@@ -1,21 +1,27 @@
-import { Hero } from "@/components/layout/hero";
-import { Features } from "@/components/layout/features";
-import { WorkflowPreview } from "@/components/layout/workflow-preview";
-import { Pricing } from "@/components/layout/pricing";
-import { FinalCTA } from "@/components/layout/final-cta";
-import { Footer } from "@/components/layout/footer";
+import React from "react";
+import AboutUsSection  from "@components/Sections/About/AboutUsSection";
+import AdditionalInfoSection  from "@components/Sections/AdditionalInfoSection/AdditionalInfoSection";
+import BenefitsSection  from "@components/Sections/BenefitsSection/BenefitsSection";
+import  DesktopFeaturesSection  from "@components/Sections/DesktopFeaturesSection/DesktopFeaturesSection";
+import FooterSection  from "@components/Sections/FooterSection/FooterSection";
+import HeroHeaderSection  from "@components/Sections/HeroHeaderSection/HeroHeaderSection";
+import IntegrationsSection  from "@components/Sections/IntegrationsSection/IntegrationsSection";
+import LayoutSection  from "@components/Sections/LayoutSection/LayoutSection";
 
-export default function Home() {
+import NavbarDemo from "@/components/Sections/Navbar/Navbar";
+
+export  default function ElementDefault () {
   return (
-    <div className="min-h-screen">
-      <main>
-        <Hero />
-        <Features />
-        <WorkflowPreview />
-        <Pricing />
-        <FinalCTA />
-      </main>
-      <Footer />
+    <div className="">
+      <NavbarDemo />
+      <HeroHeaderSection />
+      <AboutUsSection />
+      <BenefitsSection />
+      <AdditionalInfoSection />
+      <IntegrationsSection />
+      <DesktopFeaturesSection />
+      <LayoutSection />
+      <FooterSection />
     </div>
   );
-}
+};

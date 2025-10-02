@@ -1,0 +1,26 @@
+<svg width="33" height="32" viewBox="0 0 33 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_18_525)">
+<rect x="0.5" width="32" height="32" rx="5.33" fill="white"/>
+<g clip-path="url(#clip1_18_525)">
+<g clip-path="url(#clip2_18_525)">
+<path d="M19.167 16.604C20.0511 16.6043 20.8988 16.9556 21.5238 17.5808C22.1489 18.2061 22.5 19.0539 22.5 19.938C22.5 20.4684 22.2893 20.9771 21.9142 21.3522C21.5391 21.7273 21.0304 21.938 20.5 21.938H12.5C11.9696 21.938 11.4609 21.7273 11.0858 21.3522C10.7107 20.9771 10.5 20.4684 10.5 19.938C10.5003 19.0538 10.8516 18.206 11.4768 17.5808C12.102 16.9556 12.9498 16.6043 13.834 16.604H19.167ZM16.5 9.93799C17.2073 9.93799 17.8857 10.219 18.3859 10.7191C18.886 11.2193 19.167 11.8977 19.167 12.605C19.167 13.3123 18.886 13.9907 18.3859 14.4908C17.8857 14.991 17.2073 15.272 16.5 15.272C15.7927 15.272 15.1143 14.991 14.6141 14.4908C14.114 13.9907 13.833 13.3123 13.833 12.605C13.833 11.8977 14.114 11.2193 14.6141 10.7191C15.1143 10.219 15.7927 9.93799 16.5 9.93799Z" fill="#12785A"/>
+</g>
+</g>
+<rect x="1" y="0.5" width="31" height="31" rx="4.83" stroke="url(#paint0_radial_18_525)"/>
+</g>
+<defs>
+<radialGradient id="paint0_radial_18_525" cx="0" cy="0" r="1" gradientTransform="matrix(16 -16 16 27.1851 16.5 16)" gradientUnits="userSpaceOnUse">
+<stop stop-color="#12785A"/>
+<stop offset="0.935784" stop-color="white"/>
+</radialGradient>
+<clipPath id="clip0_18_525">
+<rect x="0.5" width="32" height="32" rx="5.33" fill="white"/>
+</clipPath>
+<clipPath id="clip1_18_525">
+<rect width="16" height="16" fill="white" transform="translate(8.5 8)"/>
+</clipPath>
+<clipPath id="clip2_18_525">
+<rect width="16" height="16" fill="white" transform="translate(8.5 8)"/>
+</clipPath>
+</defs>
+</svg>

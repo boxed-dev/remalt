@@ -1,40 +1,50 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import { ManageSubscription } from '@/components/subscription/manage-subscription'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { ManageSubscription } from "@/components/subscription/manage-subscription";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: { success?: string }
+  searchParams: Promise<{ success?: string }>;
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/auth/signin')
+    redirect("/auth/signin");
   }
 
   // Get user profile
   const { data: profile } = await supabase
-    .from('users')
-    .select<'*', { full_name: string | null }>('*')
-    .eq('id', user.id)
-    .single()
+    .from("users")
+    .select<"*", { full_name: string | null }>("*")
+    .eq("id", user.id)
+    .single();
 
   // Get subscription
   const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('user_id', user.id)
-    .in('status', ['active', 'trialing'])
-    .single()
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", user.id)
+    .in("status", ["active", "trialing"])
+    .single();
+
+  const params = await searchParams;
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-8">
-        {searchParams.success && (
+        {params.success && (
           <div className="rounded-md bg-green-50 p-4">
             <p className="text-sm font-medium text-green-800">
               Payment successful! Your subscription is now active.
@@ -84,5 +94,5 @@ export default async function AccountPage({
         <ManageSubscription subscription={subscription} />
       </div>
     </div>
-  )
+  );
 }
