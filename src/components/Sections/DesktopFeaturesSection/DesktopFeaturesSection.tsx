@@ -9,36 +9,69 @@ import {
 const faqData = [
   {
     id: "item-1",
-    question: "What is Pixco?",
+    question: "What is Remalt?",
     answer:
-      "A digital one-stop shop offering premium Framer & Figma templates, resources, and digital designs. Specializing in web design, we deliver stunning and functional UI/UX solutions for B2B and B2C brands looking to make a lasting impact.",
+      "Remalt is an AI growth ecosystem built for founders, consultants, and creators. It combines proven frameworks, scalable systems, and a supportive community — so you can grow your business 11X faster without the chaos.",
     defaultOpen: true,
   },
   {
     id: "item-2",
-    question: "How does the CustomAccordion component help users?",
-    answer: "",
+    question: "Who is Remalt for?",
+    answer:
+      "Remalt is designed for online experts, service providers, and creators who are ready to move beyond hustle mode. If you’re tired of scattered tools, endless guessing, and zero clarity — Remalt was built for you.",
     defaultOpen: false,
   },
   {
     id: "item-3",
-    question: "Can I customize the design of the CustomAccordion?",
-    answer: "",
+    question: "How does Remalt help me grow?",
+    answer:
+      "Remalt takes your ideas and turns them into execution-ready systems. From offers and content to funnels and community growth, you’ll have pre-built AI canvases and frameworks that save time and generate predictable results.",
     defaultOpen: false,
   },
   {
     id: "item-4",
-    question: "Who is CustomAccordion ideal for?",
-    answer: "",
+    question: "Do I need to be techy to use Remalt?",
+    answer:
+      "Not at all. Remalt is built founder-first — meaning everything is simple, guided, and designed to cut through noise. You’ll never need to figure out AI — the system is ready to plug into your workflow.",
     defaultOpen: false,
   },
   {
     id: "item-5",
-    question: "Is the CustomAccordion component mobile-friendly?",
-    answer: "",
+    question: "How is Remalt different from other AI tools?",
+    answer:
+      "Most AI tools give you outputs. Remalt gives you growth systems. Instead of random prompts, you get structured canvases designed by and for founders — with clarity and scaling baked in.",
+    defaultOpen: false,
+  },
+  {
+    id: "item-6",
+    question: "What integrations does Remalt support?",
+    answer:
+      "Remalt plays well with the tools you already use — from calendars to automation platforms, content systems, and CRMs. No chaos, just smooth workflows.",
+    defaultOpen: false,
+  },
+  {
+    id: "item-7",
+    question: "Is my data secure?",
+    answer:
+      "Yes. Privacy and security are built into the foundation of Remalt. Your data stays yours — always.",
+    defaultOpen: false,
+  },
+  {
+    id: "item-8",
+    question: "How much does Remalt cost?",
+    answer:
+      "During waitlist access, you’ll get exclusive early pricing. Once we open fully, there will be tiered plans designed to support solo founders up to scaling teams.",
+    defaultOpen: false,
+  },
+  {
+    id: "item-9",
+    question: "Why should I join the waitlist now?",
+    answer:
+      "Early access members get founder-first community access, early pricing locked in, and priority onboarding when Remalt opens up.",
     defaultOpen: false,
   },
 ];
+
 
 export default function DesktopFeaturesSection  () {
   return (

@@ -5,6 +5,7 @@ import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { Card, CardContent } from "@components/ui/card";
 import Image from "next/image";
+import GetStartedButton from "@/components/ui/buttonAnimation";
 export default function BenefitsSection() {
   const benefitCards = [
     {
@@ -97,10 +98,9 @@ export default function BenefitsSection() {
               ))}
             </div>
 
-            <Button className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 px-4 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center w-fit">
-              <span className="hidden sm:inline">Join the Waitlist</span>
-              <ArrowRightIcon className="w-4 h-4 ml-2" />
-            </Button>
+            <GetStartedButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 px-4 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center w-fit">
+              <span className="hidden sm:inline mr-2">Join the Waitlist</span>
+            </GetStartedButton>
           </div>
 
           <div className="relative w-full h-[400px] lg:h-[500px]">

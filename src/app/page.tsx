@@ -6,7 +6,7 @@ import  DesktopFeaturesSection  from "@components/Sections/DesktopFeaturesSectio
 import FooterSection  from "@components/Sections/FooterSection/FooterSection";
 import HeroHeaderSection  from "@components/Sections/HeroHeaderSection/HeroHeaderSection";
 import IntegrationsSection  from "@components/Sections/IntegrationsSection/IntegrationsSection";
-import LayoutSection  from "@components/Sections/LayoutSection/LayoutSection";
+import CTA  from "@components/Sections/LayoutSection/LayoutSection";
 
 import NavbarDemo from "@/components/Sections/Navbar/Navbar";
 
@@ -20,7 +20,7 @@ export  default function ElementDefault () {
       <AdditionalInfoSection />
       <IntegrationsSection />
       <DesktopFeaturesSection />
-      <LayoutSection />
+      <CTA />
       <FooterSection />
     </div>
   );

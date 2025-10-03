@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Host+Grotesk:ital,wght@0,300..800;1,300..800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -191,7 +192,8 @@
 
   /* Section Heading Typography */
   .section-heading {
-    font-family: "Geist", sans-serif;
+    /* font-family: "Geist", sans-serif; */
+    font-family: "Inter", sans-serif;
     font-weight: 600;
     font-size: 32px;
     line-height: 36px;
@@ -209,7 +211,7 @@
 
   /* Paragraph Typography */
   .paragraph-text {
-    font-family: "Inter", sans-serif;
+    font-family: "Host Grotesk", sans-serif;
     font-weight: 500;
     font-size: 16px;
     line-height: 22px;
@@ -227,7 +229,7 @@
 
   /* Badge Text */
   .badge-text {
-    font-family: "Inter", sans-serif;
+    font-family: "Host Grotesk", sans-serif;
     font-weight: 400;
     font-size: 12px;
     line-height: 14.4px;
@@ -236,7 +238,7 @@
 
   /* Card Title */
   .card-title {
-    font-family: "Inter", sans-serif;
+    font-family: "Host Grotesk", sans-serif;;
     font-weight: 500;
     font-size: 16px;
     line-height: 22px;
@@ -246,7 +248,7 @@
 
   /* Card Text */
   .card-text {
-    font-family: "Inter", sans-serif;
+    font-family: "Host Grotesk", sans-serif;
     font-weight: 500;
     font-size: 14px;
     line-height: 20px;

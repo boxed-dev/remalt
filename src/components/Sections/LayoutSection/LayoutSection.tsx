@@ -2,6 +2,7 @@ import { ArrowRight as ArrowRightIcon, TrendingUp as TrendingUpIcon } from "luci
 import React from "react";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
+import GetStartedButton from "@/components/ui/buttonAnimation";
 
 const features = [
   {
@@ -18,19 +19,19 @@ const features = [
   },
 ];
 
-export default function  LayoutSection() {
+export default function  CTA() {
   return (
     <section className="w-full min-h-[400px] sm:min-h-[450px] lg:min-h-[512px] flex items-center bg-[linear-gradient(131deg,rgba(255,255,255,1)_0%,rgba(18,120,90,1)_48%,rgba(212,175,127,1)_80%)] py-12 sm:py-16 lg:py-20">
       <div className="mx-auto  w-full px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-6 sm:gap-8 items-center">
           <div className="flex flex-col gap-4 items-center">
             <div className="relative flex items-center justify-center w-full max-w-md">
-              <div className="hidden sm:block absolute left-0 w-[25%] bg-[linear-gradient(90deg,rgba(255,255,255,0.25)_19%,rgba(198,180,237,0.5)_73%,rgba(149,115,222,1)_100%)] h-px" />
+              <div className="hidden sm:block absolute left-0 w-[25%] bg-[linear-gradient(90deg,rgba(0,0,0,0)_19%,rgba(198,180,237,0.5)_73%,rgba(149,115,222,1)_100%)] h-px" />
 
               <Badge className="h-8 bg-[#f5f1ff] text-black border-[#e3d6ff] rounded-[50px] flex items-center justify-center gap-2 px-3 sm:px-4 hover:bg-[#f5f1ff] text-xs whitespace-nowrap">
                 <TrendingUpIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="[font-family:'Inter',Helvetica] font-normal tracking-[-0.12px] leading-[14.4px]">
-                  UPGRADE YOUR MEETINGS
+                  Reserve Your Spot
                 </span>
               </Badge>
 
@@ -49,12 +50,11 @@ export default function  LayoutSection() {
           </div>
 
           <div className="flex justify-center w-full">
-            <Button className="w-full sm:w-auto bg-black text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg border border-[#7c5ac5] shadow-lg hover:bg-black/90 text-sm">
-              <span className="[font-family:'Inter',Helvetica] font-normal tracking-[0]">
+            <GetStartedButton className="w-full sm:w-auto bg-black text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg border  shadow-lg hover:bg-black/90 text-sm">
+              <span className=" mr-2 [font-family:'Inter',Helvetica] font-normal tracking-[0]">
                 Join the Waitlist
               </span>
-              <ArrowRightIcon className="w-4 h-4 ml-2" />
-            </Button>
+            </GetStartedButton>
           </div>
 
           <div className="flex flex-wrap justify-center gap-4 sm:gap-6 lg:gap-8 mt-4 sm:mt-6">

@@ -5,6 +5,7 @@ import { Badge } from "../../ui/badge";
 import { Button } from "@components/ui/button";
 import { Card, CardContent } from "@components/ui/card";
 import Image from "next/image";
+import GetStartedButton from "@/components/ui/buttonAnimation";
 
 const featureCards = [
   {
@@ -63,10 +64,10 @@ export default function AboutUsSection() {
                     founders the frameworks, systems, and community they need to
                     scale with confidence.
                   </p>
-                  <Button className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 px-4 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center w-fit">
-                    Join the Waitlist 
-                    <ArrowRightIcon className="w-4 h-4 ml-2" />
-                  </Button>
+                     <GetStartedButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center">
+            <span className="hidden sm:inline mr-2">Join the Waitlist</span>
+
+          </GetStartedButton>
                 </div>
 
                 {/* Right content - Dashboard preview */}

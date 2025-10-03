@@ -1,4 +1,5 @@
 "use client";
+import GetStartedButton from "@/components/ui/buttonAnimation";
 import {
   Navbar,
   NavBody,
@@ -39,10 +40,10 @@ export default function NavbarDemo() {
         <NavItems items={navItems} />
         <div className="flex items-center gap-4">
           <NavbarButton variant="secondary">Login</NavbarButton>
-          <NavbarButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center">
-            <span className="hidden sm:inline">Join the Waitlist</span>
-            <ArrowRightIcon className="w-4 h-4 ml-2" />
-          </NavbarButton>
+          <GetStartedButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center">
+            <span className="hidden sm:inline mr-2">Join the Waitlist</span>
+
+          </GetStartedButton>
         </div>
       </NavBody>
 
@@ -71,17 +72,22 @@ export default function NavbarDemo() {
             </a>
           ))}
           <div className="flex w-full flex-col gap-4">
-            <NavbarButton
+            {/* <NavbarButton
               onClick={() => setIsMobileMenuOpen(false)}
               variant="primary"
               className="w-full"
             >
               Login
-            </NavbarButton>
-            <NavbarButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm px-4 py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5]">
-              <span className="hidden sm:inline">Join the Waitlist</span>
+            </NavbarButton> */}
+            {/* <NavbarButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm px-4 py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5]">
               <span className="sm:hidden">Join Waitlist</span>
-              <ArrowRightIcon className="w-4 h-4 ml-2" />
+            </NavbarButton> */}
+             <NavbarButton
+              onClick={() => setIsMobileMenuOpen(false)}
+              variant="primary"
+              className="w-full bg-[#12785a] hover:bg-[#0f6b4d] text-white"
+            >
+              <span className="sm:hidden">Join Waitlist</span> 
             </NavbarButton>
           </div>
         </MobileNavMenu>

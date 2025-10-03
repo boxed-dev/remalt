@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
 import Image from "next/image";
+import GetStartedButton from "@/components/ui/buttonAnimation";
 
 export default function HeroHeaderSection() {
   const notificationText = "No credit card required · Cancel anytime";
@@ -67,9 +68,9 @@ export default function HeroHeaderSection() {
               defaultValue=""
             />
 
-            <Button className="absolute right-1 top-1 h-10 px-6 bg-[linear-gradient(131deg,rgba(255,255,255,1)_0%,rgba(18,120,90,1)_48%,rgba(212,175,127,1)_80%)] hover:opacity-90 [font-family:'Inter',Helvetica] font-medium text-white text-sm text-center tracking-[-0.56px] leading-[14px] rounded-[3px]">
+            <GetStartedButton className="absolute right-1 top-1 h-10 px-6 bg-[linear-gradient(131deg,rgba(255,255,255,1)_0%,rgba(18,120,90,1)_48%,rgba(212,175,127,1)_80%)] hover:opacity-90 [font-family:'Inter',Helvetica] font-medium text-white text-sm text-center tracking-[-0.56px] leading-[14px] rounded-[3px]">
               Get Notified
-            </Button>
+            </GetStartedButton>
           </div>
 
           <p className="[font-family:'Inter',Helvetica] font-normal text-[#12785a] text-sm text-center tracking-[0] leading-[16.8px]">
