@@ -1,103 +1,101 @@
-import { createClient } from '@/lib/supabase/server'
-import { PRODUCTS } from '@/lib/stripe/config'
+'use client'
+
 import { PricingCard } from '@/components/subscription/pricing-card'
-import { redirect } from 'next/navigation'
-import { createCheckoutSession, createOrRetrieveCustomer } from '@/utils/stripe-helpers'
-import { Database } from '@/types/supabase'
+import { AppHeader } from '@/components/layout/app-header'
+import { useRouter } from 'next/navigation'
 
-type Subscription = Database['public']['Tables']['subscriptions']['Row']
+// Mock product data
+const PRODUCTS = {
+  FREE: {
+    name: 'Free',
+    description: 'Perfect for getting started',
+    price: 0,
+    priceId: 'price_free',
+    features: [
+      '5 workflows per month',
+      'Basic AI models',
+      'Community support',
+      'Email notifications',
+    ],
+  },
+  PRO: {
+    name: 'Pro',
+    description: 'Best for professionals',
+    price: 29,
+    priceId: 'price_pro',
+    features: [
+      'Unlimited workflows',
+      'Advanced AI models',
+      'Priority support',
+      'Custom integrations',
+      'Team collaboration',
+      'Advanced analytics',
+    ],
+  },
+  ENTERPRISE: {
+    name: 'Enterprise',
+    description: 'For large organizations',
+    price: 99,
+    priceId: 'price_enterprise',
+    features: [
+      'Everything in Pro',
+      'Dedicated account manager',
+      'Custom AI model training',
+      'SLA guarantee',
+      'Advanced security',
+      'Unlimited team members',
+    ],
+  },
+}
 
-export default async function PricingPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export default function PricingPage() {
+  const router = useRouter()
 
-  // Get current subscription if user is logged in
-  let currentSubscription: Subscription | null = null
-  if (user) {
-    const result = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single()
-
-    currentSubscription = result.data as Subscription | null
-  }
-
-  async function handleSubscribe(priceId: string) {
-    'use server'
-
-    if (!user) {
-      redirect('/auth/signin?redirectedFrom=/pricing')
-    }
-
-    try {
-      const customerId = await createOrRetrieveCustomer({
-        uuid: user.id,
-        email: user.email!,
-      })
-
-      const session = await createCheckoutSession({
-        priceId,
-        customerId,
-        successUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/account?success=true`,
-        cancelUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing`,
-        trialPeriodDays: 14,
-      })
-
-      if (session.url) {
-        redirect(session.url)
-      }
-    } catch (error) {
-      console.error('Error creating checkout session:', error)
-      redirect('/pricing?error=checkout-failed')
-    }
+  const handleSubscribe = (planName: string) => {
+    // Navigate to flows page for now
+    router.push('/flows')
   }
 
   return (
-    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
-          <p className="text-xl text-muted-foreground">
-            Start with a 14-day free trial. No credit card required.
-          </p>
-        </div>
+    <div className="min-h-screen bg-[#FAFBFC] flex flex-col">
+      <AppHeader />
+      <div className="flex-1 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto" style={{
+          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif'
+        }}>
+          <div className="text-center mb-12">
+            <h1 className="text-[40px] font-semibold text-[#1A1D21] mb-4">Choose Your Plan</h1>
+            <p className="text-[18px] text-[#6B7280]">
+              Start with a 14-day free trial. No credit card required.
+            </p>
+          </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          <form action={handleSubscribe.bind(null, PRODUCTS.FREE.priceId)}>
+          <div className="grid md:grid-cols-3 gap-6">
             <PricingCard
               name={PRODUCTS.FREE.name}
               description={PRODUCTS.FREE.description}
               price={PRODUCTS.FREE.price}
               features={PRODUCTS.FREE.features}
-              onSubscribe={() => {}}
-              isCurrentPlan={currentSubscription?.price_id === PRODUCTS.FREE.priceId}
+              onSubscribe={() => handleSubscribe('Free')}
             />
-          </form>
 
-          <form action={handleSubscribe.bind(null, PRODUCTS.PRO.priceId)}>
             <PricingCard
               name={PRODUCTS.PRO.name}
               description={PRODUCTS.PRO.description}
               price={PRODUCTS.PRO.price}
               features={PRODUCTS.PRO.features}
-              onSubscribe={() => {}}
-              isCurrentPlan={currentSubscription?.price_id === PRODUCTS.PRO.priceId}
+              onSubscribe={() => handleSubscribe('Pro')}
               isPopular
             />
-          </form>
 
-          <form action={handleSubscribe.bind(null, PRODUCTS.ENTERPRISE.priceId)}>
             <PricingCard
               name={PRODUCTS.ENTERPRISE.name}
               description={PRODUCTS.ENTERPRISE.description}
               price={PRODUCTS.ENTERPRISE.price}
               features={PRODUCTS.ENTERPRISE.features}
-              onSubscribe={() => {}}
-              isCurrentPlan={currentSubscription?.price_id === PRODUCTS.ENTERPRISE.priceId}
+              onSubscribe={() => handleSubscribe('Enterprise')}
             />
-          </form>
+          </div>
         </div>
       </div>
     </div>

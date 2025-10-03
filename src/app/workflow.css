@@ -1,0 +1,229 @@
+/* Custom React Flow Styles */
+
+/* Selected nodes */
+.react-flow__node.selected {
+  box-shadow: 0 0 0 3px #155EEF, 0 6px 20px rgba(21, 94, 239, 0.25);
+}
+
+/* Edge path */
+.react-flow__edge-path {
+  stroke: #9CA3AF;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #155EEF;
+  stroke-width: 4.5;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #6B7280;
+  stroke-width: 4;
+}
+
+/* Controls */
+.react-flow__controls {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid #E8ECEF;
+  border-radius: 16px;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.react-flow__controls-button {
+  background: transparent;
+  border-bottom: 1px solid #E8ECEF;
+  width: 48px;
+  height: 48px;
+  transition: all 200ms ease;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.react-flow__controls-button:hover {
+  background: #F5F5F7;
+}
+
+.react-flow__controls-button svg {
+  width: 22px;
+  height: 22px;
+  fill: #6B7280;
+  transition: fill 200ms ease;
+}
+
+.react-flow__controls-button:hover svg {
+  fill: #155EEF;
+}
+
+/* Attribution */
+.react-flow__attribution {
+  display: none;
+}
+
+/* Selection */
+.react-flow__selection {
+  background: rgba(21, 94, 239, 0.08);
+  border: 1.5px solid #155EEF;
+}
+
+/* Connection line */
+.react-flow__connectionline {
+  stroke: #155EEF;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+/* Edges when connecting */
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+  from {
+    stroke-dashoffset: 10;
+  }
+}
+
+/* Node dragging */
+.react-flow__node.dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+  transform: scale(1.02);
+}
+
+/* Node hover */
+.react-flow__node:hover {
+  filter: brightness(0.98);
+}
+
+/* Handle hover states */
+.react-flow__handle {
+  width: 14px !important;
+  height: 14px !important;
+  border-width: 2.5px !important;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.8;
+}
+
+.react-flow__handle:hover {
+  opacity: 1;
+  transform: scale(1.35);
+}
+
+.react-flow__node:hover .react-flow__handle {
+  opacity: 1;
+}
+
+/* Position handles on sides for horizontal flow */
+.react-flow__handle-left {
+  left: -7px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+.react-flow__handle-right {
+  right: -7px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Make handles more visible on hover */
+.react-flow__node:hover .react-flow__handle {
+  opacity: 1;
+}
+
+.react-flow__node:hover .react-flow__handle-left,
+.react-flow__node:hover .react-flow__handle-right {
+  transform: translateY(-50%) scale(1.25) !important;
+}
+
+/* Connection line styling for horizontal flow */
+.react-flow__edge-path {
+  stroke-linecap: round;
+}
+
+/* Smooth panel animations */
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-duration: 200ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.slide-in-from-right {
+  animation-name: slide-in-from-right;
+}
+
+/* Custom Chat Scrollbar */
+.chat-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: #9CA3AF;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 200ms ease;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.chat-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #9CA3AF rgba(0, 0, 0, 0.02);
+}
+
+/* Loading pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth fade-in */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}

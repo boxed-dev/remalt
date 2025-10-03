@@ -35,21 +35,12 @@ export function Header() {
             >
               Docs
             </Link>
-            <Link
-              href="/pricing"
-              className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
-            >
-              Pricing
-            </Link>
           </nav>
 
-          {/* Desktop Auth Buttons */}
+          {/* Desktop CTA Button */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" asChild>
-              <Link href="/sign-in">Sign In</Link>
-            </Button>
             <Button asChild className="apple-button">
-              <Link href="/sign-up">Sign Up</Link>
+              <Link href="/flows">Get Started</Link>
             </Button>
           </div>
 
@@ -77,22 +68,10 @@ export function Header() {
                 >
                   Docs
                 </Link>
-                <Link
-                  href="/pricing"
-                  className="text-lg font-medium hover:text-gray-600 transition-colors"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Pricing
-                </Link>
                 <div className="flex flex-col space-y-4 pt-6 border-t">
-                  <Button variant="ghost" asChild>
-                    <Link href="/sign-in" onClick={() => setIsOpen(false)}>
-                      Sign In
-                    </Link>
-                  </Button>
                   <Button asChild className="apple-button">
-                    <Link href="/sign-up" onClick={() => setIsOpen(false)}>
-                      Sign Up
+                    <Link href="/flows" onClick={() => setIsOpen(false)}>
+                      Get Started
                     </Link>
                   </Button>
                 </div>
