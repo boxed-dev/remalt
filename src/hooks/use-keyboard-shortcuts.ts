@@ -26,11 +26,19 @@ export function useKeyboardShortcuts(shortcuts: Record<string, () => void>) {
       if (event.altKey) combo += 'alt+';
       combo += event.key.toLowerCase();
 
+      // Check if user is in an editable element
+      const inEditableElement = isEditableElement(event.target);
+
       // Execute matching shortcut
       if (shortcuts[combo]) {
-        if (isEditableElement(event.target) && combo !== 'mod+s') {
+        // Always allow mod+s (save) and mod+k (boards menu)
+        // For single-key shortcuts (node additions), only work when not in editable element
+        const isModifierShortcut = combo.includes('mod+') || combo.includes('shift+') || combo.includes('alt+');
+
+        if (inEditableElement && !isModifierShortcut && combo !== 'mod+s' && combo !== 'mod+k') {
           return;
         }
+
         event.preventDefault();
         shortcuts[combo]();
       }

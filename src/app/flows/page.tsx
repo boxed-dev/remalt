@@ -155,7 +155,7 @@ export default function FlowsPage() {
                     description: flow.description || '',
                     nodeCount: flow.nodes.length,
                     lastEdited: new Date(flow.updatedAt),
-                    tags: flow.metadata?.tags?.map(tag => ({ name: tag, color: '#007AFF' })) || []
+                    tags: flow.metadata?.tags?.map(tag => ({ name: tag as any, color: '#007AFF', count: 0 })) || []
                   }}
                   onClick={() => handleFlowClick(flow.id)}
                   onDelete={() => handleDeleteFlow(flow.id)}

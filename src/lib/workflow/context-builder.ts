@@ -14,18 +14,23 @@ import type {
 } from '@/types/workflow';
 
 export interface ChatContext {
-  textContext: string[];
+  textContext: Array<{
+    content: string;
+    aiInstructions?: string;
+  }>;
   youtubeTranscripts: Array<{
     url: string;
     transcript?: string;
     status: 'loading' | 'success' | 'unavailable' | 'error';
     method?: string;
+    aiInstructions?: string;
   }>;
   voiceTranscripts: Array<{
     audioUrl?: string;
     transcript?: string;
     duration?: number;
     status: 'idle' | 'transcribing' | 'success' | 'error';
+    aiInstructions?: string;
   }>;
   pdfDocuments: Array<{
     fileName?: string;
@@ -36,6 +41,7 @@ export interface ChatContext {
       page?: number;
     }>;
     status: 'idle' | 'parsing' | 'success' | 'error';
+    aiInstructions?: string;
   }>;
   images: Array<{
     imageUrl?: string;
@@ -44,6 +50,7 @@ export interface ChatContext {
     description?: string;
     tags?: string[];
     status: 'idle' | 'analyzing' | 'success' | 'error';
+    aiInstructions?: string;
   }>;
   webpages: Array<{
     url: string;
@@ -55,21 +62,38 @@ export interface ChatContext {
       author?: string;
     };
     status: 'idle' | 'scraping' | 'success' | 'error';
+    aiInstructions?: string;
   }>;
   mindMaps: Array<{
     concept: string;
     notes?: string;
     tags?: string[];
+    aiInstructions?: string;
   }>;
   templates: Array<{
     templateType: string;
     generatedContent?: string;
     status: 'idle' | 'generating' | 'success' | 'error';
+    aiInstructions?: string;
   }>;
   groupChats: Array<{
     groupedNodesCount: number;
     messages?: string[];
+    aiInstructions?: string;
   }>;
+}
+
+/**
+ * Safely extract AI instructions from node data
+ */
+function safeGetInstructions(data: any): string | undefined {
+  if (!data?.aiInstructions) return undefined;
+
+  const trimmed = String(data.aiInstructions).trim();
+  if (!trimmed) return undefined;
+
+  // Truncate if too long (failsafe)
+  return trimmed.slice(0, 500);
 }
 
 /**
@@ -110,7 +134,10 @@ export function buildChatContext(
       case 'text': {
         const textData = node.data as TextNodeData;
         if (textData.content && textData.content.trim()) {
-          context.textContext.push(textData.content);
+          context.textContext.push({
+            content: textData.content,
+            aiInstructions: safeGetInstructions(textData),
+          });
         }
         break;
       }
@@ -123,6 +150,7 @@ export function buildChatContext(
             transcript: youtubeData.transcript,
             status: youtubeData.transcriptStatus || 'loading',
             method: youtubeData.transcriptMethod,
+            aiInstructions: safeGetInstructions(youtubeData),
           });
         }
         break;
@@ -135,6 +163,7 @@ export function buildChatContext(
           transcript: voiceData.transcript,
           duration: voiceData.duration,
           status: voiceData.transcriptStatus || 'idle',
+          aiInstructions: safeGetInstructions(voiceData),
         });
         break;
       }
@@ -146,6 +175,7 @@ export function buildChatContext(
           parsedText: pdfData.parsedText,
           segments: pdfData.segments,
           status: pdfData.parseStatus || 'idle',
+          aiInstructions: safeGetInstructions(pdfData),
         });
         break;
       }
@@ -159,6 +189,7 @@ export function buildChatContext(
           description: imageData.analysisData?.description,
           tags: imageData.analysisData?.tags,
           status: imageData.analysisStatus || 'idle',
+          aiInstructions: safeGetInstructions(imageData),
         });
         break;
       }
@@ -171,6 +202,7 @@ export function buildChatContext(
           pageContent: webpageData.pageContent,
           metadata: webpageData.metadata,
           status: webpageData.scrapeStatus || 'idle',
+          aiInstructions: safeGetInstructions(webpageData),
         });
         break;
       }
@@ -181,6 +213,7 @@ export function buildChatContext(
           concept: mindMapData.concept,
           notes: mindMapData.notes,
           tags: mindMapData.tags,
+          aiInstructions: safeGetInstructions(mindMapData),
         });
         break;
       }
@@ -191,6 +224,7 @@ export function buildChatContext(
           templateType: templateData.templateType,
           generatedContent: templateData.generatedContent,
           status: templateData.generationStatus || 'idle',
+          aiInstructions: safeGetInstructions(templateData),
         });
         break;
       }
@@ -216,6 +250,7 @@ export function buildChatContext(
           context.groupChats.push({
             groupedNodesCount: groupData.groupedNodes?.length || 0,
             messages: groupMessages,
+            aiInstructions: safeGetInstructions(groupData),
           });
         }
 

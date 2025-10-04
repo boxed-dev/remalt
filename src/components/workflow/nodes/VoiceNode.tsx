@@ -1,20 +1,25 @@
-import { Mic, Upload, Loader2, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Download } from 'lucide-react';
-import { useState, useRef, useMemo } from 'react';
+import { Mic, Loader2, CheckCircle2, ChevronDown, ChevronUp, Download, Square } from 'lucide-react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
+import { AIInstructionsInline } from './AIInstructionsInline';
 import type { NodeProps } from '@xyflow/react';
 import type { VoiceNodeData } from '@/types/workflow';
+import { recordingManager, type RecordingState } from '@/lib/recording-manager';
+
+// Global state to track which node is currently recording
+let currentRecordingNodeId: string | null = null;
 
 export function VoiceNode({ id, data }: NodeProps<VoiceNodeData>) {
-  const [mode, setMode] = useState<'choose' | 'record' | 'upload'>('choose');
-  const [isRecording, setIsRecording] = useState(false);
-  const [url, setUrl] = useState(data.audioUrl || '');
-  const [barHeights] = useState(() => Array(5).fill(0).map(() => Math.random() * 12 + 12));
   const [showTranscript, setShowTranscript] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const [isRecordingThisNode, setIsRecordingThisNode] = useState(false);
+  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const [finalTranscripts, setFinalTranscripts] = useState<string[]>([]);
+  const [duration, setDuration] = useState(0);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
   const hasTranscript = useMemo(() => data.transcriptStatus === 'success' && !!data.transcript, [data.transcriptStatus, data.transcript]);
@@ -40,193 +45,167 @@ export function VoiceNode({ id, data }: NodeProps<VoiceNodeData>) {
     event.stopPropagation();
   };
 
-  const fileToBase64 = async (file: File) => await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-
-  const triggerTranscription = async (source?: { kind: 'base64' | 'url'; payload: string }) => {
-    try {
-      let transcriptionSource = source;
-
-      if (!transcriptionSource) {
-        if (data.audioFile) {
-          const base64 = await fileToBase64(data.audioFile as File);
-          transcriptionSource = { kind: 'base64', payload: base64 };
-        } else if (data.audioUrl) {
-          transcriptionSource = { kind: 'url', payload: data.audioUrl };
+  // Subscribe to recording events - but only act if this is the recording node
+  useEffect(() => {
+    const unsubscribeState = recordingManager.on('state-changed', (newState) => {
+      if (currentRecordingNodeId === id) {
+        setRecordingState(newState);
+        if (newState === 'error') {
+          setRecordingError('Recording failed. Please try again.');
+        }
+        if (newState === 'idle') {
+          setIsRecordingThisNode(false);
+          currentRecordingNodeId = null;
         }
       }
+    });
 
-      if (!transcriptionSource)
-        return;
+    const unsubscribeInterim = recordingManager.on('transcript-interim', (transcript) => {
+      if (currentRecordingNodeId === id) {
+        setInterimTranscript(transcript);
+      }
+    });
 
-      updateNodeData(id, {
-        transcriptStatus: 'transcribing',
-        transcriptError: undefined,
-      } as Partial<VoiceNodeData>);
+    const unsubscribeFinal = recordingManager.on('transcript-final', (transcript) => {
+      if (currentRecordingNodeId === id) {
+        setFinalTranscripts((prev) => [...prev, transcript]);
+        setInterimTranscript('');
+      }
+    });
 
-      const body = transcriptionSource.kind === 'base64'
-        ? { audioData: transcriptionSource.payload.split(',')[1] }
-        : { audioUrl: transcriptionSource.payload };
+    const unsubscribeComplete = recordingManager.on('recording-complete', (recordingData) => {
+      if (currentRecordingNodeId === id) {
+        // Auto-insert audio and transcript into this node
+        const audioUrl = URL.createObjectURL(recordingData.audioBlob);
 
-      const response = await fetch('/api/voice/transcribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
         updateNodeData(id, {
-          transcript: result.transcript,
-          duration: result.duration,
+          audioUrl,
+          transcript: recordingData.transcript,
+          duration: recordingData.duration,
           transcriptStatus: 'success',
           transcriptError: undefined,
         } as Partial<VoiceNodeData>);
-      } else {
-        updateNodeData(id, {
-          transcriptStatus: 'error',
-          transcriptError: result.error,
-        } as Partial<VoiceNodeData>);
+
+        // Reset recording UI state
+        setFinalTranscripts([]);
+        setInterimTranscript('');
+        setDuration(0);
+        setRecordingError(null);
+        setIsRecordingThisNode(false);
+        currentRecordingNodeId = null;
       }
-    } catch (error) {
-      console.error('Voice transcription failed:', error);
-      updateNodeData(id, {
-        transcriptStatus: 'error',
-        transcriptError: 'Failed to transcribe audio',
-      } as Partial<VoiceNodeData>);
+    });
+
+    const unsubscribeError = recordingManager.on('error', (errorMessage) => {
+      if (currentRecordingNodeId === id) {
+        setRecordingError(errorMessage);
+      }
+    });
+
+    return () => {
+      unsubscribeState();
+      unsubscribeInterim();
+      unsubscribeFinal();
+      unsubscribeComplete();
+      unsubscribeError();
+    };
+  }, [id, updateNodeData]);
+
+  // Duration counter - only for this node
+  useEffect(() => {
+    if (isRecordingThisNode && recordingState === 'recording') {
+      const startTime = Date.now();
+      durationIntervalRef.current = setInterval(() => {
+        setDuration(Math.floor((Date.now() - startTime) / 1000));
+      }, 1000);
+    } else {
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
+      }
+      if (recordingState === 'idle') {
+        setDuration(0);
+      }
     }
-  };
 
-  const renderStatus = () => {
-    if (data.transcriptStatus === 'transcribing')
-      return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-[#EEF2FF] px-2 py-1 text-[10px] text-[#4338CA]">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Transcribing</span>
-        </div>
-      );
+    return () => {
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+      }
+    };
+  }, [isRecordingThisNode, recordingState]);
 
-    if (data.transcriptStatus === 'success')
-      return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-[#ECFDF5] px-2 py-1 text-[10px] text-[#047857]">
-          <CheckCircle2 className="h-3 w-3" />
-          <span>Transcript ready</span>
-        </div>
-      );
-
-    if (data.transcriptStatus === 'error')
-      return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-[#FEF2F2] px-2 py-1 text-[10px] text-[#B91C1C]">
-          <AlertCircle className="h-3 w-3" />
-          <span>Transcription failed</span>
-        </div>
-      );
-
-    return null;
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(blob);
-
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => {
-            track.stop();
-          });
-          streamRef.current = null;
-        }
-
-        const recordingFile = new File([blob], `recording-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
-        const base64 = await fileToBase64(recordingFile);
-
-        setShowTranscript(false);
-        updateNodeData(id, {
-          audioUrl,
-          audioFile: recordingFile,
-          duration: 0,
-        } as Partial<VoiceNodeData>);
-
-        await triggerTranscription({ kind: 'base64', payload: base64 });
-
-        setMode('choose');
-        setIsRecording(false);
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error('Error accessing microphone:', error);
-      alert('Could not access microphone. Please check permissions.');
+  // Auto-scroll transcripts
+  useEffect(() => {
+    if (isRecordingThisNode) {
+      transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  };
+  }, [finalTranscripts, interimTranscript, isRecordingThisNode]);
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      // Tracks will be stopped in the onstop handler
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const audioUrl = URL.createObjectURL(file);
-
-      const base64 = await fileToBase64(file);
-
-      setShowTranscript(false);
-      updateNodeData(id, {
-        audioUrl,
-        audioFile: file,
-      } as Partial<VoiceNodeData>);
-
-      await triggerTranscription({ kind: 'base64', payload: base64 });
-      setMode('choose');
-    }
-  };
-
-  const handleUrlSave = async () => {
-    if (url.trim()) {
-      setShowTranscript(false);
-      updateNodeData(id, {
-        audioUrl: url,
-        audioFile: undefined,
-      } as Partial<VoiceNodeData>);
-
-      await triggerTranscription({ kind: 'url', payload: url });
-    }
-    setMode('choose');
-  };
-
-  const resetNode = () => {
-    setMode('choose');
-    setUrl('');
-    setShowTranscript(false);
-  };
-
-  const handleRetranscribe = async (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleStartRecording = async (event: React.MouseEvent) => {
     stopPropagation(event);
-    setShowTranscript(false);
-    await triggerTranscription();
+
+    // Check if another node is already recording
+    if (currentRecordingNodeId && currentRecordingNodeId !== id) {
+      alert('Another voice node is already recording. Please stop that recording first.');
+      return;
+    }
+
+    try {
+      // Mark this node as the recording node
+      currentRecordingNodeId = id;
+      setIsRecordingThisNode(true);
+
+      // Clear old data
+      updateNodeData(id, {
+        audioUrl: undefined,
+        transcript: undefined,
+        duration: undefined,
+        transcriptStatus: 'idle',
+        transcriptError: undefined,
+      } as Partial<VoiceNodeData>);
+
+      await recordingManager.startRecording();
+      setRecordingError(null);
+      setFinalTranscripts([]);
+      setInterimTranscript('');
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      setRecordingError('Failed to start recording. Please check microphone permissions.');
+      currentRecordingNodeId = null;
+      setIsRecordingThisNode(false);
+    }
+  };
+
+  const handleStopRecording = async (event: React.MouseEvent) => {
+    stopPropagation(event);
+    try {
+      await recordingManager.stopRecording();
+    } catch (error) {
+      console.error('Failed to stop recording:', error);
+      setRecordingError('Failed to stop recording');
+    }
+  };
+
+  const handleCancelRecording = async (event: React.MouseEvent) => {
+    stopPropagation(event);
+    try {
+      await recordingManager.cancelRecording();
+      setFinalTranscripts([]);
+      setInterimTranscript('');
+      setDuration(0);
+      setRecordingError(null);
+      setIsRecordingThisNode(false);
+      currentRecordingNodeId = null;
+    } catch (error) {
+      console.error('Failed to cancel recording:', error);
+    }
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const downloadTranscript = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -254,18 +233,151 @@ export function VoiceNode({ id, data }: NodeProps<VoiceNodeData>) {
     link.click();
   };
 
+  const liveWordCount = [...finalTranscripts.join(' ').split(/\s+/), ...interimTranscript.split(/\s+/)].filter(Boolean).length;
+
+  // Only show recording UI if this specific node is recording
+  const showRecordingUI = isRecordingThisNode && recordingState !== 'idle';
+
   return (
     <BaseNode id={id} showTargetHandle={false}>
-      <div className="w-[280px] space-y-2">
+      <div className="w-[320px] space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4 text-[#8B5CF6]" />
             <span className="text-[13px] font-medium text-[#1A1D21]">Voice</span>
           </div>
-          {renderStatus()}
+          {isRecordingThisNode && recordingState === 'recording' && (
+            <div className="inline-flex items-center gap-1 rounded-full bg-[#FEF2F2] px-2 py-1 text-[10px] text-[#EF4444]">
+              <div className="h-2 w-2 rounded-full bg-[#EF4444] animate-pulse" />
+              <span>Recording</span>
+            </div>
+          )}
+          {isRecordingThisNode && recordingState === 'processing' && (
+            <div className="inline-flex items-center gap-1 rounded-full bg-[#EEF2FF] px-2 py-1 text-[10px] text-[#4338CA]">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Processing</span>
+            </div>
+          )}
+          {data.transcriptStatus === 'success' && !isRecordingThisNode && (
+            <div className="inline-flex items-center gap-1 rounded-full bg-[#ECFDF5] px-2 py-1 text-[10px] text-[#047857]">
+              <CheckCircle2 className="h-3 w-3" />
+              <span>Ready</span>
+            </div>
+          )}
         </div>
 
-        {hasAudio ? (
+        {/* Recording UI - only shown for the recording node */}
+        {showRecordingUI && (
+          <div className="space-y-3 rounded-lg border-2 border-[#EF4444] bg-gradient-to-br from-[#FEF2F2] to-white p-4">
+            {/* Waveform visualization */}
+            <div className="flex items-center justify-center gap-1 h-16">
+              {[...Array(20)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-1 bg-[#EF4444] rounded-full"
+                  style={{
+                    height: recordingState === 'recording'
+                      ? `${Math.random() * 60 + 10}%`
+                      : '20%',
+                    animationName: recordingState === 'recording' ? 'waveform' : 'none',
+                    animationDuration: recordingState === 'recording' ? `${0.5 + Math.random() * 0.5}s` : '0s',
+                    animationTimingFunction: 'ease-in-out',
+                    animationIterationCount: 'infinite',
+                    animationDelay: `${i * 0.05}s`,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Duration */}
+            {recordingState === 'recording' && (
+              <div className="text-center">
+                <div className="text-[20px] font-mono font-semibold text-[#1F2937]">
+                  {formatDuration(duration)}
+                </div>
+              </div>
+            )}
+
+            {/* Live transcript */}
+            {!recordingError && (
+              <div className="bg-white rounded-lg border border-[#E5E7EB] p-3">
+                <div className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wide mb-2">
+                  Live Transcript
+                </div>
+                <div className="max-h-[120px] overflow-y-auto">
+                  {finalTranscripts.length === 0 && !interimTranscript ? (
+                    <div className="text-center py-4 text-[#9CA3AF] text-[12px]">
+                      {recordingState === 'requesting-permission'
+                        ? 'Requesting access...'
+                        : recordingState === 'recording'
+                        ? 'Start speaking...'
+                        : recordingState === 'processing'
+                        ? 'Processing audio...'
+                        : 'Waiting...'}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 text-[12px] leading-relaxed">
+                      {finalTranscripts.map((transcript, index) => (
+                        <div key={index} className="text-[#1F2937]">
+                          {transcript}
+                        </div>
+                      ))}
+                      {interimTranscript && (
+                        <div className="text-[#6B7280] italic animate-pulse">
+                          {interimTranscript}
+                        </div>
+                      )}
+                      <div ref={transcriptEndRef} />
+                    </div>
+                  )}
+                </div>
+                {liveWordCount > 0 && (
+                  <div className="mt-2 pt-2 border-t border-[#E5E7EB]">
+                    <div className="text-[10px] text-[#6B7280]">~{liveWordCount} words</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Error */}
+            {recordingError && (
+              <div className="rounded-lg bg-[#FEF2F2] border border-[#FCA5A5] px-3 py-2">
+                <p className="text-[#B91C1C] text-[11px]">{recordingError}</p>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="space-y-2">
+              {recordingState === 'recording' && (
+                <>
+                  <button
+                    onClick={handleStopRecording}
+                    onMouseDown={stopPropagation}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1A1D21] text-white rounded-lg hover:bg-black transition-all shadow-lg"
+                  >
+                    <Square className="h-4 w-4 fill-white" />
+                    <span className="text-[13px] font-medium">Stop Recording</span>
+                  </button>
+                  <button
+                    onClick={handleCancelRecording}
+                    onMouseDown={stopPropagation}
+                    className="w-full px-3 py-2 text-[12px] text-[#6B7280] hover:text-[#1F2937] hover:bg-white rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+              {recordingState === 'processing' && (
+                <div className="text-center text-[11px] text-[#6B7280] py-2">
+                  Creating voice node...
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Existing audio display */}
+        {hasAudio && !showRecordingUI && (
           <div className="space-y-2">
             <div className="rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-3">
               <audio
@@ -307,186 +419,58 @@ export function VoiceNode({ id, data }: NodeProps<VoiceNodeData>) {
                 )}
               </div>
             )}
-            <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
-              <button
-                onClick={(event) => {
-                  stopPropagation(event);
-                  resetNode();
-                }}
-                className="rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#6B7280] hover:border-[#8B5CF6] hover:text-[#8B5CF6]"
-              >
-                Replace audio
-              </button>
-              {(data.transcriptStatus === 'error' || data.transcriptStatus === 'success') && (
-                <button
-                  onClick={handleRetranscribe}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#E0E7FF] bg-[#EEF2FF] px-3 py-1 text-[#4338CA] hover:bg-[#E0E7FF]"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Re-transcribe
-                </button>
-              )}
-              {hasTranscript && (
-                <button
-                  onClick={downloadTranscript}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21]"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Export transcript
-                </button>
-              )}
-              {hasAudio && (
-                <button
-                  onClick={downloadAudio}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21]"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Save audio
-                </button>
-              )}
-            </div>
-          </div>
-        ) : mode === 'choose' ? (
-          <div className="space-y-2">
-            <button
-              onClick={() => setMode('record')}
-              onMouseDown={stopPropagation}
-              className="w-full p-4 border border-dashed border-[#E5E7EB] rounded hover:border-[#8B5CF6] hover:bg-[#F5F5F7] transition text-center"
-            >
-              <Mic className="h-8 w-8 text-[#8B5CF6] mx-auto mb-1" />
-              <div className="text-[11px] text-[#6B7280]">Record audio</div>
-            </button>
-            <button
-              onClick={() => setMode('upload')}
-              onMouseDown={stopPropagation}
-              className="w-full p-4 border border-dashed border-[#E5E7EB] rounded hover:border-[#8B5CF6] hover:bg-[#F5F5F7] transition text-center"
-            >
-              <Upload className="h-8 w-8 text-[#8B5CF6] mx-auto mb-1" />
-              <div className="text-[11px] text-[#6B7280]">Upload file or URL</div>
-            </button>
-          </div>
-        ) : mode === 'record' ? (
-          <div className="space-y-2">
-            {!isRecording ? (
-              <button
-                onClick={startRecording}
-                onMouseDown={stopPropagation}
-                className="w-full p-5 bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] text-white rounded-lg hover:from-[#7C3AED] hover:to-[#6D28D9] active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                <div className="flex flex-col items-center gap-2">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-white rounded-full opacity-20 animate-pulse" />
-                    <Mic className="h-8 w-8 relative" />
-                  </div>
-                  <div className="text-[13px] font-semibold tracking-wide">Start Recording</div>
-                </div>
-              </button>
-            ) : (
-              <div className="space-y-3">
-                <div className="relative p-6 bg-gradient-to-br from-[#EF4444] to-[#DC2626] rounded-lg overflow-hidden">
-                  {/* Animated background waves */}
-                  <div className="absolute inset-0 opacity-20">
-                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-white rounded-full blur-2xl animate-pulse" style={{ animationDuration: '2s' }} />
-                    <div className="absolute bottom-0 left-0 right-0 h-20 bg-white rounded-full blur-3xl animate-pulse" style={{ animationDuration: '3s', animationDelay: '0.5s' }} />
-                  </div>
-
-                  <div className="relative flex flex-col items-center justify-center gap-3">
-                    {/* Pulsing concentric circles */}
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-white rounded-full opacity-20 animate-ping" />
-                      <div className="absolute inset-0 bg-white rounded-full opacity-30 animate-pulse" />
-                      <div className="relative w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                        <Mic className="h-8 w-8 text-[#EF4444]" />
-                      </div>
-                    </div>
-
-                    {/* Audio level bars */}
-                    <div className="flex items-center gap-1">
-                      {barHeights.map((height, i) => (
-                        <div
-                          key={i}
-                          className="w-1 bg-white rounded-full"
-                          style={{
-                            height: `${height}px`,
-                            animation: `pulse 0.7s ease-in-out infinite`,
-                            animationDelay: `${i * 0.15}s`
-                          }}
-                        />
-                      ))}
-                    </div>
-
-                    <span className="text-[13px] font-semibold text-white tracking-wide">Recording...</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={stopRecording}
-                  onMouseDown={stopPropagation}
-                  className="w-full p-3 bg-[#1A1D21] text-white rounded-lg hover:bg-[#000000] active:scale-95 transition-all duration-150 flex items-center justify-center gap-2 shadow-lg"
-                >
-                  <div className="w-4 h-4 bg-white rounded-sm" />
-                  <span className="text-[12px] font-medium">Stop Recording</span>
-                </button>
+            {(hasTranscript || hasAudio) && (
+              <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
+                {hasTranscript && (
+                  <button
+                    onClick={downloadTranscript}
+                    className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21]"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export transcript
+                  </button>
+                )}
+                {hasAudio && (
+                  <button
+                    onClick={downloadAudio}
+                    className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21]"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Save audio
+                  </button>
+                )}
               </div>
             )}
-            <button
-              onClick={() => setMode('choose')}
-              onMouseDown={stopPropagation}
-              className="w-full text-[11px] text-[#6B7280] hover:text-[#1A1D21] transition"
-            >
-              Back
-            </button>
           </div>
-        ) : mode === 'upload' ? (
-          <div className="space-y-2">
-            <input
-              type="file"
-              accept="audio/*"
-              onChange={handleFileUpload}
-              className="hidden"
-              id={`audio-upload-${id}`}
-            />
-            <label
-              htmlFor={`audio-upload-${id}`}
-              onMouseDown={stopPropagation}
-              className="block w-full p-4 border border-dashed border-[#E5E7EB] rounded hover:border-[#8B5CF6] hover:bg-[#F5F5F7] transition text-center cursor-pointer"
-            >
-              <Upload className="h-8 w-8 text-[#8B5CF6] mx-auto mb-1" />
-              <div className="text-[11px] text-[#6B7280]">Choose file</div>
-            </label>
-            <div className="text-[11px] text-[#9CA3AF] text-center">or</div>
-            <input
-              ref={inputRef}
-              type="text"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleUrlSave();
-                if (e.key === 'Escape') setMode('choose');
-              }}
-              placeholder="Paste audio URL..."
-              className="w-full px-3 py-2 text-[12px] border border-[#E5E7EB] rounded focus:outline-none focus:border-[#8B5CF6]"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => setMode('choose')}
-                onMouseDown={stopPropagation}
-                className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded transition"
-              >
-                Back
-              </button>
-              <button
-                onClick={handleUrlSave}
-                onMouseDown={stopPropagation}
-                disabled={!url.trim()}
-                className="flex-1 px-3 py-2 text-[11px] bg-[#8B5CF6] text-white rounded hover:bg-[#7C3AED] disabled:opacity-40 disabled:cursor-not-allowed transition"
-              >
-                Add URL
-              </button>
-            </div>
-          </div>
-        ) : null}
+        )}
+
+        {/* Initial state - click to record */}
+        {!hasAudio && !showRecordingUI && (
+          <button
+            onClick={handleStartRecording}
+            onMouseDown={stopPropagation}
+            className="w-full p-4 border-2 border-dashed border-[#E5E7EB] rounded-lg hover:border-[#8B5CF6] hover:bg-[#F5F5F7] transition-all group"
+          >
+            <Mic className="h-8 w-8 text-[#8B5CF6] mx-auto mb-2 group-hover:scale-110 transition-transform" />
+            <div className="text-[12px] font-medium text-[#1A1D21] mb-1">Click to Record</div>
+            <div className="text-[10px] text-[#6B7280]">Live transcription with Deepgram</div>
+          </button>
+        )}
+
+        <AIInstructionsInline
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<VoiceNodeData>)}
+          nodeId={id}
+          nodeType="voice"
+        />
       </div>
+
+      <style jsx>{`
+        @keyframes waveform {
+          0%, 100% { height: 20%; }
+          50% { height: 80%; }
+        }
+      `}</style>
     </BaseNode>
   );
 }

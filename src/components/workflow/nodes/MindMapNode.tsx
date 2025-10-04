@@ -4,6 +4,7 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { MindMapNodeData } from '@/types/workflow';
+import { AIInstructionsInline } from './AIInstructionsInline';
 
 export function MindMapNode({ id, data }: NodeProps<MindMapNodeData>) {
   const [isEditing, setIsEditing] = useState(false);
@@ -27,6 +28,13 @@ export function MindMapNode({ id, data }: NodeProps<MindMapNodeData>) {
     setIsEditing(false);
   };
 
+  useEffect(() => {
+    if (!isEditing) {
+      setConcept(data.concept || '');
+      setNotes(data.notes || '');
+    }
+  }, [data.concept, data.notes, isEditing]);
+
   return (
     <BaseNode id={id}>
       <div className="space-y-2 w-[240px]">
@@ -41,6 +49,7 @@ export function MindMapNode({ id, data }: NodeProps<MindMapNodeData>) {
               type="text"
               value={concept}
               onChange={(e) => setConcept(e.target.value)}
+              onBlur={handleSave}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSave();
                 if (e.key === 'Escape') { setConcept(data.concept || ''); setIsEditing(false); }
@@ -76,6 +85,12 @@ export function MindMapNode({ id, data }: NodeProps<MindMapNodeData>) {
             )}
           </div>
         )}
+        <AIInstructionsInline
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<MindMapNodeData>)}
+          nodeId={id}
+          nodeType="mindmap"
+        />
       </div>
     </BaseNode>
   );

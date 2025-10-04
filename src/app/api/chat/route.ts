@@ -48,24 +48,41 @@ export async function POST(req: NextRequest) {
     // Add text context
     if (textContext && textContext.length > 0) {
       systemContext += '\n\n=== Text Content ===\n';
-      textContext.forEach((text: string, index: number) => {
-        systemContext += `\n[Text ${index + 1}]:\n${text}\n`;
+      textContext.forEach((item: { content: string; aiInstructions?: string } | string, index: number) => {
+        try {
+          systemContext += `\n[Text ${index + 1}]:\n`;
+          if (typeof item === 'object' && item.aiInstructions) {
+            systemContext += `📝 AI Processing Instructions: ${item.aiInstructions}\n\n`;
+          }
+          const content = typeof item === 'string' ? item : item.content;
+          systemContext += `${content}\n`;
+        } catch (error) {
+          console.error(`[Context] Error processing text item ${index}:`, error);
+        }
       });
     }
 
     // Add YouTube transcripts
     if (youtubeTranscripts && youtubeTranscripts.length > 0) {
       systemContext += '\n\n=== YouTube Videos ===\n';
-      youtubeTranscripts.forEach((video: any, index: number) => {
-        if (video.transcript && video.status === 'success') {
-          const method = video.method === 'deepgram' ? '🎙️ Deepgram' : '📝 Captions';
-          systemContext += `\n[Video ${index + 1} - ${video.url}]:\nTranscript (${method}):\n${video.transcript}\n`;
-        } else if (video.status === 'loading') {
-          systemContext += `\n[Video ${index + 1} - ${video.url}]: Transcription in progress...\n`;
-        } else if (video.status === 'unavailable') {
-          systemContext += `\n[Video ${index + 1} - ${video.url}]: No captions available\n`;
-        } else if (video.status === 'error') {
-          systemContext += `\n[Video ${index + 1} - ${video.url}]: Transcription failed\n`;
+      youtubeTranscripts.forEach((video: { url?: string; transcript?: string; status: string; method?: string; aiInstructions?: string }, index: number) => {
+        try {
+          if (video.transcript && video.status === 'success') {
+            const method = video.method === 'deepgram' ? '🎙️ Deepgram' : '📝 Captions';
+            systemContext += `\n[Video ${index + 1} - ${video.url}]:\n`;
+            if (video.aiInstructions) {
+              systemContext += `📝 AI Processing Instructions: ${video.aiInstructions}\n\n`;
+            }
+            systemContext += `Transcript (${method}):\n${video.transcript}\n`;
+          } else if (video.status === 'loading') {
+            systemContext += `\n[Video ${index + 1} - ${video.url}]: Transcription in progress...\n`;
+          } else if (video.status === 'unavailable') {
+            systemContext += `\n[Video ${index + 1} - ${video.url}]: No captions available\n`;
+          } else if (video.status === 'error') {
+            systemContext += `\n[Video ${index + 1} - ${video.url}]: Transcription failed\n`;
+          }
+        } catch (error) {
+          console.error(`[Context] Error processing YouTube item ${index}:`, error);
         }
       });
     }
@@ -73,14 +90,22 @@ export async function POST(req: NextRequest) {
     // Add voice transcripts
     if (voiceTranscripts && voiceTranscripts.length > 0) {
       systemContext += '\n\n=== Voice Recordings ===\n';
-      voiceTranscripts.forEach((voice: any, index: number) => {
-        if (voice.transcript && voice.status === 'success') {
-          const duration = voice.duration ? ` (${Math.round(voice.duration)}s)` : '';
-          systemContext += `\n[Voice ${index + 1}${duration}]:\n${voice.transcript}\n`;
-        } else if (voice.status === 'transcribing') {
-          systemContext += `\n[Voice ${index + 1}]: Transcription in progress...\n`;
-        } else if (voice.status === 'error') {
-          systemContext += `\n[Voice ${index + 1}]: Transcription failed\n`;
+      voiceTranscripts.forEach((voice: { transcript?: string; status: string; duration?: number; aiInstructions?: string }, index: number) => {
+        try {
+          if (voice.transcript && voice.status === 'success') {
+            const duration = voice.duration ? ` (${Math.round(voice.duration)}s)` : '';
+            systemContext += `\n[Voice ${index + 1}${duration}]:\n`;
+            if (voice.aiInstructions) {
+              systemContext += `📝 AI Processing Instructions: ${voice.aiInstructions}\n\n`;
+            }
+            systemContext += `${voice.transcript}\n`;
+          } else if (voice.status === 'transcribing') {
+            systemContext += `\n[Voice ${index + 1}]: Transcription in progress...\n`;
+          } else if (voice.status === 'error') {
+            systemContext += `\n[Voice ${index + 1}]: Transcription failed\n`;
+          }
+        } catch (error) {
+          console.error(`[Context] Error processing voice item ${index}:`, error);
         }
       });
     }
@@ -88,24 +113,31 @@ export async function POST(req: NextRequest) {
     // Add PDF documents
     if (pdfDocuments && pdfDocuments.length > 0) {
       systemContext += '\n\n=== PDF Documents ===\n';
-      pdfDocuments.forEach((pdf: any, index: number) => {
-        if (pdf.status === 'success') {
-          const fileName = pdf.fileName || `Document ${index + 1}`;
-          systemContext += `\n[${fileName}]:\n`;
+      pdfDocuments.forEach((pdf: { fileName?: string; parsedText?: string; segments?: Array<{ content: string; heading?: string }>; status: string; aiInstructions?: string }, index: number) => {
+        try {
+          if (pdf.status === 'success') {
+            const fileName = pdf.fileName || `Document ${index + 1}`;
+            systemContext += `\n[${fileName}]:\n`;
+            if (pdf.aiInstructions) {
+              systemContext += `📝 AI Processing Instructions: ${pdf.aiInstructions}\n\n`;
+            }
 
-          if (pdf.segments && pdf.segments.length > 0) {
-            pdf.segments.forEach((segment: any) => {
-              if (segment.heading) {
-                systemContext += `\n## ${segment.heading}\n${segment.content}\n`;
-              } else {
-                systemContext += `${segment.content}\n`;
-              }
-            });
-          } else if (pdf.parsedText) {
-            systemContext += `${pdf.parsedText}\n`;
+            if (pdf.segments && pdf.segments.length > 0) {
+              pdf.segments.forEach((segment: { content: string; heading?: string }) => {
+                if (segment.heading) {
+                  systemContext += `\n## ${segment.heading}\n${segment.content}\n`;
+                } else {
+                  systemContext += `${segment.content}\n`;
+                }
+              });
+            } else if (pdf.parsedText) {
+              systemContext += `${pdf.parsedText}\n`;
+            }
+          } else if (pdf.status === 'parsing') {
+            systemContext += `\n[${pdf.fileName || `Document ${index + 1}`}]: Parsing in progress...\n`;
           }
-        } else if (pdf.status === 'parsing') {
-          systemContext += `\n[${pdf.fileName || `Document ${index + 1}`}]: Parsing in progress...\n`;
+        } catch (error) {
+          console.error(`[Context] Error processing PDF item ${index}:`, error);
         }
       });
     }
@@ -113,23 +145,30 @@ export async function POST(req: NextRequest) {
     // Add images
     if (images && images.length > 0) {
       systemContext += '\n\n=== Images ===\n';
-      images.forEach((image: any, index: number) => {
-        if (image.status === 'success') {
-          systemContext += `\n[Image ${index + 1}]:\n`;
-          if (image.caption) {
-            systemContext += `Caption: ${image.caption}\n`;
+      images.forEach((image: { caption?: string; description?: string; ocrText?: string; tags?: string[]; status: string; aiInstructions?: string }, index: number) => {
+        try {
+          if (image.status === 'success') {
+            systemContext += `\n[Image ${index + 1}]:\n`;
+            if (image.aiInstructions) {
+              systemContext += `📝 AI Processing Instructions: ${image.aiInstructions}\n\n`;
+            }
+            if (image.caption) {
+              systemContext += `Caption: ${image.caption}\n`;
+            }
+            if (image.description) {
+              systemContext += `AI Description: ${image.description}\n`;
+            }
+            if (image.ocrText) {
+              systemContext += `Text from image: ${image.ocrText}\n`;
+            }
+            if (image.tags && image.tags.length > 0) {
+              systemContext += `Tags: ${image.tags.join(', ')}\n`;
+            }
+          } else if (image.status === 'analyzing') {
+            systemContext += `\n[Image ${index + 1}]: Analysis in progress...\n`;
           }
-          if (image.description) {
-            systemContext += `AI Description: ${image.description}\n`;
-          }
-          if (image.ocrText) {
-            systemContext += `Text from image: ${image.ocrText}\n`;
-          }
-          if (image.tags && image.tags.length > 0) {
-            systemContext += `Tags: ${image.tags.join(', ')}\n`;
-          }
-        } else if (image.status === 'analyzing') {
-          systemContext += `\n[Image ${index + 1}]: Analysis in progress...\n`;
+        } catch (error) {
+          console.error(`[Context] Error processing image item ${index}:`, error);
         }
       });
     }
@@ -137,17 +176,24 @@ export async function POST(req: NextRequest) {
     // Add webpages
     if (webpages && webpages.length > 0) {
       systemContext += '\n\n=== Web Pages ===\n';
-      webpages.forEach((webpage: any, index: number) => {
-        if (webpage.status === 'success') {
-          systemContext += `\n[${webpage.pageTitle || webpage.url}]:\n`;
-          if (webpage.metadata?.description) {
-            systemContext += `Description: ${webpage.metadata.description}\n`;
+      webpages.forEach((webpage: { url?: string; pageTitle?: string; pageContent?: string; metadata?: { description?: string }; status: string; aiInstructions?: string }, index: number) => {
+        try {
+          if (webpage.status === 'success') {
+            systemContext += `\n[${webpage.pageTitle || webpage.url}]:\n`;
+            if (webpage.aiInstructions) {
+              systemContext += `📝 AI Processing Instructions: ${webpage.aiInstructions}\n\n`;
+            }
+            if (webpage.metadata?.description) {
+              systemContext += `Description: ${webpage.metadata.description}\n`;
+            }
+            if (webpage.pageContent) {
+              systemContext += `Content:\n${webpage.pageContent}\n`;
+            }
+          } else if (webpage.status === 'scraping') {
+            systemContext += `\n[${webpage.url}]: Scraping in progress...\n`;
           }
-          if (webpage.pageContent) {
-            systemContext += `Content:\n${webpage.pageContent}\n`;
-          }
-        } else if (webpage.status === 'scraping') {
-          systemContext += `\n[${webpage.url}]: Scraping in progress...\n`;
+        } catch (error) {
+          console.error(`[Context] Error processing webpage item ${index}:`, error);
         }
       });
     }
@@ -155,13 +201,20 @@ export async function POST(req: NextRequest) {
     // Add mind maps
     if (mindMaps && mindMaps.length > 0) {
       systemContext += '\n\n=== Mind Maps / Ideas ===\n';
-      mindMaps.forEach((mindMap: any, index: number) => {
-        systemContext += `\n[Concept ${index + 1}]: ${mindMap.concept}\n`;
-        if (mindMap.notes) {
-          systemContext += `Notes: ${mindMap.notes}\n`;
-        }
-        if (mindMap.tags && mindMap.tags.length > 0) {
-          systemContext += `Tags: ${mindMap.tags.join(', ')}\n`;
+      mindMaps.forEach((mindMap: { concept: string; notes?: string; tags?: string[]; aiInstructions?: string }, index: number) => {
+        try {
+          systemContext += `\n[Concept ${index + 1}]: ${mindMap.concept}\n`;
+          if (mindMap.aiInstructions) {
+            systemContext += `📝 AI Processing Instructions: ${mindMap.aiInstructions}\n\n`;
+          }
+          if (mindMap.notes) {
+            systemContext += `Notes: ${mindMap.notes}\n`;
+          }
+          if (mindMap.tags && mindMap.tags.length > 0) {
+            systemContext += `Tags: ${mindMap.tags.join(', ')}\n`;
+          }
+        } catch (error) {
+          console.error(`[Context] Error processing mindmap item ${index}:`, error);
         }
       });
     }
@@ -169,11 +222,19 @@ export async function POST(req: NextRequest) {
     // Add templates
     if (templates && templates.length > 0) {
       systemContext += '\n\n=== Generated Content ===\n';
-      templates.forEach((template: any, index: number) => {
-        if (template.status === 'success' && template.generatedContent) {
-          systemContext += `\n[${template.templateType} - Generated ${index + 1}]:\n${template.generatedContent}\n`;
-        } else if (template.status === 'generating') {
-          systemContext += `\n[${template.templateType}]: Generating...\n`;
+      templates.forEach((template: { templateType: string; generatedContent?: string; status: string; aiInstructions?: string }, index: number) => {
+        try {
+          if (template.status === 'success' && template.generatedContent) {
+            systemContext += `\n[${template.templateType} - Generated ${index + 1}]:\n`;
+            if (template.aiInstructions) {
+              systemContext += `📝 AI Processing Instructions: ${template.aiInstructions}\n\n`;
+            }
+            systemContext += `${template.generatedContent}\n`;
+          } else if (template.status === 'generating') {
+            systemContext += `\n[${template.templateType}]: Generating...\n`;
+          }
+        } catch (error) {
+          console.error(`[Context] Error processing template item ${index}:`, error);
         }
       });
     }
@@ -181,12 +242,19 @@ export async function POST(req: NextRequest) {
     // Add group chats
     if (groupChats && groupChats.length > 0) {
       systemContext += '\n\n=== Group Conversations ===\n';
-      groupChats.forEach((group: any, index: number) => {
-        systemContext += `\n[Group ${index + 1} - ${group.groupedNodesCount} nodes]:\n`;
-        if (group.messages && group.messages.length > 0) {
-          group.messages.forEach((msg: string) => {
-            systemContext += `${msg}\n`;
-          });
+      groupChats.forEach((group: { groupedNodesCount: number; messages?: string[]; aiInstructions?: string }, index: number) => {
+        try {
+          systemContext += `\n[Group ${index + 1} - ${group.groupedNodesCount} nodes]:\n`;
+          if (group.aiInstructions) {
+            systemContext += `📝 AI Processing Instructions: ${group.aiInstructions}\n\n`;
+          }
+          if (group.messages && group.messages.length > 0) {
+            group.messages.forEach((msg: string) => {
+              systemContext += `${msg}\n`;
+            });
+          }
+        } catch (error) {
+          console.error(`[Context] Error processing group chat item ${index}:`, error);
         }
       });
     }
@@ -245,8 +313,8 @@ User question: ${latestMessage.content}`;
           controller.enqueue(encoder.encode(`data: ${finalData}\n\n`));
 
           controller.close();
-        } catch (error: any) {
-          const errorData = JSON.stringify({ error: error.message });
+        } catch (error: unknown) {
+          const errorData = JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' });
           controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
           controller.close();
         }
@@ -261,12 +329,12 @@ User question: ${latestMessage.content}`;
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Chat API Error:', error);
     return new Response(
       JSON.stringify({
-        error: error.message || 'Failed to generate response',
-        details: error.toString(),
+        error: error instanceof Error ? error.message : 'Failed to generate response',
+        details: error instanceof Error ? error.toString() : String(error),
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );

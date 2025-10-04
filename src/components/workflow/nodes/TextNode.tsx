@@ -2,6 +2,7 @@ import { Type } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
+import { AIInstructionsInline } from './AIInstructionsInline';
 import type { TextNodeData } from '@/types/workflow';
 
 interface TextNodeProps {
@@ -34,6 +35,12 @@ export function TextNode({ id, data }: TextNodeProps) {
     }
   };
 
+  useEffect(() => {
+    if (!isEditing) {
+      setContent(data.content || '');
+    }
+  }, [data.content, isEditing]);
+
   return (
     <BaseNode id={id}>
       <div className="space-y-2 w-[280px]">
@@ -65,6 +72,13 @@ export function TextNode({ id, data }: TextNodeProps) {
             )}
           </div>
         )}
+
+        <AIInstructionsInline
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<TextNodeData>)}
+          nodeId={id}
+          nodeType="text"
+        />
       </div>
     </BaseNode>
   );

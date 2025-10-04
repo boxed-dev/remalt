@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { WorkflowCanvas } from '@/components/workflow/WorkflowCanvas';
 import { WorkflowSidebar } from '@/components/workflow/WorkflowSidebar';
-import { WorkflowToolbar } from '@/components/workflow/WorkflowToolbar';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -22,13 +21,14 @@ export default function WorkflowEditorPage() {
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const workflow = useWorkflowStore((state) => state.workflow);
   const createWorkflow = useWorkflowStore((state) => state.createWorkflow);
   const loadWorkflow = useWorkflowStore((state) => state.loadWorkflow);
   const selectedNodes = useWorkflowStore((state) => state.selectedNodes);
-  const deleteNodes = useWorkflowStore((state) => state.deleteNodes);
   const copyNodes = useWorkflowStore((state) => state.copyNodes);
   const duplicateNode = useWorkflowStore((state) => state.duplicateNode);
+  const addNode = useWorkflowStore((state) => state.addNode);
+  const undo = useWorkflowStore((state) => state.undo);
+  const redo = useWorkflowStore((state) => state.redo);
 
   // Debug user state
   useEffect(() => {
@@ -45,6 +45,25 @@ export default function WorkflowEditorPage() {
     autoSaveDelay: 2000,
     userId: user?.id || null,
   });
+
+  // Handle visibility changes (tab switching)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Force re-render when tab becomes visible
+        const state = useWorkflowStore.getState();
+        if (state.workflow) {
+          // Touch the workflow to trigger re-render
+          state.loadWorkflow(state.workflow);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // Load workflow from Supabase
   useEffect(() => {
@@ -70,9 +89,9 @@ export default function WorkflowEditorPage() {
         } else {
           setLoadError('Workflow not found');
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error('Failed to load workflow:', error);
-        setLoadError(error.message || 'Failed to load workflow');
+        setLoadError(error instanceof Error ? error.message : 'Failed to load workflow');
       } finally {
         setLoadingWorkflow(false);
       }
@@ -86,6 +105,14 @@ export default function WorkflowEditorPage() {
     'mod+s': () => {
       // Manual save
       saveWorkflow();
+    },
+    'mod+z': () => {
+      // Undo
+      undo();
+    },
+    'mod+shift+z': () => {
+      // Redo
+      redo();
     },
     'mod+d': () => {
       // Duplicate selected node
@@ -104,6 +131,27 @@ export default function WorkflowEditorPage() {
       if (selectedNodes.length > 0) {
         useWorkflowStore.getState().clearSelection();
       }
+    },
+    // Add node shortcuts
+    'c': () => addNode('chat', { x: 100, y: 100 }),
+    's': () => addNode('template', { x: 100, y: 100 }),
+    'r': () => addNode('voice', { x: 100, y: 100 }),
+    'i': () => addNode('image', { x: 100, y: 100 }),
+    't': () => addNode('text', { x: 100, y: 100 }),
+    'a': () => addNode('connector', { x: 100, y: 100 }),
+    'w': () => addNode('webpage', { x: 100, y: 100 }),
+    'm': () => addNode('mindmap', { x: 100, y: 100 }),
+    'd': () => addNode('pdf', { x: 100, y: 100 }),
+    'g': () => addNode('group', { x: 100, y: 100 }),
+    // Zoom shortcuts
+    '=': () => {
+      // Will be handled by ReactFlow controls
+    },
+    '-': () => {
+      // Will be handled by ReactFlow controls
+    },
+    '1': () => {
+      // Will be handled by ReactFlow controls
     },
   });
 
@@ -143,15 +191,13 @@ export default function WorkflowEditorPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[#FAFBFC]">
-      <WorkflowToolbar />
+    <div className="h-screen flex bg-[#FAFBFC]" style={{ visibility: 'visible' }}>
+      {/* Left Sidebar - Fixed */}
+      <WorkflowSidebar />
 
-      {/* Canvas Area */}
-      <div className="flex-1 flex overflow-hidden">
-        <WorkflowSidebar />
-        <div className="flex-1">
-          <WorkflowCanvas />
-        </div>
+      {/* Main Canvas Area - Takes remaining space (toolbar is inside canvas) */}
+      <div className="flex-1 pl-14" style={{ visibility: 'visible' }}>
+        <WorkflowCanvas />
       </div>
     </div>
   );

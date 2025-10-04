@@ -19,6 +19,9 @@ npm start
 
 # Run linter
 npm run lint
+
+# Python API for YouTube transcription (separate terminal)
+python transcript_api.py 5001
 ```
 
 ## Architecture Overview
@@ -36,6 +39,7 @@ npm run lint
 - **Database**: Supabase PostgreSQL with Row Level Security
 - **AI Integration**: Google Generative AI (Gemini 2.5 Flash)
 - **Transcription**: Deepgram SDK + Python API (youtube_transcript_api)
+- **Web Scraping**: Jina AI Reader (free, no API key required)
 - **Layout**: ELK.js for automatic graph layout
 
 ### Project Structure
@@ -117,7 +121,7 @@ supabase/
 - `connector` - Define relationships between nodes (workflow, reference, dependency, custom)
 - `group` - Group multiple nodes with optional unified chat over all grouped content
 
-**State Management**: Zustand store (`workflow-store.ts`) manages:
+**State Management**: Zustand store ([workflow-store.ts](src/lib/stores/workflow-store.ts)) manages:
 - Workflow CRUD operations (create, load, update, clear)
 - Node operations (add, update, delete, duplicate, move)
 - Edge operations (add, update, delete)
@@ -210,7 +214,7 @@ supabase/
 - Template → generated content
 - Chat → previous conversation history
 - Group → aggregated context from all grouped nodes
-- Context builder (`context-builder.ts`) assembles all incoming context
+- Context builder ([context-builder.ts](src/lib/workflow/context-builder.ts)) assembles all incoming context
 - Chat API streams responses with full context awareness
 
 ### API Routes
@@ -239,7 +243,24 @@ supabase/
 
 **`/api/webpage/analyze` (POST)**: Webpage scraping endpoint
 - Accepts: `url`
-- Returns: `title`, `content`, `metadata`, `images`, `links`
+- Uses Jina AI Reader with automatic fallback to direct HTML fetch
+- Rate limits: 20 RPM (no key) or 200 RPM (with `JINA_API_KEY`)
+- Returns: `pageTitle`, `pageContent` (markdown), `summary`, `keyPoints`, `metadata`
+- Fallback ensures 100% uptime even if Jina is down
+
+**`/api/webpage/preview` (POST)**: Webpage metadata preview endpoint
+- Accepts: `url`
+- Extracts Open Graph meta tags from HTML
+- Auto-generates screenshot if no og:image available (via `/api/webpage/screenshot`)
+- Returns: `title`, `description`, `imageUrl`, `themeColor`
+
+**`/api/webpage/screenshot` (POST)**: Enterprise screenshot generation endpoint
+- Accepts: `url`
+- Multi-provider fallback architecture (5 providers)
+- Priority: ScreenshotOne > ApiFlash > Urlbox > ScreenshotAPI > Microlink
+- Automatic failover if provider unavailable/rate-limited
+- Returns: `success`, `imageUrl` (base64 or CDN URL), `provider`, `cached`
+- See `SCREENSHOT_SETUP.md` for configuration details
 
 **`/api/pdf/parse` (POST)**: PDF parsing endpoint
 - Accepts: `pdfUrl` or `pdfData`
@@ -257,6 +278,23 @@ GEMINI_API_KEY=                     # Google Gemini API key for AI chat/vision
 # Transcription Services (OPTIONAL)
 DEEPGRAM_API_KEY=                   # Deepgram API key for voice transcription
 PYTHON_API_URL=                     # Python API URL, defaults to http://localhost:5001
+
+# Web Scraping (OPTIONAL API KEY)
+# Jina AI Reader API key - optional but recommended to avoid rate limits
+# Without key: 20 requests/minute | With key: 200 requests/minute
+# Get free key at: https://jina.ai/reader/
+JINA_API_KEY=                       # Optional: Jina AI Reader API key for higher rate limits
+
+# Screenshot Services (OPTIONAL - at least one recommended)
+# Multi-provider fallback: priority order listed below
+# Microlink works without API key (fallback with rate limits)
+# See SCREENSHOT_SETUP.md for detailed setup instructions
+
+SCREENSHOTONE_API_KEY=              # ScreenshotOne (Priority 1) - Best quality
+APIFLASH_API_KEY=                   # ApiFlash (Priority 2) - Excellent reliability
+SCREENSHOTAPI_API_KEY=              # ScreenshotAPI (Priority 3) - Good quality
+URLBOX_API_KEY=                     # Urlbox (Priority 2) - Fast, generous free tier
+URLBOX_SECRET=                      # Urlbox secret for API signing
 ```
 
 ### Path Aliases
@@ -268,28 +306,28 @@ PYTHON_API_URL=                     # Python API URL, defaults to http://localho
 ### Key Patterns
 
 **Authentication Flow**:
-- Use `createServerClient()` from `@/lib/supabase/server` in Server Components and Route Handlers
-- Use `createClient()` from `@/lib/supabase/client` in Client Components
-- Middleware (`src/middleware.ts`) protects routes by checking auth status
+- Use `createServerClient()` from [src/lib/supabase/server.ts](src/lib/supabase/server.ts) in Server Components and Route Handlers
+- Use `createClient()` from [src/lib/supabase/client.ts](src/lib/supabase/client.ts) in Client Components
+- Middleware ([src/middleware.ts](src/middleware.ts)) protects routes by checking auth status
 - User profile automatically created via database trigger on signup
 - OAuth providers (Google) configured in Supabase dashboard
 
 **Workflow Persistence**:
-- `useWorkflowPersistence` hook handles auto-save with 2-second debouncing
-- Manual save triggered by Cmd/Ctrl+S via `use-keyboard-shortcuts` hook
-- All workflow operations go through `src/lib/supabase/workflows.ts`
+- [useWorkflowPersistence](src/hooks/use-workflow-persistence.ts) hook handles auto-save with 2-second debouncing
+- Manual save triggered by Cmd/Ctrl+S via [use-keyboard-shortcuts](src/hooks/use-keyboard-shortcuts.ts) hook
+- All workflow operations go through [src/lib/supabase/workflows.ts](src/lib/supabase/workflows.ts)
 - Upsert pattern used to handle both create and update seamlessly
 - Row Level Security (RLS) ensures users can only access their own workflows
 
-**Node Data Management**: Each node type has strongly-typed data interfaces defined in `workflow.ts`. The workflow store uses Immer middleware for immutable updates.
+**Node Data Management**: Each node type has strongly-typed data interfaces defined in [workflow.ts](src/types/workflow.ts). The workflow store uses Immer middleware for immutable updates.
 
-**Node Registry**: `node-registry.ts` provides metadata for all node types including labels, descriptions, colors, and default dimensions. Use `getNodeMetadata(type)` to access.
+**Node Registry**: [node-registry.ts](src/lib/workflow/node-registry.ts) provides metadata for all node types including labels, descriptions, colors, and default dimensions. Use `getNodeMetadata(type)` to access.
 
 **Type Safety**: All workflow operations are fully typed. The `NodeData` discriminated union ensures type safety when accessing node-specific data.
 
 **Context Building**: When a chat node sends a message, use `buildChatContext(chatNodeId, workflow)` to gather all text content and transcripts from connected nodes.
 
-**ID Generation**: Use `nanoid()` for workflow, node, and edge IDs. Use `crypto.randomUUID()` for Supabase-generated UUIDs (workflows table).
+**ID Generation**: Use `crypto.randomUUID()` for all IDs (workflows, nodes, edges). Consistent with Supabase-generated UUIDs.
 
 **Design Philosophy**:
 - Clean, minimal UI with focus on functionality
@@ -303,11 +341,11 @@ PYTHON_API_URL=                     # Python API URL, defaults to http://localho
 ## Development Notes
 
 ### Database & Authentication
-- **Supabase Setup**: Run `supabase/schema.sql` in SQL Editor to create tables and RLS policies
+- **Supabase Setup**: Run [supabase/schema.sql](supabase/schema.sql) in SQL Editor to create tables and RLS policies
 - **Auto-save System**: 2-second debounce prevents excessive writes, status shown in UI
 - **RLS Policies**: Users can only read/write their own workflows via `auth.uid() = user_id` checks
 - **Profile Creation**: Automatic via database trigger when new user signs up
-- **Protected Routes**: Middleware redirects unauthenticated users to `/auth/signin`
+- **Protected Routes**: Middleware redirects unauthenticated users to [/auth/signin](src/app/auth/signin/page.tsx)
 
 ### Code Quality & Architecture
 - No test framework is currently configured

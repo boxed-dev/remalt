@@ -66,10 +66,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Extract transcript from Deepgram response
-    const transcript = transcriptionResult.results?.channels[0]?.alternatives[0]?.transcript || '';
-    const confidence = transcriptionResult.results?.channels[0]?.alternatives[0]?.confidence || 0;
-    const duration = transcriptionResult.metadata?.duration || 0;
-    const language = transcriptionResult.results?.channels[0]?.detected_language || 'en';
+    const transcript = transcriptionResult?.results?.channels[0]?.alternatives[0]?.transcript || '';
+    const confidence = transcriptionResult?.results?.channels[0]?.alternatives[0]?.confidence || 0;
+    const duration = transcriptionResult?.metadata?.duration || 0;
+    const language = transcriptionResult?.results?.channels[0]?.detected_language || 'en';
 
     console.log('[Deepgram] Transcription complete');
     console.log('  Transcript length:', transcript.length, 'chars');

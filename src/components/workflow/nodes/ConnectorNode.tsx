@@ -4,6 +4,7 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { ConnectorNodeData } from '@/types/workflow';
+import { AIInstructionsInline } from './AIInstructionsInline';
 
 export function ConnectorNode({ id, data }: NodeProps<ConnectorNodeData>) {
   const [isSelecting, setIsSelecting] = useState(false);
@@ -55,6 +56,12 @@ export function ConnectorNode({ id, data }: NodeProps<ConnectorNodeData>) {
             <div className="text-[12px] text-[#1A1D21]">{relationshipLabels[data.relationshipType]}</div>
           </div>
         )}
+        <AIInstructionsInline
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ConnectorNodeData>)}
+          nodeId={id}
+          nodeType="connector"
+        />
       </div>
     </BaseNode>
   );

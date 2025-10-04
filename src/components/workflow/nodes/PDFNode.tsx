@@ -2,6 +2,7 @@ import { FileText, Upload, Loader2, CheckCircle2, AlertCircle, RefreshCw, Chevro
 import { useState, useRef, useMemo } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
+import { AIInstructionsInline } from './AIInstructionsInline';
 import type { NodeProps } from '@xyflow/react';
 import type { PDFNodeData } from '@/types/workflow';
 
@@ -32,6 +33,9 @@ export function PDFNode({ id, data }: NodeProps<PDFNodeData>) {
       };
       reader.readAsDataURL(file);
       setMode('choose');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -87,6 +91,7 @@ export function PDFNode({ id, data }: NodeProps<PDFNodeData>) {
       const response = await fetch('/api/pdf/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(body),
       });
 
@@ -98,6 +103,7 @@ export function PDFNode({ id, data }: NodeProps<PDFNodeData>) {
           segments: result.segments,
           parseStatus: 'success',
           parseError: undefined,
+          file: undefined,
         } as Partial<PDFNodeData>);
       } else {
         updateNodeData(id, {
@@ -331,6 +337,13 @@ export function PDFNode({ id, data }: NodeProps<PDFNodeData>) {
             </div>
           </div>
         )}
+
+        <AIInstructionsInline
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<PDFNodeData>)}
+          nodeId={id}
+          nodeType="pdf"
+        />
       </div>
     </BaseNode>
   );

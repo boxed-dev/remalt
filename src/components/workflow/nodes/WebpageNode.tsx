@@ -5,6 +5,7 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { WebpageNodeData } from '@/types/workflow';
+import { AIInstructionsInline } from './AIInstructionsInline';
 
 const CACHE_TTL_MS = 1000 * 60 * 10; // 10 minutes
 
@@ -28,8 +29,6 @@ type CacheRecord<T> = {
 
 const previewCache = new Map<string, CacheRecord<WebpagePreviewData>>();
 const analysisCache = new Map<string, CacheRecord<WebpageAnalysisData>>();
-
-const ALLOWED_PREVIEW_IMAGE_HOST_SUFFIXES = ['microlink.io', 'img.youtube.com', 'i.ytimg.com'];
 
 function normalizeUrl(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -287,14 +286,10 @@ export function WebpageNode({ id, data }: NodeProps<WebpageNodeData>) {
         throw new Error(result.error || `Preview request failed with ${htmlResponse.status}`);
       }
 
-      const { title, description, imageUrl, imageUrlHost, themeColor } = await htmlResponse.json();
-
-      const sanitizedImageUrl = imageUrlHost && imageUrl
-        ? (ALLOWED_PREVIEW_IMAGE_HOST_SUFFIXES.some((suffix) => imageUrlHost === suffix || imageUrlHost.endsWith(`.${suffix}`)) ? imageUrl : undefined)
-        : undefined;
+      const { title, description, imageUrl, themeColor } = await htmlResponse.json();
 
       const previewData: WebpagePreviewData = {
-        imageUrl: sanitizedImageUrl,
+        imageUrl: typeof imageUrl === 'string' ? imageUrl : undefined,
         title,
         description,
         themeColor,
@@ -446,6 +441,7 @@ export function WebpageNode({ id, data }: NodeProps<WebpageNodeData>) {
                               sizes="(max-width: 320px) 100vw, 320px"
                               className="object-cover"
                               priority
+                              unoptimized
                             />
                           </div>
                         )}
@@ -535,6 +531,12 @@ export function WebpageNode({ id, data }: NodeProps<WebpageNodeData>) {
             <div className="text-[11px] text-[#9CA3AF]">Enter URL</div>
           </div>
         )}
+        <AIInstructionsInline
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<WebpageNodeData>)}
+          nodeId={id}
+          nodeType="webpage"
+        />
       </div>
     </BaseNode>
   );

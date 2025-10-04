@@ -83,6 +83,7 @@ export interface BaseNodeData {
   description?: string;
   disabled?: boolean;
   validationErrors?: string[];
+  aiInstructions?: string; // AI processing guidelines for this node
 }
 
 // PDF/Document Node
@@ -112,6 +113,9 @@ export interface VoiceNodeData extends BaseNodeData {
   transcriptStatus?: 'idle' | 'transcribing' | 'success' | 'error';
   transcriptError?: string;
   waveformData?: number[];
+  interimTranscript?: string; // Live partial transcript during recording
+  finalTranscripts?: string[]; // Array of completed utterances
+  isLiveRecording?: boolean; // Flag for active live recording
 }
 
 // YouTube Video Node

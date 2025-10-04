@@ -10,12 +10,36 @@ import type {
   Viewport
 } from '@/types/workflow';
 
+function deepClone<T>(value: T): T {
+  if (typeof globalThis.structuredClone === 'function') {
+    return globalThis.structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function removeNodeIdsFromGroups(nodes: WorkflowNode[], ids: string[]) {
+  nodes.forEach((node) => {
+    if (node.type === 'group' && 'groupedNodes' in node.data) {
+      const grouped = node.data.groupedNodes || [];
+      const filtered = grouped.filter((nodeId) => !ids.includes(nodeId));
+      if (filtered.length !== grouped.length) {
+        node.data.groupedNodes = filtered;
+      }
+    }
+  });
+}
+
 interface WorkflowStore {
   // State
   workflow: Workflow | null;
   selectedNodes: string[];
   selectedEdges: string[];
   clipboard: WorkflowNode[];
+
+  // History State
+  history: Workflow[];
+  historyIndex: number;
 
   // Persistence State
   isSaving: boolean;
@@ -69,6 +93,16 @@ interface WorkflowStore {
   getNode: (id: string) => WorkflowNode | undefined;
   getEdge: (id: string) => WorkflowEdge | undefined;
   getConnectedNodes: (nodeId: string) => WorkflowNode[];
+
+  // Recording Actions
+  createNodeFromRecording: (audioBlob: Blob, transcript: string, duration: number) => WorkflowNode;
+
+  // History Actions
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+  pushHistory: () => void;
 }
 
 const createDefaultWorkflow = (name: string, description?: string): Workflow => ({
@@ -150,6 +184,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
     selectedNodes: [],
     selectedEdges: [],
     clipboard: [],
+    history: [],
+    historyIndex: -1,
     isSaving: false,
     saveError: null,
     lastSaved: null,
@@ -207,10 +243,10 @@ export const useWorkflowStore = create<WorkflowStore>()(
           state.isSaving = false;
           state.lastSaved = new Date().toISOString();
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         set((state) => {
           state.isSaving = false;
-          state.saveError = error.message || 'Failed to save workflow';
+          state.saveError = error instanceof Error ? error.message : 'Failed to save workflow';
         });
       }
     },
@@ -227,6 +263,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
 
     // Node Actions
     addNode: (type, position, data) => {
+      const { pushHistory } = get();
+      pushHistory();
+
       const node: WorkflowNode = {
         id: crypto.randomUUID(),
         type,
@@ -288,12 +327,16 @@ export const useWorkflowStore = create<WorkflowStore>()(
             (e) => e.source !== id && e.target !== id
           );
           state.selectedNodes = state.selectedNodes.filter((nId) => nId !== id);
+          removeNodeIdsFromGroups(state.workflow.nodes, [id]);
           state.workflow.updatedAt = new Date().toISOString();
         }
       });
     },
 
     deleteNodes: (ids) => {
+      const { pushHistory } = get();
+      pushHistory();
+
       set((state) => {
         if (state.workflow) {
           state.workflow.nodes = state.workflow.nodes.filter((n) => !ids.includes(n.id));
@@ -301,6 +344,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
             (e) => !ids.includes(e.source) && !ids.includes(e.target)
           );
           state.selectedNodes = state.selectedNodes.filter((nId) => !ids.includes(nId));
+          removeNodeIdsFromGroups(state.workflow.nodes, ids);
           state.workflow.updatedAt = new Date().toISOString();
         }
       });
@@ -311,14 +355,15 @@ export const useWorkflowStore = create<WorkflowStore>()(
         if (state.workflow) {
           const original = state.workflow.nodes.find((n) => n.id === id);
           if (original) {
-            const duplicate: WorkflowNode = {
-              ...original,
-              id: crypto.randomUUID(),
-              position: {
-                x: original.position.x + 50,
-                y: original.position.y + 50,
-              },
+            const duplicate: WorkflowNode = deepClone(original);
+            duplicate.id = crypto.randomUUID();
+            duplicate.position = {
+              x: original.position.x + 50,
+              y: original.position.y + 50,
             };
+            if (duplicate.type === 'group' && 'groupedNodes' in duplicate.data) {
+              duplicate.data.groupedNodes = [];
+            }
             state.workflow.nodes.push(duplicate);
             state.workflow.updatedAt = new Date().toISOString();
           }
@@ -419,7 +464,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
     copyNodes: (ids) => {
       const { workflow } = get();
       if (workflow) {
-        const nodesToCopy = workflow.nodes.filter((n) => ids.includes(n.id));
+        const nodesToCopy = workflow.nodes
+          .filter((n) => ids.includes(n.id))
+          .map((node) => deepClone(node));
         set((state) => {
           state.clipboard = nodesToCopy;
         });
@@ -430,14 +477,18 @@ export const useWorkflowStore = create<WorkflowStore>()(
       set((state) => {
         if (state.workflow && state.clipboard.length > 0) {
           const offset = position ? position : { x: 50, y: 50 };
-          const newNodes = state.clipboard.map((node) => ({
-            ...node,
-            id: crypto.randomUUID(),
-            position: {
+          const newNodes = state.clipboard.map((node) => {
+            const clone = deepClone(node);
+            clone.id = crypto.randomUUID();
+            clone.position = {
               x: node.position.x + offset.x,
               y: node.position.y + offset.y,
-            },
-          }));
+            };
+            if (clone.type === 'group' && 'groupedNodes' in clone.data) {
+              clone.data.groupedNodes = [];
+            }
+            return clone;
+          });
           state.workflow.nodes.push(...newNodes);
           state.workflow.updatedAt = new Date().toISOString();
         }
@@ -457,12 +508,15 @@ export const useWorkflowStore = create<WorkflowStore>()(
     createGroup: (nodeIds, position) => {
       set((state) => {
         if (state.workflow) {
+          const existingIds = new Set(state.workflow.nodes.map((n) => n.id));
+          const uniqueIds = Array.from(new Set(nodeIds)).filter((nodeId) => existingIds.has(nodeId) && nodeId);
+
           const groupNode: WorkflowNode = {
             id: crypto.randomUUID(),
             type: 'group',
             position,
             data: {
-              groupedNodes: nodeIds,
+              groupedNodes: uniqueIds,
               collapsed: false,
               groupChatEnabled: true,
               groupChatMessages: [],
@@ -470,6 +524,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
           };
           state.workflow.nodes.push(groupNode);
           state.workflow.updatedAt = new Date().toISOString();
+          state.selectedNodes = [groupNode.id];
+          state.selectedEdges = [];
         }
       });
     },
@@ -479,8 +535,13 @@ export const useWorkflowStore = create<WorkflowStore>()(
         if (state.workflow) {
           const groupNode = state.workflow.nodes.find((n) => n.id === groupId && n.type === 'group');
           if (groupNode && 'groupedNodes' in groupNode.data) {
-            const existingNodes = groupNode.data.groupedNodes || [];
-            groupNode.data.groupedNodes = [...new Set([...existingNodes, ...nodeIds])];
+            const existingNodes = new Set(groupNode.data.groupedNodes || []);
+            nodeIds.forEach((nodeId) => {
+              if (nodeId && nodeId !== groupId) {
+                existingNodes.add(nodeId);
+              }
+            });
+            groupNode.data.groupedNodes = Array.from(existingNodes);
             state.workflow.updatedAt = new Date().toISOString();
           }
         }
@@ -537,6 +598,95 @@ export const useWorkflowStore = create<WorkflowStore>()(
       );
 
       return workflow.nodes.filter((n) => connectedNodeIds.includes(n.id));
+    },
+
+    // Recording Actions
+    createNodeFromRecording: (audioBlob, transcript, duration) => {
+      const { workflow, addNode } = get();
+      if (!workflow) {
+        throw new Error('No active workflow');
+      }
+
+      // Create object URL for audio playback
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      // Calculate position - center of current viewport
+      const viewport = workflow.viewport;
+      const basePosition = viewport
+        ? {
+            x: -viewport.x / (viewport.zoom || 1) + 400,
+            y: -viewport.y / (viewport.zoom || 1) + 200,
+          }
+        : { x: 400, y: 200 };
+
+      // Create voice node with recording data
+      const node = addNode('voice', basePosition, {
+        audioUrl,
+        transcript,
+        duration,
+        transcriptStatus: 'success',
+        isLiveRecording: false,
+      });
+
+      return node;
+    },
+
+    // History Actions
+    pushHistory: () => {
+      const { workflow, history, historyIndex } = get();
+      if (!workflow) return;
+
+      set((state) => {
+        // Clone current workflow
+        const snapshot = deepClone(workflow);
+
+        // Remove future history if we're not at the end
+        if (historyIndex < history.length - 1) {
+          state.history = state.history.slice(0, historyIndex + 1);
+        }
+
+        // Add snapshot to history
+        state.history.push(snapshot);
+
+        // Limit history to 50 items
+        if (state.history.length > 50) {
+          state.history.shift();
+        } else {
+          state.historyIndex = state.history.length - 1;
+        }
+      });
+    },
+
+    undo: () => {
+      const { history, historyIndex } = get();
+
+      if (historyIndex <= 0) return;
+
+      set((state) => {
+        state.historyIndex = historyIndex - 1;
+        state.workflow = deepClone(history[state.historyIndex]);
+      });
+    },
+
+    redo: () => {
+      const { history, historyIndex } = get();
+
+      if (historyIndex >= history.length - 1) return;
+
+      set((state) => {
+        state.historyIndex = historyIndex + 1;
+        state.workflow = deepClone(history[state.historyIndex]);
+      });
+    },
+
+    canUndo: () => {
+      const { historyIndex } = get();
+      return historyIndex > 0;
+    },
+
+    canRedo: () => {
+      const { history, historyIndex } = get();
+      return historyIndex < history.length - 1;
     },
   }))
 );

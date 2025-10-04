@@ -32,6 +32,7 @@ import type {
   VoiceNodeData,
 } from '@/types/workflow';
 import { nodeTypes } from './nodes';
+import { WorkflowControls } from './WorkflowControls';
 
 type UrlNodeMapping = {
   type: NodeType;
@@ -327,7 +328,7 @@ function WorkflowCanvasInner() {
   }
 
   return (
-    <div ref={reactFlowWrapper} className="h-full w-full">
+    <div ref={reactFlowWrapper} className="h-full w-full relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -365,12 +366,6 @@ function WorkflowCanvasInner() {
           color="#D1D5DB"
           style={{ backgroundColor: '#FAFBFC' }}
         />
-        <Controls
-          showZoom
-          showFitView
-          showInteractive
-          position="bottom-right"
-        />
       </ReactFlow>
     </div>
   );
@@ -380,6 +375,7 @@ export function WorkflowCanvas() {
   return (
     <ReactFlowProvider>
       <WorkflowCanvasInner />
+      <WorkflowControls />
     </ReactFlowProvider>
   );
 }

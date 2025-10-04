@@ -1,4 +1,4 @@
-import { MessageSquare, Send, Loader2, Copy, Check, Maximize2, X } from 'lucide-react';
+import { MessageSquare, Send, Loader2, Copy, Check, Maximize2, X, User } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { SyntheticEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -10,6 +10,7 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { buildChatContext, getLinkedNodeIds } from '@/lib/workflow/context-builder';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import type { ChatNodeData, ChatMessage } from '@/types/workflow';
 import 'katex/dist/katex.min.css';
 
@@ -33,7 +34,7 @@ function CodeBlock({ inline, className, children, isUserMessage }: any) {
 
   if (inline) {
     return (
-      <code className={`${isUserMessage ? 'bg-white/20' : 'bg-gray-100'} px-2 py-1 rounded text-[12px] font-mono`}>
+      <code className="bg-gray-100 px-2 py-1 rounded text-[12px] font-mono">
         {children}
       </code>
     );
@@ -92,6 +93,13 @@ export function ChatNode({ id, data }: ChatNodeProps) {
   const prevMessagesLengthRef = useRef(data.messages.length);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const workflow = useWorkflowStore((state) => state.workflow);
+  const { user } = useCurrentUser();
+
+  // Get display name from user metadata or email
+  const getUserDisplayName = () => {
+    if (!user) return 'You';
+    return user.user_metadata?.full_name || user.email?.split('@')[0] || 'You';
+  };
 
   type NativeEventWithStop = Event & { stopImmediatePropagation?: () => void };
 
@@ -173,6 +181,9 @@ export function ChatNode({ id, data }: ChatNodeProps) {
       timestamp: new Date().toISOString(),
     };
 
+    // Add empty assistant message immediately for streaming
+    updateNodeData(id, { messages: [...updatedMessages, streamingMessage] } as Partial<ChatNodeData>);
+
     try {
       // Build context from linked nodes
       const context = workflow ? buildChatContext(id, workflow) : {
@@ -193,6 +204,7 @@ export function ChatNode({ id, data }: ChatNodeProps) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           messages: updatedMessages,
           textContext: context.textContext,
@@ -237,9 +249,9 @@ export function ChatNode({ id, data }: ChatNodeProps) {
                   fullContent = parsed.content;
                 } else {
                   fullContent += parsed.content;
-                  // Update message in real-time
-                  const streamingMessages = [...updatedMessages, { ...streamingMessage, content: fullContent }];
-                  updateNodeData(id, { messages: streamingMessages } as Partial<ChatNodeData>);
+                  // Update message in real-time with accumulated content
+                  const currentMessages = [...updatedMessages, { ...streamingMessage, content: fullContent }];
+                  updateNodeData(id, { messages: currentMessages } as Partial<ChatNodeData>);
                 }
               } catch (e) {
                 // Skip invalid JSON
@@ -324,18 +336,31 @@ export function ChatNode({ id, data }: ChatNodeProps) {
             >
               {data.messages.length > 0 ? (
                 data.messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`p-4 rounded-xl text-[13px] leading-[1.6] break-words shadow-sm transition-all ${
-                      message.role === 'user'
-                        ? 'bg-[#155EEF] text-white ml-16'
-                        : 'bg-white text-[#1A1D21] mr-16 border border-[#E8ECEF]'
-                    }`}
-                    style={{
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                    }}
-                  >
+                  <div key={message.id} className="max-w-[85%]">
+                    <div className="flex items-center gap-2 mb-2">
+                      {message.role === 'assistant' ? (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#14B8A6] to-[#0EA5E9]">
+                          <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                          <span className="text-[11px] font-semibold text-white tracking-wide">REMALT</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#155EEF]">
+                          <User className="w-3 h-3 text-white" />
+                          <span className="text-[11px] font-semibold text-white tracking-wide">{getUserDisplayName().toUpperCase()}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      className={`p-4 rounded-xl text-[13px] leading-[1.6] break-words shadow-sm transition-all ${
+                        message.role === 'user'
+                          ? 'bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] text-[#1A1D21] border border-[#93C5FD]'
+                          : 'bg-white text-[#1A1D21] border border-[#E8ECEF]'
+                      }`}
+                      style={{
+                        wordWrap: 'break-word',
+                        overflowWrap: 'break-word',
+                      }}
+                    >
                     <div className="prose prose-sm max-w-none markdown-content overflow-x-auto">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm, remarkMath]}
@@ -395,6 +420,7 @@ export function ChatNode({ id, data }: ChatNodeProps) {
                         {message.content}
                       </ReactMarkdown>
                     </div>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -402,6 +428,8 @@ export function ChatNode({ id, data }: ChatNodeProps) {
                   No messages yet
                 </div>
               )}
+              
+              
               <div ref={messagesEndRef} />
             </div>
           </div>
@@ -497,14 +525,27 @@ export function ChatNode({ id, data }: ChatNodeProps) {
           >
             {data.messages.length > 0 ? (
               data.messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`p-5 rounded-2xl text-[14px] leading-[1.6] shadow-sm ${
-                    message.role === 'user'
-                      ? 'bg-[#155EEF] text-white ml-auto max-w-[75%]'
-                      : 'bg-white text-[#1A1D21] mr-auto max-w-[85%] border border-[#E8ECEF]'
-                  }`}
-                >
+                <div key={message.id} className="max-w-[85%]">
+                  <div className="flex items-center gap-2 mb-2">
+                    {message.role === 'assistant' ? (
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#14B8A6] to-[#0EA5E9]">
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                        <span className="text-[12px] font-semibold text-white tracking-wide">REMALT</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#155EEF]">
+                        <User className="w-3.5 h-3.5 text-white" />
+                        <span className="text-[12px] font-semibold text-white tracking-wide">{getUserDisplayName().toUpperCase()}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    className={`p-5 rounded-2xl text-[14px] leading-[1.6] shadow-sm ${
+                      message.role === 'user'
+                        ? 'bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] text-[#1A1D21] border border-[#93C5FD]'
+                        : 'bg-white text-[#1A1D21] border border-[#E8ECEF]'
+                    }`}
+                  >
                   <div className="prose prose-sm max-w-none markdown-content overflow-x-auto">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm, remarkMath]}
@@ -552,6 +593,7 @@ export function ChatNode({ id, data }: ChatNodeProps) {
                       {message.content}
                     </ReactMarkdown>
                   </div>
+                  </div>
                 </div>
               ))
             ) : (
@@ -561,6 +603,8 @@ export function ChatNode({ id, data }: ChatNodeProps) {
                 <p className="text-[13px] text-[#9CA3AF]">Start a conversation with the AI assistant</p>
               </div>
             )}
+            
+            
             <div ref={modalMessagesEndRef} />
           </div>
 

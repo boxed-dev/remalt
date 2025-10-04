@@ -126,8 +126,6 @@ export function WorkflowSidebar() {
     event.dataTransfer.effectAllowed = 'move';
   };
 
-  const categories = Object.keys(CATEGORY_LABELS) as Array<keyof typeof CATEGORY_LABELS>;
-
   const handleImageSidebarClick = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -137,6 +135,7 @@ export function WorkflowSidebar() {
   }, [clearSelection]);
 
   const handleUploadSuccess = useCallback((cdnUrl: string) => {
+    console.log('Upload success, CDN URL:', cdnUrl);
     const viewport = workflow?.viewport;
     const basePosition = viewport
       ? {
@@ -150,19 +149,31 @@ export function WorkflowSidebar() {
       thumbnail: cdnUrl,
       uploadcareCdnUrl: cdnUrl,
       uploadSource: 'uploadcare',
-      analysisStatus: 'loading',
+      analysisStatus: 'idle',
     });
 
     selectNode(newNode.id);
+
+    // Trigger analysis automatically
+    setTimeout(() => {
+      const imageNodeElement = document.querySelector(`[data-id="${newNode.id}"]`);
+      if (imageNodeElement) {
+        console.log('Image node created, triggering analysis');
+      }
+    }, 500);
   }, [addNode, selectNode, workflow]);
 
-  const handleUploaderChange = useCallback(({ allEntries }: { allEntries?: Array<{ status: string; cdnUrl?: string }> }) => {
-    const firstCompleted = allEntries?.find((entry) => entry.status === 'success' && entry.cdnUrl);
+  const handleUploaderChange = useCallback((event: any) => {
+    console.log('Uploader change event:', event);
+    const allEntries = event?.allEntries || event?.successEntries || [];
+    const firstCompleted = allEntries.find((entry: any) => entry.status === 'success' && entry.cdnUrl);
     if (firstCompleted?.cdnUrl) {
+      console.log('File uploaded successfully:', firstCompleted.cdnUrl);
       setIsUploading(false);
       setShowImageUploader(false);
       handleUploadSuccess(firstCompleted.cdnUrl);
-    } else if (allEntries && allEntries.some((entry) => entry.status === 'uploading')) {
+    } else if (event?.uploadingCount > 0 || allEntries.some((entry: any) => entry.status === 'uploading')) {
+      console.log('Upload in progress...');
       setIsUploading(true);
     }
   }, [handleUploadSuccess]);
@@ -174,104 +185,98 @@ export function WorkflowSidebar() {
   }, [isUploading]);
 
   return (
-    <aside className="w-64 h-full bg-white border-r border-[#E8ECEF] flex flex-col overflow-y-auto relative">
-      <div className="p-4 border-b border-[#E8ECEF]">
-        <h2 className="text-sm font-semibold text-[#1F2937]">Add Nodes</h2>
-        <p className="text-xs text-[#6B7280] mt-1">Drag to canvas</p>
-      </div>
+    <>
+      {/* Vertical Left Sidebar */}
+      <aside className="fixed left-0 top-0 h-full w-14 bg-white border-r border-[#E8ECEF] flex flex-col items-center py-4 gap-2 z-10">
+        {NODE_TYPES.map((node) => {
+          const isImageNode = node.type === 'image';
 
-      <div className="flex-1 p-4 space-y-6">
-        {categories.map((category) => {
-          const categoryNodes = NODE_TYPES.filter((node) => node.category === category);
-          
+          // Image node - click to upload
+          if (isImageNode) {
+            return (
+              <button
+                key={node.type}
+                type="button"
+                onClick={handleImageSidebarClick}
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-transparent hover:border-[#E8ECEF] hover:bg-[#F5F5F7] transition-all cursor-pointer group"
+                title={node.label}
+              >
+                <div className="text-[#6B7280] group-hover:text-[#1F2937] transition-colors">
+                  {node.icon}
+                </div>
+              </button>
+            );
+          }
+
+          // Default - draggable node
           return (
-            <div key={category}>
-              <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-3">
-                {CATEGORY_LABELS[category]}
-              </h3>
-              <div className="space-y-2">
-                {categoryNodes.map((node) => {
-                  const isImageNode = node.type === 'image';
-
-                  if (isImageNode) {
-                    return (
-                      <button
-                        key={node.type}
-                        type="button"
-                        onClick={handleImageSidebarClick}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[#E8ECEF] bg-[#FAFBFC] hover:bg-[#F5F5F7] hover:border-[#CBD5E1] transition-all cursor-pointer group"
-                      >
-                        <div className="text-[#6B7280] group-hover:text-[#1F2937] transition-colors">
-                          {node.icon}
-                        </div>
-                        <span className="text-sm font-medium text-[#1F2937]">
-                          {node.label}
-                        </span>
-                      </button>
-                    );
-                  }
-
-                  return (
-                    <div
-                      key={node.type}
-                      draggable
-                      onDragStart={(e) => onDragStart(e, node.type)}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[#E8ECEF] bg-[#FAFBFC] hover:bg-[#F5F5F7] hover:border-[#CBD5E1] transition-all cursor-grab active:cursor-grabbing group"
-                    >
-                      <div className="text-[#6B7280] group-hover:text-[#1F2937] transition-colors">
-                        {node.icon}
-                      </div>
-                      <span className="text-sm font-medium text-[#1F2937]">
-                        {node.label}
-                      </span>
-                    </div>
-                  );
-                })}
+            <div
+              key={node.type}
+              draggable
+              onDragStart={(e) => onDragStart(e, node.type)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg border border-transparent hover:border-[#E8ECEF] hover:bg-[#F5F5F7] transition-all cursor-grab active:cursor-grabbing group"
+              title={node.label}
+            >
+              <div className="text-[#6B7280] group-hover:text-[#1F2937] transition-colors">
+                {node.icon}
               </div>
             </div>
           );
         })}
-      </div>
+      </aside>
 
-      {/* Uploadcare Uploader Popup */}
+      {/* Uploadcare Uploader Modal */}
       <AnimatePresence>
         {showImageUploader && (
-          <motion.div
-            className="absolute left-full top-4 ml-4 z-20"
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="w-[320px] rounded-xl border border-[#E5E7EB] bg-white shadow-xl">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8ECEF]">
-                <div>
-                  <div className="text-[13px] font-semibold text-[#1F2937]">Upload Image</div>
-                  <div className="text-[11px] text-[#6B7280] mt-0.5">Select from multiple sources</div>
+          <>
+            {/* Backdrop */}
+            <motion.div
+              className="fixed inset-0 bg-black/50 z-[100]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={hideUploader}
+            />
+            {/* Modal */}
+            <motion.div
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[101]"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-[420px] max-w-[90vw] max-h-[80vh] rounded-xl border border-[#E5E7EB] bg-white shadow-2xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8ECEF] bg-gradient-to-r from-[#F9FAFB] to-white">
+                  <div>
+                    <div className="text-[14px] font-semibold text-[#1F2937]">Upload Image</div>
+                    <div className="text-[11px] text-[#6B7280] mt-0.5">Select from multiple sources</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={hideUploader}
+                    disabled={isUploading}
+                    className="text-[#9CA3AF] hover:text-[#1F2937] disabled:opacity-40 transition-colors p-1 rounded hover:bg-white"
+                    title="Close"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={hideUploader}
-                  disabled={isUploading}
-                  className="text-[#9CA3AF] hover:text-[#1F2937] disabled:opacity-40 transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="p-6 bg-white">
+                  <UploadcareUploader
+                    pubkey="94c0b598f78b9fe9b471"
+                    classNameUploader="uc-light uc-purple"
+                    sourceList="local, camera, gdrive, facebook"
+                    filesViewMode="grid"
+                    userAgentIntegration="remalt-next"
+                    onChange={handleUploaderChange}
+                  />
+                </div>
               </div>
-              <div className="p-4">
-                <UploadcareUploader
-                  pubkey="94c0b598f78b9fe9b471"
-                  classNameUploader="uc-light uc-purple"
-                  sourceList="local, camera, gdrive, facebook"
-                  filesViewMode="grid"
-                  userAgentIntegration="remalt-next"
-                  onChange={handleUploaderChange}
-                />
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
-    </aside>
+    </>
   );
 }

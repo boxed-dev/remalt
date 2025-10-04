@@ -6,6 +6,7 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { ImageNodeData } from '@/types/workflow';
+import { AIInstructionsInline } from './AIInstructionsInline';
 
 export function ImageNode({ id, data }: NodeProps<ImageNodeData>) {
   const [mode, setMode] = useState<'idle' | 'url' | 'upload'>('idle');
@@ -30,7 +31,6 @@ export function ImageNode({ id, data }: NodeProps<ImageNodeData>) {
     setImageLoading(true);
   }, [data.imageUrl, data.thumbnail]);
 
-
   const fileToBase64 = async (file: File) => await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
@@ -51,9 +51,13 @@ export function ImageNode({ id, data }: NodeProps<ImageNodeData>) {
         }
       }
 
-      if (!analysisSource)
+      if (!analysisSource) {
+        console.warn('No analysis source available');
         return;
+      }
 
+      console.log('🔍 Starting image analysis...', analysisSource.kind === 'url' ? analysisSource.payload : 'base64');
+      
       updateNodeData(id, {
         analysisStatus: 'analyzing',
         analysisError: undefined,
@@ -66,12 +70,19 @@ export function ImageNode({ id, data }: NodeProps<ImageNodeData>) {
       const response = await fetch('/api/image/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(body),
       });
 
       const result = await response.json();
 
       if (response.ok) {
+        console.log('✅ Image analysis completed successfully:', {
+          hasOCR: !!result.ocrText,
+          hasDescription: !!result.description,
+          tagCount: result.tags?.length || 0,
+          colorCount: result.colors?.length || 0
+        });
         updateNodeData(id, {
           ocrText: result.ocrText,
           analysisData: {
@@ -83,19 +94,28 @@ export function ImageNode({ id, data }: NodeProps<ImageNodeData>) {
           analysisError: undefined,
         } as Partial<ImageNodeData>);
       } else {
+        console.error('❌ Image analysis failed:', result.error);
         updateNodeData(id, {
           analysisStatus: 'error',
           analysisError: result.error,
         } as Partial<ImageNodeData>);
       }
     } catch (error) {
-      console.error('Image analysis failed:', error);
+      console.error('❌ Image analysis exception:', error);
       updateNodeData(id, {
         analysisStatus: 'error',
         analysisError: 'Failed to analyze image',
       } as Partial<ImageNodeData>);
     }
   }, [data.imageFile, data.imageUrl, id, updateNodeData]);
+
+  // Auto-trigger analysis when image is uploaded or when status is set to loading
+  useEffect(() => {
+    if (safeImageUrl && (data.analysisStatus === 'idle' || data.analysisStatus === 'loading')) {
+      console.log('Auto-triggering analysis for image:', safeImageUrl, 'Status:', data.analysisStatus);
+      void triggerAnalysis({ kind: 'url', payload: safeImageUrl });
+    }
+  }, [safeImageUrl, data.analysisStatus, triggerAnalysis]);
 
   const handleUrlSave = async () => {
     if (url.trim()) {
@@ -522,6 +542,12 @@ export function ImageNode({ id, data }: NodeProps<ImageNodeData>) {
             </div>
           </div>
         )}
+        <AIInstructionsInline
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ImageNodeData>)}
+          nodeId={id}
+          nodeType="image"
+        />
       </div>
     </BaseNode>
   );

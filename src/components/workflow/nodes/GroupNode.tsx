@@ -3,6 +3,7 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { GroupNodeData } from '@/types/workflow';
+import { AIInstructionsInline } from './AIInstructionsInline';
 
 export function GroupNode({ id, data }: NodeProps<GroupNodeData>) {
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
@@ -34,6 +35,12 @@ export function GroupNode({ id, data }: NodeProps<GroupNodeData>) {
           <MessageSquare className="h-3 w-3" />
           <span>{data.groupChatEnabled ? 'Chat enabled' : 'Enable chat'}</span>
         </button>
+        <AIInstructionsInline
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<GroupNodeData>)}
+          nodeId={id}
+          nodeType="group"
+        />
       </div>
     </BaseNode>
   );
