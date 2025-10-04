@@ -502,15 +502,6 @@ export function WebpageNode({ id, data }: NodeProps<WebpageNodeData>) {
               >
                 Edit URL
               </button>
-              {(data.scrapeStatus === 'error' || data.scrapeStatus === 'success') && (
-                <button
-                  onClick={handleRescrape}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#CFFAFE] bg-[#ECFEFF] px-3 py-1 text-[#0E7490] hover:bg-[#BAE6FD]"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Re-run
-                </button>
-              )}
               {data.url && (
                 <button
                   onClick={openInNewTab}
