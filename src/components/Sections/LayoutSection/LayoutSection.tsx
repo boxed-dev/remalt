@@ -1,28 +1,42 @@
-import { ArrowRight as ArrowRightIcon, TrendingUp as TrendingUpIcon } from "lucide-react";
+"use client";
+import {
+  ArrowRight as ArrowRightIcon,
+  TrendingUp as TrendingUpIcon,
+  Clock,
+  Users,
+  Play,
+} from "lucide-react";
 import React from "react";
+import { motion } from "motion/react";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import GetStartedButton from "@/components/ui/buttonAnimation";
 
 const features = [
   {
-    icon: "/icon-wrapper.svg",
+    icon: Clock,
     text: "Time-saving",
   },
   {
-    icon: "/icon-wrapper-2.svg",
+    icon: Users,
     text: "Team-ready features",
   },
   {
-    icon: "/icon-wrapper-1.svg",
+    icon: Play,
     text: "East to start",
   },
 ];
 
-export default function  CTA() {
+export default function CTA() {
   return (
     <section className="w-full min-h-[400px] sm:min-h-[450px] lg:min-h-[512px] flex items-center bg-[linear-gradient(131deg,rgba(255,255,255,1)_0%,rgba(18,120,90,1)_48%,rgba(212,175,127,1)_80%)] py-12 sm:py-16 lg:py-20">
-      <div className="mx-auto  w-full px-4 sm:px-6 lg:px-8">
+      <motion.div 
+        className="mx-auto  w-full px-4 sm:px-6 lg:px-8"
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
         <div className="flex flex-col gap-6 sm:gap-8 items-center">
           <div className="flex flex-col gap-4 items-center">
             <div className="relative flex items-center justify-center w-full max-w-md">
@@ -50,10 +64,8 @@ export default function  CTA() {
           </div>
 
           <div className="flex justify-center w-full">
-            <GetStartedButton className="w-full sm:w-auto bg-black text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg border  shadow-lg hover:bg-black/90 text-sm">
-              <span className=" mr-2 [font-family:'Inter',Helvetica] font-normal tracking-[0]">
-                Join the Waitlist
-              </span>
+            <GetStartedButton className=" right-1 top-1 h-10 px-10 py-4 bg-black  font-medium text-white text-sm text-center tracking-[-0.56px] leading-[14px] rounded-xl">
+              Get Notified
             </GetStartedButton>
           </div>
 
@@ -61,7 +73,7 @@ export default function  CTA() {
             {features.map((feature, index) => (
               <div key={index} className="flex gap-2 sm:gap-3 items-center">
                 <div className="h-6 w-6 sm:h-8 sm:w-8 bg-white/20 rounded flex items-center justify-center">
-                  <span className="text-white text-xs">•</span>
+                  <feature.icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
                 <span className="[font-family:'Inter',Helvetica] font-normal text-white text-sm sm:text-base tracking-[0] leading-tight">
                   {feature.text}
@@ -70,7 +82,7 @@ export default function  CTA() {
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
-};
+}

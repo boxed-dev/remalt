@@ -1,3 +1,5 @@
+"use client";
+import { motion } from "motion/react";
 import { TrendingUp as TrendingUpIcon } from "lucide-react";
 import React from "react";
 import { Badge } from "@components/ui/badge";
@@ -5,7 +7,13 @@ import { Badge } from "@components/ui/badge";
 export  default function AdditionalInfoSection () {
   return (
     <section className="w-full flex bg-[#ffffffa1] py-12 sm:py-16 lg:py-[100px]">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-8 sm:gap-10 lg:gap-[50px]">
+      <motion.div 
+        className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-8 sm:gap-10 lg:gap-[50px]"
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
         <header className="flex flex-col items-center gap-6 sm:gap-8 max-w-2xl mx-auto">
           <div className="w-full h-8 relative flex items-center justify-center">
             <div className="hidden sm:block absolute left-0 w-32 sm:w-40 h-px bg-gradient-to-r from-[#12785a] to-white" />
@@ -13,7 +21,7 @@ export  default function AdditionalInfoSection () {
             <Badge className="bg-gradient-to-r from-white via-[#12785a] to-[#d4af7f] text-white border border-[#e3d6ff] rounded-[50px] h-8 px-3 flex items-center gap-2 text-xs">
               <TrendingUpIcon className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="font-normal tracking-[-0.12px] leading-[14.4px] [font-family:'Inter',Helvetica]">
-                BY THE NUMBERS
+                BEHIND THE BUILD
               </span>
             </Badge>
 
@@ -41,7 +49,7 @@ export  default function AdditionalInfoSection () {
             Statistics Container
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 };

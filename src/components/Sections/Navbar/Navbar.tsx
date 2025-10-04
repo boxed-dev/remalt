@@ -14,35 +14,60 @@ import {
 import { ArrowRightIcon } from "lucide-react";
 import { useState } from "react";
 
-export default function NavbarDemo() {
+interface NavbarDemoProps {
+  scrollToSection?: (id: string) => void;
+}
+
+export default function NavbarDemo({ scrollToSection }: NavbarDemoProps) {
   const navItems = [
     {
-      name: "Features",
-      link: "#features",
+      name: "About Us",
+      link: "about",
     },
     {
-      name: "Pricing",
-      link: "#pricing",
+      name: "Benifits",
+      link: "Benifits",
     },
     {
       name: "Contact",
-      link: "#contact",
+      link: "contact",
     },
   ];
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, link: string) => {
+    e.preventDefault();
+    if (scrollToSection) {
+      scrollToSection(link);
+    } else {
+      // Fallback to default behavior
+      const element = document.getElementById(link);
+      element?.scrollIntoView({ behavior: 'smooth' });
+    }
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <Navbar>
       {/* Desktop Navigation */}
       <NavBody>
         <NavbarLogo />
-        <NavItems items={navItems} />
+        <div className="flex-1 flex items-center justify-center">
+          {navItems.map((item, idx) => (
+            <a
+              key={`nav-link-${idx}`}
+              href={`#${item.link}`}
+              onClick={(e) => handleNavClick(e, item.link)}
+              className="relative px-4 py-2 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+            >
+              {item.name}
+            </a>
+          ))}
+        </div>
         <div className="flex items-center gap-4">
-          <NavbarButton variant="secondary">Login</NavbarButton>
           <GetStartedButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center">
             <span className="hidden sm:inline mr-2">Join the Waitlist</span>
-
           </GetStartedButton>
         </div>
       </NavBody>
@@ -64,25 +89,15 @@ export default function NavbarDemo() {
           {navItems.map((item, idx) => (
             <a
               key={`mobile-link-${idx}`}
-              href={item.link}
-              onClick={() => setIsMobileMenuOpen(false)}
+              href={`#${item.link}`}
+              onClick={(e) => handleNavClick(e, item.link)}
               className="relative text-neutral-600 dark:text-neutral-300"
             >
               <span className="block">{item.name}</span>
             </a>
           ))}
           <div className="flex w-full flex-col gap-4">
-            {/* <NavbarButton
-              onClick={() => setIsMobileMenuOpen(false)}
-              variant="primary"
-              className="w-full"
-            >
-              Login
-            </NavbarButton> */}
-            {/* <NavbarButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm px-4 py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5]">
-              <span className="sm:hidden">Join Waitlist</span>
-            </NavbarButton> */}
-             <NavbarButton
+            <NavbarButton
               onClick={() => setIsMobileMenuOpen(false)}
               variant="primary"
               className="w-full bg-[#12785a] hover:bg-[#0f6b4d] text-white"

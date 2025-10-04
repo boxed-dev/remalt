@@ -1,4 +1,5 @@
-"use client"
+"use client";
+import { motion } from "motion/react";
 import { TrendingUp as TrendingUpIcon } from "lucide-react";
 import React from "react";
 import Image from "next/image";
@@ -8,7 +9,11 @@ const logos = [
   { name: "Youtube", image: "/logos/yt.png", opacity: "" },
   { name: "Instagram", image: "/logos/insta.png", opacity: "" },
   { name: "Hitech", image: "/logos/hitech.png", opacity: "" },
-  { name: "Automation", image: "/logos/automation.png", opacity: "opacity-100" },
+  {
+    name: "Automation",
+    image: "/logos/automation.png",
+    opacity: "opacity-100",
+  },
   { name: "Glossy", image: "/logos/glossy.png", opacity: "opacity-100" },
   { name: "Orbitc", image: "/logos/orbitc.png", opacity: "opacity-100" },
   { name: "Chain", image: "/logos/chain.png", opacity: "opacity-100" },
@@ -18,7 +23,13 @@ const logos = [
 export default function IntegrationsSection() {
   return (
     <section className="w-full py-12 sm:py-16 lg:py-[100px] px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      <div className="max-w-[1240px] mx-auto flex flex-col items-center gap-6 sm:gap-8">
+      <motion.div
+        className="max-w-[1240px] mx-auto flex flex-col items-center gap-6 sm:gap-8"
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
         <div className="w-full max-w-[612px] h-8 relative flex items-center justify-center">
           <div className="hidden sm:block absolute left-0 w-[150px] sm:w-[225px] bg-[linear-gradient(90deg,rgba(255,255,255,0.25)_19%,rgba(18,120,90,0.5)_73%,rgba(18,120,90,1)_100%)] h-px" />
 
@@ -46,10 +57,16 @@ export default function IntegrationsSection() {
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Infinite scrolling logos */}
-      <div className="w-full mt-8 sm:mt-10 lg:mt-[41px] overflow-hidden">
+      <motion.div
+        className="w-full mt-8 sm:mt-10 lg:mt-[41px] overflow-hidden"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
+      >
         <style jsx>{`
           @keyframes scroll {
             0% {
@@ -106,7 +123,7 @@ export default function IntegrationsSection() {
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

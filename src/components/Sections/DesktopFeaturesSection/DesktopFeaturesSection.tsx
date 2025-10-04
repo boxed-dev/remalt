@@ -1,4 +1,6 @@
+"use client";
 import React from "react";
+import { motion } from "motion/react";
 import {
   Accordion,
   AccordionContent,
@@ -76,7 +78,13 @@ const faqData = [
 export default function DesktopFeaturesSection  () {
   return (
     <section className="w-full flex bg-white py-12 sm:py-16 lg:py-[100px] px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto w-full flex flex-col gap-8 sm:gap-10 lg:gap-[50px]">
+      <motion.div 
+        className="max-w-4xl mx-auto w-full flex flex-col gap-8 sm:gap-10 lg:gap-[50px]"
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
         <header className="flex flex-col gap-6 sm:gap-8">
           <div className="relative flex items-center justify-center h-8">
             <div className="hidden sm:block absolute left-0 right-auto w-[30%] bg-[linear-gradient(90deg,rgba(255,255,255,0.25)_19%,rgba(18,120,90,0.5)_73%,rgba(18,120,90,1)_100%)] h-px" />
@@ -138,7 +146,7 @@ export default function DesktopFeaturesSection  () {
             ))}
           </Accordion>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 };

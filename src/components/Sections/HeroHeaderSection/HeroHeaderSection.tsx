@@ -1,16 +1,23 @@
+"use client";
 import React from "react";
+import { motion } from "motion/react";
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
 import Image from "next/image";
 import GetStartedButton from "@/components/ui/buttonAnimation";
 
 export default function HeroHeaderSection() {
-  const notificationText = "No credit card required · Cancel anytime";
 
   return (
     <section className="w-full flex items-center justify-center bg-white py-12 sm:py-16 lg:py-20">
         
-      <div className="flex flex-col items-center gap-6 max-w-8xl px-4">
+      <motion.div 
+        className="flex flex-col items-center gap-6 max-w-8xl px-4 py-10"
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
         <header className="flex flex-col items-center gap-4">
           <div className="relative flex flex-col items-center">
             {/* First line: "The [icon] AI ecosystem" */}
@@ -73,11 +80,8 @@ export default function HeroHeaderSection() {
             </GetStartedButton>
           </div>
 
-          <p className="[font-family:'Inter',Helvetica] font-normal text-[#12785a] text-sm text-center tracking-[0] leading-[16.8px]">
-            {notificationText}
-          </p>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

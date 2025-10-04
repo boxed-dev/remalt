@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { motion } from "motion/react";
 import { ArrowRight as ArrowRightIcon } from "lucide-react";
 import { Badge } from "../../ui/badge";
 import { Button } from "@components/ui/button";
@@ -33,7 +34,13 @@ const featureCards = [
 export default function AboutUsSection() {
   return (
     <section className="w-full py-12 px-4">
-      <div className="max-w-7xl mx-auto">
+      <motion.div 
+        className="max-w-7xl mx-auto"
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
         <Card className="bg-[#fbfbfb] border-none shadow-none">
           <CardContent className="">
             <div className="relative">
@@ -64,10 +71,9 @@ export default function AboutUsSection() {
                     founders the frameworks, systems, and community they need to
                     scale with confidence.
                   </p>
-                     <GetStartedButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center">
-            <span className="hidden sm:inline mr-2">Join the Waitlist</span>
-
-          </GetStartedButton>
+                  <GetStartedButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center">
+                    <span className="sm:inline mr-2">Join the Waitlist</span>
+                  </GetStartedButton>
                 </div>
 
                 {/* Right content - Dashboard preview */}
@@ -82,23 +88,22 @@ export default function AboutUsSection() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12">
-                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 gap-4 sm:gap-6">
                   {featureCards.map((feature) => (
-                    <Card
-                      key={feature.id}
-                      className="bg-white shadow-md border border-gray-100"
-                    >
-                      <CardContent className="p-4 sm:p-5 h-full flex flex-col justify-between min-h-[100px] sm:min-h-[120px]">
-                        <div className="w-16 h-16 sm:w-12 sm:h-12 rounded flex items-center justify-center text-gray-400 text-xs">
+                    <Card key={feature.id} className="shadow-md">
+                      <CardContent className="p-4 sm:p-6 h-full flex flex-col justify-between min-h-[140px] sm:min-h-[160px]">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 mb-3 sm:mb-4 bg-gradient-to-br from-[#12785a]/10 to-[#12785a]/5 rounded-lg flex items-center justify-center shadow-sm">
                           <Image
-                            className="w-8 h-8"
-                            alt="Math trend up"
+                            className="w-6 h-6 sm:w-8 sm:h-8"
+                            alt={feature.title}
                             src={feature.icon}
-                            width={64}
-                            height={64}
+                            width={32}
+                            height={32}
                           />
                         </div>
-                        <div className="feature-text">{feature.title}</div>
+                        <div className="feature-text text-sm sm:text-base leading-snug">
+                          {feature.title}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -116,7 +121,13 @@ export default function AboutUsSection() {
                   </blockquote>
 
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-200" />
+                    <Image
+                      className="w-10 h-10 rounded-full bg-gray-200 object-cover"
+                      alt="Avatar"
+                      src="/avatar.png"
+                      width={32}
+                      height={32}
+                    />
                     <cite className="testimonial-text not-italic">
                       — Early Access Founder
                     </cite>
@@ -126,7 +137,7 @@ export default function AboutUsSection() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     </section>
   );
 }
