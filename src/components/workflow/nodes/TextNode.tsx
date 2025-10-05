@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { AIInstructionsInline } from './AIInstructionsInline';
+import { VoiceTextarea } from '../VoiceInput';
 import type { TextNodeData } from '@/types/workflow';
 
 interface TextNodeProps {
@@ -49,14 +50,15 @@ export function TextNode({ id, data }: TextNodeProps) {
           <span className="text-[13px] font-medium text-[#1A1D21]">Text</span>
         </div>
         {isEditing ? (
-          <textarea
+          <VoiceTextarea
             ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onBlur={handleSave}
             onKeyDown={handleKeyDown}
-            className="w-full min-h-[100px] text-[12px] border-0 focus:outline-none resize-none text-[#1A1D21] leading-relaxed bg-transparent"
-            placeholder="Enter text..."
+            voiceMode="append"
+            className="w-full min-h-[100px] text-[12px] border-0 focus:outline-none resize-none text-[#1A1D21] leading-relaxed bg-transparent pr-10"
+            placeholder="Type or speak..."
           />
         ) : (
           <div

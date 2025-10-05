@@ -456,12 +456,12 @@ export function VoiceNode({ id, data }: NodeProps<VoiceNodeData>) {
         )}
       </div>
 
-      <style jsx>{`
+      <style jsx>{\`
         @keyframes waveform {
           0%, 100% { height: 20%; }
           50% { height: 80%; }
         }
-      `}</style>
+      \`}</style>
     </BaseNode>
   );
 }

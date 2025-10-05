@@ -5,6 +5,7 @@ import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { MindMapNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
+import { VoiceInput, VoiceTextarea } from '../VoiceInput';
 
 export function MindMapNode({ id, data }: NodeProps<MindMapNodeData>) {
   const [isEditing, setIsEditing] = useState(false);
@@ -44,7 +45,7 @@ export function MindMapNode({ id, data }: NodeProps<MindMapNodeData>) {
         </div>
         {isEditing ? (
           <div className="space-y-2">
-            <input
+            <VoiceInput
               ref={inputRef}
               type="text"
               value={concept}
@@ -54,15 +55,17 @@ export function MindMapNode({ id, data }: NodeProps<MindMapNodeData>) {
                 if (e.key === 'Enter') handleSave();
                 if (e.key === 'Escape') { setConcept(data.concept || ''); setIsEditing(false); }
               }}
-              placeholder="Idea concept..."
+              voiceMode="replace"
+              placeholder="Type or speak idea..."
               className="w-full px-3 py-2 text-[12px] border border-[#E5E7EB] rounded focus:outline-none focus:border-[#EC4899]"
             />
-            <textarea
+            <VoiceTextarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               onBlur={handleSave}
-              placeholder="Notes (optional)..."
-              className="w-full px-3 py-2 text-[11px] border border-[#E5E7EB] rounded focus:outline-none focus:border-[#EC4899] resize-none"
+              voiceMode="append"
+              placeholder="Type or speak notes..."
+              className="w-full px-3 py-2 text-[11px] border border-[#E5E7EB] rounded focus:outline-none focus:border-[#EC4899] resize-none pr-10"
               rows={3}
             />
           </div>

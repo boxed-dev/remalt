@@ -191,12 +191,12 @@ export default function WorkflowEditorPage() {
   }
 
   return (
-    <div className="h-screen flex bg-[#FAFBFC]" style={{ visibility: 'visible' }}>
-      {/* Left Sidebar - Fixed */}
+    <div className="fixed inset-0 bg-[#FAFBFC]" style={{ top: '56px' }}>
+      {/* Left Sidebar - Fixed, positioned by the component itself */}
       <WorkflowSidebar />
 
-      {/* Main Canvas Area - Takes remaining space (toolbar is inside canvas) */}
-      <div className="flex-1 pl-14" style={{ visibility: 'visible' }}>
+      {/* Main Canvas Area - Takes remaining space, margin adjusts for sidebar */}
+      <div className="h-full transition-all duration-300" style={{ marginLeft: '56px' }}>
         <WorkflowCanvas />
       </div>
     </div>

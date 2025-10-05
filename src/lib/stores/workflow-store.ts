@@ -130,6 +130,7 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
     case 'voice':
       return {
         transcriptStatus: 'idle',
+        uploadStatus: 'idle',
       } as NodeData;
     case 'image':
       return {

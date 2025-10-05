@@ -41,22 +41,22 @@ export function BaseNode({
 }: BaseNodeProps) {
   return (
     <div
-      className={`min-w-[240px] rounded-2xl bg-white border border-[#E8ECEF] hover:border-[#D1D5DB] shadow-sm hover:shadow-lg transition-all duration-200 ${
+      className={`min-w-[280px] rounded-2xl bg-white border-2 border-[#E8ECEF] hover:border-[#D1D5DB] shadow-md hover:shadow-xl transition-all duration-200 ${
         allowOverflow ? '' : 'overflow-hidden'
       }`}
     >
       {/* Content */}
-      <div className="p-4">{children}</div>
+      <div className="p-5">{children}</div>
 
       {/* Primary Target Handle - Default LEFT for side connections */}
       {showTargetHandle && (
         <Handle
           type="target"
           position={targetHandlePosition}
-          className="!w-2.5 !h-2.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#155EEF] hover:!scale-125 !transition-all !duration-150"
+          className="!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#155EEF] hover:!scale-125 !transition-all !duration-150"
           style={{
-            ...(targetHandlePosition === Position.Left && { left: '-5px' }),
-            ...(targetHandlePosition === Position.Right && { right: '-5px' }),
+            ...(targetHandlePosition === Position.Left && { left: '-7px' }),
+            ...(targetHandlePosition === Position.Right && { right: '-7px' }),
           }}
         />
       )}
@@ -66,10 +66,10 @@ export function BaseNode({
         <Handle
           type="source"
           position={sourceHandlePosition}
-          className="!w-2.5 !h-2.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#155EEF] hover:!scale-125 !transition-all !duration-150"
+          className="!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#155EEF] hover:!scale-125 !transition-all !duration-150"
           style={{
-            ...(sourceHandlePosition === Position.Left && { left: '-5px' }),
-            ...(sourceHandlePosition === Position.Right && { right: '-5px' }),
+            ...(sourceHandlePosition === Position.Left && { left: '-7px' }),
+            ...(sourceHandlePosition === Position.Right && { right: '-7px' }),
           }}
         />
       )}
@@ -81,7 +81,7 @@ export function BaseNode({
           id={handle.id}
           type="target"
           position={handle.position}
-          className="!w-2.5 !h-2.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#155EEF] hover:!scale-125 !transition-all !duration-150"
+          className="!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#155EEF] hover:!scale-125 !transition-all !duration-150"
           style={handle.style}
         />
       ))}
@@ -93,7 +93,7 @@ export function BaseNode({
           id={handle.id}
           type="source"
           position={handle.position}
-          className="!w-2.5 !h-2.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#155EEF] hover:!scale-125 !transition-all !duration-150"
+          className="!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#155EEF] hover:!scale-125 !transition-all !duration-150"
           style={handle.style}
         />
       ))}

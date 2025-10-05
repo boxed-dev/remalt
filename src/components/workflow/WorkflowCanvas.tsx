@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useRef, DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type DragEvent } from 'react';
 import {
   ReactFlow,
   Background,
-  Controls,
   useNodesState,
   useEdgesState,
   useReactFlow,
@@ -14,7 +13,9 @@ import {
   type Edge,
   type OnNodesChange,
   type OnEdgesChange,
+  type OnMove,
   type OnMoveEnd,
+  type Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import '@/app/workflow.css';
@@ -31,7 +32,9 @@ import type {
   ImageNodeData,
   VoiceNodeData,
 } from '@/types/workflow';
+import { shallow } from 'zustand/shallow';
 import { nodeTypes } from './nodes';
+import { edgeTypes } from './edges';
 import { WorkflowControls } from './WorkflowControls';
 
 type UrlNodeMapping = {
@@ -41,6 +44,8 @@ type UrlNodeMapping = {
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'opus']);
+const EMPTY_NODES: WorkflowNode[] = [];
+const EMPTY_EDGES: WorkflowEdge[] = [];
 
 function isEditableElement(element: EventTarget | null): boolean {
   if (!element || !(element instanceof HTMLElement)) {
@@ -116,9 +121,20 @@ function mapUrlToNode(url: URL): UrlNodeMapping {
 
 function WorkflowCanvasInner() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { screenToFlowPosition } = useReactFlow();
+  const rafHandle = useRef<number | null>(null);
+  const hasAppliedStoredViewport = useRef(false);
+  const { screenToFlowPosition, getViewport, setViewport } = useReactFlow();
 
   const workflow = useWorkflowStore((state) => state.workflow);
+  const workflowNodes = useWorkflowStore(
+    (state) => state.workflow?.nodes ?? EMPTY_NODES,
+    shallow
+  );
+  const workflowEdges = useWorkflowStore(
+    (state) => state.workflow?.edges ?? EMPTY_EDGES,
+    shallow
+  );
+  const workflowViewport = useWorkflowStore((state) => state.workflow?.viewport);
   const addNode = useWorkflowStore((state) => state.addNode);
   const updateNodePosition = useWorkflowStore((state) => state.updateNodePosition);
   const deleteNode = useWorkflowStore((state) => state.deleteNode);
@@ -135,34 +151,89 @@ function WorkflowCanvasInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
+  const defaultViewport = useMemo<Viewport | undefined>(() => {
+    if (!workflowViewport) {
+      return undefined;
+    }
+
+    return {
+      x: workflowViewport.x,
+      y: workflowViewport.y,
+      zoom: workflowViewport.zoom,
+    };
+  }, [workflowViewport]);
+
   // Sync workflow state to React Flow
   useEffect(() => {
-    if (workflow) {
-      setNodes(
-        workflow.nodes.map((node: WorkflowNode) => ({
-          id: node.id,
-          type: node.type,
-          position: node.position,
-          data: node.data,
-          style: node.style,
-        }))
-      );
-      setEdges(
-        workflow.edges.map((edge: WorkflowEdge) => ({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          sourceHandle: edge.sourceHandle,
-          targetHandle: edge.targetHandle,
-          type: edge.type,
-          animated: edge.animated,
-          style: edge.style,
-          label: edge.label,
-          data: edge.data,
-        }))
-      );
+    setNodes(
+      workflowNodes.map((node) => ({
+        id: node.id,
+        type: node.type,
+        position: node.position,
+        data: node.data,
+        style: node.style,
+      }))
+    );
+  }, [workflowNodes, setNodes]);
+
+  useEffect(() => {
+    setEdges(
+      workflowEdges.map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
+        type: edge.type,
+        animated: edge.animated,
+        style: edge.style,
+        label: edge.label,
+        data: edge.data,
+      }))
+    );
+  }, [workflowEdges, setEdges]);
+
+  const scheduleViewportPersist = useCallback(
+    (viewport: Viewport) => {
+      if (rafHandle.current) {
+        cancelAnimationFrame(rafHandle.current);
+      }
+
+      rafHandle.current = requestAnimationFrame(() => {
+        rafHandle.current = null;
+        updateViewport(viewport);
+      });
+    },
+    [updateViewport]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (rafHandle.current) {
+        cancelAnimationFrame(rafHandle.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!workflowViewport) {
+      return;
     }
-  }, [workflow, setNodes, setEdges]);
+
+    const runtimeViewport = getViewport();
+    const isDifferent =
+      Math.abs(runtimeViewport.x - workflowViewport.x) > 0.5 ||
+      Math.abs(runtimeViewport.y - workflowViewport.y) > 0.5 ||
+      Math.abs(runtimeViewport.zoom - workflowViewport.zoom) > 0.0001;
+
+    if (isDifferent) {
+      setViewport(workflowViewport, {
+        duration: hasAppliedStoredViewport.current ? 180 : 0,
+        easing: (t) => 1 - Math.pow(1 - t, 3),
+      });
+      hasAppliedStoredViewport.current = true;
+    }
+  }, [getViewport, setViewport, workflowViewport]);
 
   // Handle node changes (position, selection, etc.)
   const handleNodesChange: OnNodesChange = useCallback(
@@ -214,11 +285,18 @@ function WorkflowCanvasInner() {
   );
 
   // Handle viewport changes
+  const onMove = useCallback<OnMove>(
+    (_event, viewport) => {
+      scheduleViewportPersist(viewport);
+    },
+    [scheduleViewportPersist]
+  );
+
   const onMoveEnd = useCallback<OnMoveEnd>(
     (_event, viewport) => {
-      updateViewport(viewport);
+      scheduleViewportPersist(viewport);
     },
-    [updateViewport]
+    [scheduleViewportPersist]
   );
 
   // Handle pane click (deselect all)
@@ -242,19 +320,19 @@ function WorkflowCanvasInner() {
     [deleteEdges]
   );
 
-  // Handle drag over
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
-  // Handle drop
   const onDrop = useCallback(
     (event: DragEvent) => {
       event.preventDefault();
 
       const type = event.dataTransfer.getData('application/reactflow') as NodeType;
-      if (!type) return;
+      if (!type) {
+        return;
+      }
 
       const position = screenToFlowPosition({
         x: event.clientX,
@@ -263,7 +341,7 @@ function WorkflowCanvasInner() {
 
       addNode(type, position);
     },
-    [screenToFlowPosition, addNode]
+    [addNode, screenToFlowPosition]
   );
 
   useEffect(() => {
@@ -320,7 +398,7 @@ function WorkflowCanvasInner() {
           </div>
           <h2 className="text-[20px] font-semibold text-[#1A1D21] mb-2">No Workflow Loaded</h2>
           <p className="text-[14px] text-[#6B7280] leading-relaxed">
-            Start by dragging nodes from the sidebar or create a new workflow to get started
+            Click nodes from the sidebar to add them to your workflow
           </p>
         </div>
       </div>
@@ -328,32 +406,45 @@ function WorkflowCanvasInner() {
   }
 
   return (
-    <div ref={reactFlowWrapper} className="h-full w-full relative">
+    <div
+      ref={reactFlowWrapper}
+      className="h-full w-full relative"
+      data-lenis-prevent
+      data-lenis-prevent-wheel
+      data-lenis-prevent-touch
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        defaultViewport={defaultViewport}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onMove={onMove}
         onMoveEnd={onMoveEnd}
         onPaneClick={onPaneClick}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
-        onDrop={onDrop}
         onDragOver={onDragOver}
-        fitView
+        onDrop={onDrop}
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
         maxZoom={4}
+        panOnScroll={true}
+        panOnScrollSpeed={0.5}
+        panOnDrag={true}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
+        zoomOnDoubleClick={false}
+        selectionOnDrag={false}
+        selectionMode="partial"
+        panActivationKeyCode="Space"
+        proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{
           type: 'smoothstep',
           animated: false,
-          style: {
-            strokeWidth: 3.5,
-            stroke: '#9CA3AF',
-            strokeLinecap: 'round',
-          },
         }}
         deleteKeyCode={['Backspace', 'Delete']}
         multiSelectionKeyCode="Shift"

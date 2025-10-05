@@ -107,6 +107,9 @@ export interface PDFNodeData extends BaseNodeData {
 // Voice Note Node
 export interface VoiceNodeData extends BaseNodeData {
   audioUrl?: string;
+  audioStoragePath?: string;
+  audioSignedUrlExpiresAt?: string;
+  uploadStatus?: 'idle' | 'uploading' | 'success' | 'error';
   audioFile?: File;
   duration?: number;
   transcript?: string;

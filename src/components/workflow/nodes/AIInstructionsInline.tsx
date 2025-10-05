@@ -3,6 +3,7 @@
 import { Sparkles, Check, X } from 'lucide-react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
+import { VoiceTextarea } from '../VoiceInput';
 
 interface AIInstructionsInlineProps {
   value?: string;
@@ -100,7 +101,7 @@ export function AIInstructionsInline({
       >
         <div className="opacity-0 group-hover:opacity-100 transition-opacity px-2.5 py-1.5 text-[11px] border border-dashed border-[#E8ECEF] group-hover:border-[#F59E0B]/30 rounded bg-transparent group-hover:bg-[#FAFBFC] flex items-center gap-1.5 text-[#D1D5DB] group-hover:text-[#F59E0B]">
           <Sparkles className="h-3 w-3" />
-          <span>Click to add AI instructions...</span>
+          <span>Click or use voice to add AI instructions...</span>
         </div>
       </div>
     );
@@ -161,13 +162,15 @@ export function AIInstructionsInline({
       </div>
 
       {/* Textarea */}
-      <textarea
+      <VoiceTextarea
         ref={textareaRef}
         value={localValue}
         onChange={handleChange}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="w-full px-2.5 py-2 text-[11px] leading-[1.4] border border-[#E8ECEF] rounded bg-white focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] resize-none transition-all placeholder:text-[#9CA3AF]"
+        showVoice
+        voiceMode="append"
+        className="px-2.5 py-2 text-[11px] leading-[1.4] border border-[#E8ECEF] rounded bg-white focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] resize-none transition-all placeholder:text-[#9CA3AF]"
         rows={3}
         onMouseDown={stopPropagation}
         onWheel={stopPropagation}

@@ -1,6 +1,6 @@
 'use client';
 
-import { DragEvent, useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   FileText,
   Mic,
@@ -14,6 +14,8 @@ import {
   Link2,
   FolderTree,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import type { NodeType } from '@/types/workflow';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
@@ -31,6 +33,7 @@ interface NodeTypeConfig {
   icon: React.ReactNode;
   label: string;
   category: 'media' | 'content' | 'ai' | 'structure';
+  tooltip?: string;
 }
 
 const NODE_TYPES: NodeTypeConfig[] = [
@@ -40,30 +43,35 @@ const NODE_TYPES: NodeTypeConfig[] = [
     icon: <FileText className="h-4 w-4" />,
     label: 'PDF',
     category: 'media',
+    tooltip: 'Upload documents • Extract text instantly',
   },
   {
     type: 'voice',
     icon: <Mic className="h-4 w-4" />,
     label: 'Voice',
     category: 'media',
+    tooltip: 'Record audio • Auto-transcribe speech',
   },
   {
     type: 'youtube',
     icon: <Youtube className="h-4 w-4" />,
     label: 'YouTube',
     category: 'media',
+    tooltip: 'Any video URL • Full transcript extraction',
   },
   {
     type: 'image',
     icon: <ImageIcon className="h-4 w-4" />,
     label: 'Image',
     category: 'media',
+    tooltip: 'Upload photos • AI vision analysis',
   },
   {
     type: 'webpage',
     icon: <Globe className="h-4 w-4" />,
     label: 'Webpage',
     category: 'media',
+    tooltip: 'Paste any URL • Smart content extraction',
   },
   // Content
   {
@@ -71,12 +79,14 @@ const NODE_TYPES: NodeTypeConfig[] = [
     icon: <Type className="h-4 w-4" />,
     label: 'Text',
     category: 'content',
+    tooltip: 'Quick notes • Rich text support',
   },
   {
     type: 'mindmap',
     icon: <Lightbulb className="h-4 w-4" />,
     label: 'Idea',
     category: 'content',
+    tooltip: 'Capture thoughts • Tag and organize',
   },
   // AI
   {
@@ -84,12 +94,14 @@ const NODE_TYPES: NodeTypeConfig[] = [
     icon: <Sparkles className="h-4 w-4" />,
     label: 'Template',
     category: 'ai',
+    tooltip: 'Ready-made prompts • Instant generation',
   },
   {
     type: 'chat',
     icon: <MessageSquare className="h-4 w-4" />,
     label: 'Chat',
     category: 'ai',
+    tooltip: 'AI assistant • Context-aware conversations',
   },
   // Structure
   {
@@ -97,12 +109,14 @@ const NODE_TYPES: NodeTypeConfig[] = [
     icon: <Link2 className="h-4 w-4" />,
     label: 'Connect',
     category: 'structure',
+    tooltip: 'Link nodes • Define relationships',
   },
   {
     type: 'group',
     icon: <FolderTree className="h-4 w-4" />,
     label: 'Group',
     category: 'structure',
+    tooltip: 'Organize nodes • Unified AI chat',
   },
 ];
 
@@ -120,11 +134,22 @@ export function WorkflowSidebar() {
   const clearSelection = useWorkflowStore((state) => state.clearSelection);
   const [showImageUploader, setShowImageUploader] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
-  const onDragStart = (event: DragEvent, nodeType: NodeType) => {
-    event.dataTransfer.setData('application/reactflow', nodeType);
-    event.dataTransfer.effectAllowed = 'move';
-  };
+  const handleNodeClick = useCallback((nodeType: NodeType) => {
+    const viewport = workflow?.viewport;
+    const sidebarWidth = isExpanded ? 240 : 56;
+    const centerPosition = viewport
+      ? {
+          x: -viewport.x / (viewport.zoom || 1) + (window.innerWidth - sidebarWidth) / 2 / (viewport.zoom || 1),
+          y: -viewport.y / (viewport.zoom || 1) + window.innerHeight / 2 / (viewport.zoom || 1),
+        }
+      : { x: 400, y: 300 };
+
+    const newNode = addNode(nodeType, centerPosition);
+    clearSelection();
+    selectNode(newNode.id);
+  }, [workflow, addNode, clearSelection, selectNode, isExpanded]);
 
   const handleImageSidebarClick = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
@@ -184,45 +209,102 @@ export function WorkflowSidebar() {
     }
   }, [isUploading]);
 
+  // Group nodes by category
+  const nodesByCategory = NODE_TYPES.reduce((acc, node) => {
+    if (!acc[node.category]) {
+      acc[node.category] = [];
+    }
+    acc[node.category].push(node);
+    return acc;
+  }, {} as Record<string, NodeTypeConfig[]>);
+
   return (
     <>
       {/* Vertical Left Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-14 bg-white border-r border-[#E8ECEF] flex flex-col items-center py-4 gap-2 z-10">
-        {NODE_TYPES.map((node) => {
-          const isImageNode = node.type === 'image';
+      <aside
+        className={`fixed left-0 bottom-0 bg-white border-r border-[#D4AF7F]/20 flex flex-col z-[40] transition-all duration-300 ${
+          isExpanded ? 'w-60' : 'w-14'
+        }`}
+        style={{ top: '56px' }}
+      >
+        {/* Header with toggle only */}
+        <div className={`flex items-center border-b border-[#D4AF7F]/20 ${isExpanded ? 'justify-between px-4 py-3' : 'justify-center py-3 px-3'}`}>
+          {isExpanded && (
+            <h2 className="text-[13px] font-semibold text-[#095D40]">Add Nodes</h2>
+          )}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-2 rounded-lg hover:bg-[#D4AF7F]/10 text-[#6B7280] hover:text-[#095D40] transition-colors flex-shrink-0 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#095D40]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            title={isExpanded ? 'Collapse • More canvas space' : 'Expand • See all nodes'}
+            style={{ minWidth: '32px', minHeight: '32px' }}
+          >
+            {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </button>
+        </div>
 
-          // Image node - click to upload
-          if (isImageNode) {
-            return (
-              <button
-                key={node.type}
-                type="button"
-                onClick={handleImageSidebarClick}
-                className="w-9 h-9 flex items-center justify-center rounded-lg border border-transparent hover:border-[#E8ECEF] hover:bg-[#F5F5F7] transition-all cursor-pointer group"
-                title={node.label}
-              >
-                <div className="text-[#6B7280] group-hover:text-[#1F2937] transition-colors">
-                  {node.icon}
+        {/* Scrollable content */}
+        <div
+          className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3"
+          data-lenis-prevent
+          data-lenis-prevent-wheel
+          data-lenis-prevent-touch
+        >
+          {isExpanded ? (
+            // Expanded view - grouped by category
+            <div className="space-y-6">
+              {(Object.keys(nodesByCategory) as Array<keyof typeof CATEGORY_LABELS>).map((category) => (
+                <div key={category}>
+                  <div className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2 px-2">
+                    {CATEGORY_LABELS[category]}
+                  </div>
+                  <div className="space-y-1">
+                    {nodesByCategory[category].map((node) => {
+                      const isImageNode = node.type === 'image';
+
+                      return (
+                        <button
+                          key={node.type}
+                          type="button"
+                          onClick={isImageNode ? handleImageSidebarClick : () => handleNodeClick(node.type)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:border-[#D4AF7F]/30 hover:bg-[#D4AF7F]/10 transition-all cursor-pointer group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#095D40]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                          title={node.tooltip || node.label}
+                        >
+                          <div className="text-[#6B7280] group-hover:text-[#095D40] transition-colors flex-shrink-0">
+                            {node.icon}
+                          </div>
+                          <span className="text-[13px] text-[#333333] font-medium group-hover:text-[#095D40] transition-colors">
+                            {node.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </button>
-            );
-          }
-
-          // Default - draggable node
-          return (
-            <div
-              key={node.type}
-              draggable
-              onDragStart={(e) => onDragStart(e, node.type)}
-              className="w-9 h-9 flex items-center justify-center rounded-lg border border-transparent hover:border-[#E8ECEF] hover:bg-[#F5F5F7] transition-all cursor-grab active:cursor-grabbing group"
-              title={node.label}
-            >
-              <div className="text-[#6B7280] group-hover:text-[#1F2937] transition-colors">
-                {node.icon}
-              </div>
+              ))}
             </div>
-          );
-        })}
+          ) : (
+            // Collapsed view - icons only
+            <div className="flex flex-col items-center gap-2">
+              {NODE_TYPES.map((node) => {
+                const isImageNode = node.type === 'image';
+
+                return (
+                  <button
+                    key={node.type}
+                    type="button"
+                    onClick={isImageNode ? handleImageSidebarClick : () => handleNodeClick(node.type)}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg border border-transparent hover:border-[#D4AF7F]/30 hover:bg-[#D4AF7F]/10 transition-all cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#095D40]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                    title={node.tooltip || node.label}
+                  >
+                    <div className="text-[#6B7280] group-hover:text-[#095D40] transition-colors">
+                      {node.icon}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </aside>
 
       {/* Uploadcare Uploader Modal */}
@@ -246,17 +328,17 @@ export function WorkflowSidebar() {
               transition={{ duration: 0.2 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-[420px] max-w-[90vw] max-h-[80vh] rounded-xl border border-[#E5E7EB] bg-white shadow-2xl overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8ECEF] bg-gradient-to-r from-[#F9FAFB] to-white">
+              <div className="w-[420px] max-w-[90vw] max-h-[80vh] rounded-xl border border-[#D4AF7F]/30 bg-white shadow-2xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[#D4AF7F]/20 bg-gradient-to-r from-[#D4AF7F]/5 to-white">
                   <div>
-                    <div className="text-[14px] font-semibold text-[#1F2937]">Upload Image</div>
+                    <div className="text-[14px] font-semibold text-[#333333]">Upload Image</div>
                     <div className="text-[11px] text-[#6B7280] mt-0.5">Select from multiple sources</div>
                   </div>
                   <button
                     type="button"
                     onClick={hideUploader}
                     disabled={isUploading}
-                    className="text-[#9CA3AF] hover:text-[#1F2937] disabled:opacity-40 transition-colors p-1 rounded hover:bg-white"
+                    className="text-[#9CA3AF] hover:text-[#095D40] disabled:opacity-40 transition-colors p-1 rounded hover:bg-white"
                     title="Close"
                   >
                     <X className="h-5 w-5" />

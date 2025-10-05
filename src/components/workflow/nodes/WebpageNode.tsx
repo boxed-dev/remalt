@@ -454,13 +454,6 @@ export function WebpageNode({ id, data }: NodeProps<WebpageNodeData>) {
                               {previewState.data.description || data.pageContent}
                             </div>
                           )}
-                          <button
-                            onClick={openInNewTab}
-                            className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-2 py-1 text-[11px] text-[#0369A1] hover:border-[#0369A1]"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            Open in new tab
-                          </button>
                         </div>
                       </div>
                     )}

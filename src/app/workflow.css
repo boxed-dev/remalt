@@ -2,7 +2,7 @@
 
 /* Selected nodes */
 .react-flow__node.selected {
-  box-shadow: 0 0 0 3px #155EEF, 0 6px 20px rgba(21, 94, 239, 0.25);
+  box-shadow: 0 0 0 3px #095D40, 0 6px 20px rgba(9, 93, 64, 0.25);
 }
 
 /* Edge path */
@@ -13,7 +13,7 @@
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #155EEF;
+  stroke: #095D40;
   stroke-width: 4.5;
 }
 
@@ -56,7 +56,7 @@
 }
 
 .react-flow__controls-button:hover svg {
-  fill: #155EEF;
+  fill: #095D40;
 }
 
 /* Attribution */
@@ -66,13 +66,13 @@
 
 /* Selection */
 .react-flow__selection {
-  background: rgba(21, 94, 239, 0.08);
-  border: 1.5px solid #155EEF;
+  background: rgba(9, 93, 64, 0.08);
+  border: 1.5px solid #095D40;
 }
 
 /* Connection line */
 .react-flow__connectionline {
-  stroke: #155EEF;
+  stroke: #095D40;
   stroke-width: 3.5;
   stroke-linecap: round;
 }

@@ -12,6 +12,7 @@ import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { buildChatContext, getLinkedNodeIds } from '@/lib/workflow/context-builder';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import type { ChatNodeData, ChatMessage } from '@/types/workflow';
+import { VoiceInput } from '../VoiceInput';
 import 'katex/dist/katex.min.css';
 
 interface ChatNodeProps {
@@ -331,30 +332,33 @@ export function ChatNode({ id, data }: ChatNodeProps) {
               onPointerDown={(event) => stopReactFlowPropagation(event)}
               onTouchStart={(event) => stopReactFlowPropagation(event)}
               onTouchMove={(event) => stopReactFlowPropagation(event)}
+              data-lenis-prevent
+              data-lenis-prevent-wheel
+              data-lenis-prevent-touch
               className="relative h-[480px] overflow-y-auto overflow-x-hidden space-y-3 scroll-smooth chat-scrollbar"
               style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
             >
               {data.messages.length > 0 ? (
                 data.messages.map((message) => (
                   <div key={message.id} className="max-w-[85%]">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-1.5">
                       {message.role === 'assistant' ? (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#14B8A6] to-[#0EA5E9]">
-                          <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                          <span className="text-[11px] font-semibold text-white tracking-wide">REMALT</span>
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#FAFBFC] border border-[#E8ECEF]">
+                          <div className="w-1.5 h-1.5 bg-[#14B8A6] rounded-full"></div>
+                          <span className="text-[10px] font-medium text-[#6B7280] tracking-wide">AI</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#155EEF]">
-                          <User className="w-3 h-3 text-white" />
-                          <span className="text-[11px] font-semibold text-white tracking-wide">{getUserDisplayName().toUpperCase()}</span>
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#FAFBFC] border border-[#E8ECEF]">
+                          <User className="w-2.5 h-2.5 text-[#6B7280]" />
+                          <span className="text-[10px] font-medium text-[#6B7280] tracking-wide">{getUserDisplayName()}</span>
                         </div>
                       )}
                     </div>
                     <div
-                      className={`p-4 rounded-xl text-[13px] leading-[1.6] break-words shadow-sm transition-all ${
+                      className={`p-3.5 rounded-lg text-[13px] leading-[1.6] break-words transition-all ${
                         message.role === 'user'
-                          ? 'bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] text-[#1A1D21] border border-[#93C5FD]'
-                          : 'bg-white text-[#1A1D21] border border-[#E8ECEF]'
+                          ? 'bg-[#F5F5F7] text-[#1A1D21] border border-[#E8ECEF]'
+                          : 'bg-white text-[#1A1D21]'
                       }`}
                       style={{
                         wordWrap: 'break-word',
@@ -362,6 +366,13 @@ export function ChatNode({ id, data }: ChatNodeProps) {
                       }}
                     >
                     <div className="prose prose-sm max-w-none markdown-content overflow-x-auto">
+                      {message.content === '' && isLoading ? (
+                        <div className="flex items-center gap-2 py-2">
+                          <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse"></div>
+                          <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                        </div>
+                      ) : (
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm, remarkMath]}
                         rehypePlugins={[rehypeKatex]}
@@ -419,6 +430,7 @@ export function ChatNode({ id, data }: ChatNodeProps) {
                       >
                         {message.content}
                       </ReactMarkdown>
+                      )}
                     </div>
                     </div>
                   </div>
@@ -442,7 +454,7 @@ export function ChatNode({ id, data }: ChatNodeProps) {
         )}
 
         <div className="flex gap-2">
-          <input
+          <VoiceInput
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -450,8 +462,9 @@ export function ChatNode({ id, data }: ChatNodeProps) {
             onMouseDown={(event) => stopReactFlowPropagation(event)}
             onWheel={(event) => stopReactFlowPropagation(event)}
             onWheelCapture={(event) => stopReactFlowPropagation(event)}
-            placeholder="Type your message..."
+            placeholder="Type or speak..."
             disabled={isLoading}
+            voiceMode="replace"
             className="flex-1 px-4 py-2.5 text-[13px] border border-[#E8ECEF] rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#155EEF] focus:border-transparent disabled:bg-[#F5F5F7] disabled:cursor-not-allowed transition-all"
           />
           <button
@@ -520,33 +533,43 @@ export function ChatNode({ id, data }: ChatNodeProps) {
             onPointerDown={(event) => stopReactFlowPropagation(event)}
             onTouchStart={(event) => stopReactFlowPropagation(event)}
             onTouchMove={(event) => stopReactFlowPropagation(event)}
+            data-lenis-prevent
+            data-lenis-prevent-wheel
+            data-lenis-prevent-touch
             className="relative flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-3 chat-scrollbar"
             style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
           >
             {data.messages.length > 0 ? (
               data.messages.map((message) => (
                 <div key={message.id} className="max-w-[85%]">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-1.5">
                     {message.role === 'assistant' ? (
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#14B8A6] to-[#0EA5E9]">
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                        <span className="text-[12px] font-semibold text-white tracking-wide">REMALT</span>
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FAFBFC] border border-[#E8ECEF]">
+                        <div className="w-1.5 h-1.5 bg-[#14B8A6] rounded-full"></div>
+                        <span className="text-[11px] font-medium text-[#6B7280] tracking-wide">AI</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#155EEF]">
-                        <User className="w-3.5 h-3.5 text-white" />
-                        <span className="text-[12px] font-semibold text-white tracking-wide">{getUserDisplayName().toUpperCase()}</span>
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FAFBFC] border border-[#E8ECEF]">
+                        <User className="w-3 h-3 text-[#6B7280]" />
+                        <span className="text-[11px] font-medium text-[#6B7280] tracking-wide">{getUserDisplayName()}</span>
                       </div>
                     )}
                   </div>
                   <div
-                    className={`p-5 rounded-2xl text-[14px] leading-[1.6] shadow-sm ${
+                    className={`p-4 rounded-lg text-[14px] leading-[1.6] ${
                       message.role === 'user'
-                        ? 'bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] text-[#1A1D21] border border-[#93C5FD]'
-                        : 'bg-white text-[#1A1D21] border border-[#E8ECEF]'
+                        ? 'bg-[#F5F5F7] text-[#1A1D21] border border-[#E8ECEF]'
+                        : 'bg-white text-[#1A1D21]'
                     }`}
                   >
                   <div className="prose prose-sm max-w-none markdown-content overflow-x-auto">
+                    {message.content === '' && isLoading ? (
+                      <div className="flex items-center gap-2 py-2">
+                        <div className="w-2.5 h-2.5 bg-[#14B8A6] rounded-full animate-pulse"></div>
+                        <div className="w-2.5 h-2.5 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2.5 h-2.5 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                      </div>
+                    ) : (
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm, remarkMath]}
                       rehypePlugins={[rehypeKatex]}
@@ -592,6 +615,7 @@ export function ChatNode({ id, data }: ChatNodeProps) {
                     >
                       {message.content}
                     </ReactMarkdown>
+                    )}
                   </div>
                   </div>
                 </div>
@@ -611,13 +635,14 @@ export function ChatNode({ id, data }: ChatNodeProps) {
           {/* Modal Input */}
           <div className="px-6 py-5 border-t border-[#E8ECEF] bg-white">
             <div className="flex gap-3">
-              <input
+              <VoiceInput
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your message..."
+                placeholder="Type or speak your message..."
                 disabled={isLoading}
+                voiceMode="replace"
                 className="flex-1 px-5 py-3.5 text-[14px] border border-[#E8ECEF] rounded-2xl bg-white focus:outline-none focus:ring-2 focus:ring-[#155EEF] focus:border-transparent disabled:bg-[#F5F5F7] disabled:cursor-not-allowed transition-all"
                 autoFocus
                 onMouseDown={(event) => stopReactFlowPropagation(event)}

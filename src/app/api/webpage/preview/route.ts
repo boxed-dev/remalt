@@ -3,16 +3,29 @@ import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
 
 const USER_AGENT = 'Mozilla/5.0 (compatible; RemaltBot/1.0; +https://remalt.ai)';
 const FETCH_TIMEOUT_MS = 10_000;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+type PreviewCacheEntry = {
+  expiresAt: number;
+  response: {
+    title: string | null;
+    description: string | null;
+    imageUrl: string | null;
+    themeColor: string | null;
+  };
+};
+
+const PREVIEW_CACHE = new Map<string, PreviewCacheEntry>();
 
 function parseRequestBody(raw: string) {
   if (!raw || raw.trim() === '') {
-    throw new Error('Request body is empty');
+    return null;
   }
   try {
     return JSON.parse(raw) as { url?: string };
   } catch (error) {
     console.error('JSON parse error:', error);
-    throw new Error('Invalid JSON in request body');
+    return null;
   }
 }
 
@@ -80,10 +93,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = parseRequestBody(await req.text());
-    const normalizedUrl = typeof body.url === 'string' ? normalizeUrl(body.url) : null;
+    const normalizedUrl = body?.url ? normalizeUrl(body.url) : null;
 
     if (!normalizedUrl) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+    }
+
+    const cachedEntry = PREVIEW_CACHE.get(normalizedUrl);
+    if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
+      return NextResponse.json(cachedEntry.response);
     }
 
     let html: string | null = null;
@@ -154,12 +172,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const responseBody = {
       title,
       description,
       imageUrl,
       themeColor,
+    } as const;
+
+    PREVIEW_CACHE.set(normalizedUrl, {
+      expiresAt: Date.now() + CACHE_TTL_MS,
+      response: responseBody,
     });
+
+    return NextResponse.json(responseBody);
   } catch (error) {
     console.error('Webpage preview error:', error);
     const message = error instanceof Error ? error.message : 'Failed to load preview';

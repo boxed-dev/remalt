@@ -291,12 +291,6 @@ class RecordingManager {
         this.session.interimTranscript = transcript;
         this.emit('transcript-interim', transcript);
       }
-    } else if (data.type === 'Metadata') {
-      // Handle metadata if needed
-      console.log('Deepgram metadata:', data);
-    } else if (data.type === 'UtteranceEnd') {
-      // Utterance ended - could trigger auto-finalization
-      console.log('Utterance ended');
     }
   }
 

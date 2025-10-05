@@ -4,16 +4,35 @@ import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
 const USER_AGENT = 'Mozilla/5.0 (compatible; RemaltBot/1.0; +https://remalt.ai)';
 const FETCH_TIMEOUT_MS = 12_000;
 const MAX_CONTENT_LENGTH = 12_000;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+type AnalysisCacheEntry = {
+  expiresAt: number;
+  response: {
+    url: string;
+    pageTitle: string;
+    pageContent: string;
+    summary: string;
+    keyPoints: string[];
+    metadata: {
+      description?: string;
+      keywords?: string[];
+    };
+    status: 'success';
+  };
+};
+
+const ANALYSIS_CACHE = new Map<string, AnalysisCacheEntry>();
 
 function parseRequestBody(raw: string) {
   if (!raw || raw.trim() === '') {
-    throw new Error('Request body is empty');
+    return null;
   }
   try {
     return JSON.parse(raw) as { url?: string };
   } catch (error) {
     console.error('JSON parse error:', error);
-    throw new Error('Invalid JSON in request body');
+    return null;
   }
 }
 
@@ -148,13 +167,18 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = parseRequestBody(await req.text());
-    const normalizedUrl = typeof body.url === 'string' ? normalizeUrl(body.url) : null;
+    const normalizedUrl = body?.url ? normalizeUrl(body.url) : null;
 
     if (!normalizedUrl) {
       return NextResponse.json(
         { error: 'URL is required' },
         { status: 400 },
       );
+    }
+
+    const cachedEntry = ANALYSIS_CACHE.get(normalizedUrl);
+    if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
+      return NextResponse.json(cachedEntry.response);
     }
 
     const result = await directHtmlAnalysis(normalizedUrl, user.id);
@@ -165,11 +189,18 @@ export async function POST(req: NextRequest) {
       keyPoints: result.keyPoints.length,
     });
 
-    return NextResponse.json({
+    const responseBody = {
       url: normalizedUrl,
       ...result,
       status: 'success',
+    } as const;
+
+    ANALYSIS_CACHE.set(normalizedUrl, {
+      expiresAt: Date.now() + CACHE_TTL_MS,
+      response: responseBody,
     });
+
+    return NextResponse.json(responseBody);
   } catch (error) {
     console.error('Webpage Analysis Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to analyze webpage';

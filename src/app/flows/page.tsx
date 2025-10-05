@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, Loader2 } from "lucide-react";
 import { FlowCard } from "@/components/flows/flow-card";
 import { useRouter } from "next/navigation";
-import { AppHeader } from "@/components/layout/app-header";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { createClient } from "@/lib/supabase/client";
 import { getUserWorkflows, deleteWorkflow } from "@/lib/supabase/workflows";
@@ -98,11 +97,9 @@ export default function FlowsPage() {
   }
 
   return (
-    <div className="h-screen bg-[#FAFBFC] flex flex-col">
-      <AppHeader />
-
+    <div className="min-h-screen bg-[#FAFBFC]">
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="min-h-screen">
         <div className="max-w-7xl mx-auto px-8 py-8">
           {/* Header with Search and New Flow Button */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
