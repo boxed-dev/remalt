@@ -146,6 +146,10 @@ function WorkflowCanvasInner() {
   const selectNode = useWorkflowStore((state) => state.selectNode);
   const clearSelection = useWorkflowStore((state) => state.clearSelection);
   const pasteNodes = useWorkflowStore((state) => state.pasteNodes);
+  const addNodesToGroup = useWorkflowStore((state) => state.addNodesToGroup);
+
+  // Track dragged node for group drop
+  const draggedNodeIdRef = useRef<string | null>(null);
 
   // Convert workflow nodes/edges to React Flow format
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -320,6 +324,28 @@ function WorkflowCanvasInner() {
     [deleteEdges]
   );
 
+  // Handle node drag start
+  const onNodeDragStart = useCallback((_event: React.MouseEvent, node: Node) => {
+    draggedNodeIdRef.current = node.id;
+  }, []);
+
+  // Handle node drag stop
+  const onNodeDragStop = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      const draggedId = draggedNodeIdRef.current;
+      const targetGroupId = (window as any).__targetGroupId;
+
+      draggedNodeIdRef.current = null;
+      (window as any).__targetGroupId = null;
+
+      // If we have a target group, add the node to it
+      if (draggedId && targetGroupId && draggedId !== targetGroupId) {
+        addNodesToGroup(targetGroupId, [draggedId]);
+      }
+    },
+    [addNodesToGroup]
+  );
+
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -409,6 +435,7 @@ function WorkflowCanvasInner() {
     <div
       ref={reactFlowWrapper}
       className="h-full w-full relative"
+      style={{ isolation: 'isolate' }}
       data-lenis-prevent
       data-lenis-prevent-wheel
       data-lenis-prevent-touch
@@ -427,6 +454,8 @@ function WorkflowCanvasInner() {
         onPaneClick={onPaneClick}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDragStop={onNodeDragStop}
         onDragOver={onDragOver}
         onDrop={onDrop}
         fitViewOptions={{ padding: 0.2 }}

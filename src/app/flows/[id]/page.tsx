@@ -192,11 +192,11 @@ export default function WorkflowEditorPage() {
 
   return (
     <div className="fixed inset-0 bg-[#FAFBFC]" style={{ top: '56px' }}>
-      {/* Left Sidebar - Fixed, positioned by the component itself */}
+      {/* Left Sidebar - Independently fixed, completely isolated */}
       <WorkflowSidebar />
 
-      {/* Main Canvas Area - Takes remaining space, margin adjusts for sidebar */}
-      <div className="h-full transition-all duration-300" style={{ marginLeft: '56px' }}>
+      {/* Main Canvas Area - Isolated zoom container with proper offset */}
+      <div className="h-full ml-14 transition-[margin] duration-300">
         <WorkflowCanvas />
       </div>
     </div>
