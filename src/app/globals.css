@@ -250,6 +250,16 @@
 .markdown-content code {
     white-space: pre-wrap;
   }
+
+  /* Fix for sidebar and toolbar visibility after tab switching */
+  aside.fixed[style*="top: 56px"],
+  div.fixed.bottom-6.right-6 {
+    will-change: auto !important;
+    transform: translateZ(0);
+    backface-visibility: visible !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
 }
 
 html.lenis-enabled,

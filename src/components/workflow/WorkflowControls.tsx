@@ -2,10 +2,12 @@
 
 import { useEffect } from 'react';
 import { useReactFlow } from '@xyflow/react';
+import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { WorkflowToolbar } from './WorkflowToolbar';
 
 export function WorkflowControls() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const setControlMode = useWorkflowStore((state) => state.setControlMode);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -19,8 +21,16 @@ export function WorkflowControls() {
         return;
       }
 
+      // Control mode shortcuts
+      if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault();
+        setControlMode('pointer');
+      } else if (e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        setControlMode('hand');
+      }
       // Zoom shortcuts
-      if (e.key === '=' || e.key === '+') {
+      else if (e.key === '=' || e.key === '+') {
         e.preventDefault();
         zoomIn({ duration: 200 });
       } else if (e.key === '-' || e.key === '_') {
@@ -34,7 +44,7 @@ export function WorkflowControls() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [zoomIn, zoomOut, fitView]);
+  }, [zoomIn, zoomOut, fitView, setControlMode]);
 
   return <WorkflowToolbar />;
 }

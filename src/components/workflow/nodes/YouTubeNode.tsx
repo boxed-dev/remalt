@@ -1,9 +1,10 @@
-import { Youtube, Loader2, CheckCircle2, AlertCircle, Download, ExternalLink } from 'lucide-react';
+import { Youtube, Loader2, CheckCircle2, AlertCircle, Download, ExternalLink, Users, ChevronDown, ChevronUp, PlayCircle } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { YouTubeNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
+import { extractChannelId } from '@/lib/api/youtube';
 
 interface YouTubeNodeProps {
   id: string;
@@ -25,21 +26,51 @@ function extractYouTubeId(url: string): string | null {
   return null;
 }
 
+function isChannelUrl(url: string): boolean {
+  return !!extractChannelId(url);
+}
+
+function formatViewCount(count: string): string {
+  const num = parseInt(count);
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return `${num}`;
+}
+
+function formatDuration(isoDuration: string): string {
+  const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return '0:00';
+
+  const hours = match[1] ? parseInt(match[1]) : 0;
+  const minutes = match[2] ? parseInt(match[2]) : 0;
+  const seconds = match[3] ? parseInt(match[3]) : 0;
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
 export function YouTubeNode({ id, data }: YouTubeNodeProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
+  const [expandedVideos, setExpandedVideos] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const processedUrlRef = useRef<string | null>(null);
 
+  const isChannel = data.mode === 'channel';
   const hasTranscript = useMemo(() => data.transcriptStatus === 'success' && !!data.transcript, [data.transcriptStatus, data.transcript]);
   const displayTitle = useMemo(() => {
+    if (isChannel) return data.channelTitle;
     const trimmed = data.title?.trim();
-    if (!trimmed || trimmed === 'YouTube Video') {
-      return undefined;
-    }
+    if (!trimmed || trimmed === 'YouTube Video') return undefined;
     return trimmed;
-  }, [data.title]);
+  }, [data.title, data.channelTitle, isChannel]);
+
+  const selectedVideosCount = useMemo(() => {
+    return data.channelVideos?.filter(v => v.selected).length || 0;
+  }, [data.channelVideos]);
 
   const stopPropagation = (event: React.MouseEvent | React.TouchEvent) => {
     event.stopPropagation();
@@ -95,8 +126,7 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
       const response = await fetch(`/api/youtube/metadata?url=${encodeURIComponent(videoUrl)}`, {
         credentials: 'include',
       });
-      if (!response.ok)
-        return undefined;
+      if (!response.ok) return undefined;
 
       const metadata = await response.json();
       const title = typeof metadata.title === 'string' ? metadata.title.trim() : '';
@@ -106,6 +136,48 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
       return undefined;
     }
   }, []);
+
+  const fetchChannelData = useCallback(async (channelUrl: string) => {
+    updateNodeData(id, {
+      channelLoadStatus: 'loading',
+      channelError: undefined,
+    } as Partial<YouTubeNodeData>);
+
+    try {
+      const response = await fetch(`/api/youtube/channel?url=${encodeURIComponent(channelUrl)}&maxResults=20`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch channel data');
+      }
+
+      const result = await response.json();
+
+      updateNodeData(id, {
+        channelId: result.channel.id,
+        channelTitle: result.channel.title,
+        channelDescription: result.channel.description,
+        channelThumbnail: result.channel.thumbnail,
+        channelSubscriberCount: result.channel.subscriberCount,
+        channelVideoCount: result.channel.videoCount,
+        channelCustomUrl: result.channel.customUrl,
+        channelVideos: result.videos.map((v: any) => ({
+          ...v,
+          selected: false,
+        })),
+        channelLoadStatus: 'success',
+        nextPageToken: result.nextPageToken,
+      } as Partial<YouTubeNodeData>);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch channel data';
+      updateNodeData(id, {
+        channelLoadStatus: 'error',
+        channelError: message,
+      } as Partial<YouTubeNodeData>);
+    }
+  }, [id, updateNodeData]);
 
   const processVideoUrl = useCallback(async (videoUrl: string, silent = false) => {
     const safeUrl = videoUrl.trim();
@@ -140,6 +212,7 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
       transcript: hasTranscript ? existingTranscript : undefined,
       transcriptError: undefined,
       transcriptMethod: hasTranscript ? existingMethod : undefined,
+      mode: 'video',
     } as Partial<YouTubeNodeData>);
 
     if (shouldFetchTitle) {
@@ -165,32 +238,47 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
       transcriptMethod: result.method,
       transcriptError: result.error,
     } as Partial<YouTubeNodeData>);
-  }, [fetchTranscript, id, updateNodeData]);
+  }, [fetchTranscript, id, updateNodeData, fetchVideoTitle]);
+
+  const processUrl = useCallback(async (inputUrl: string, silent = false) => {
+    const safeUrl = inputUrl.trim();
+
+    // Determine if it's a channel or video URL
+    if (isChannelUrl(safeUrl)) {
+      updateNodeData(id, {
+        url: safeUrl,
+        mode: 'channel',
+      } as Partial<YouTubeNodeData>);
+      await fetchChannelData(safeUrl);
+    } else {
+      await processVideoUrl(safeUrl, silent);
+    }
+  }, [id, updateNodeData, fetchChannelData, processVideoUrl]);
 
   useEffect(() => {
-    if (!data.url) {
-      return;
-    }
+    if (!data.url) return;
 
     const node = useWorkflowStore.getState().getNode(id);
     if (node?.type === 'youtube') {
       const nodeData = node.data as YouTubeNodeData;
+      if (nodeData.mode === 'channel' && nodeData.channelLoadStatus && nodeData.channelLoadStatus !== 'loading') {
+        processedUrlRef.current = data.url;
+        return;
+      }
       if (nodeData.videoId && nodeData.transcriptStatus && nodeData.transcriptStatus !== 'loading') {
         processedUrlRef.current = data.url;
         return;
       }
     }
 
-    if (processedUrlRef.current === data.url) {
-      return;
-    }
+    if (processedUrlRef.current === data.url) return;
 
     processedUrlRef.current = data.url;
-    void processVideoUrl(data.url, true);
-  }, [data.url, id, processVideoUrl]);
+    void processUrl(data.url, true);
+  }, [data.url, id, processUrl]);
 
   const handleSave = async () => {
-    await processVideoUrl(url);
+    await processUrl(url);
     setIsEditing(false);
   };
 
@@ -205,8 +293,7 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
 
   const downloadTranscript = (event: React.MouseEvent<HTMLButtonElement>) => {
     stopPropagation(event);
-    if (!data.transcript)
-      return;
+    if (!data.transcript) return;
 
     const blob = new Blob([data.transcript], { type: 'text/plain;charset=utf-8' });
     const urlObject = URL.createObjectURL(blob);
@@ -217,13 +304,64 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
     URL.revokeObjectURL(urlObject);
   };
 
-  const openVideo = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const downloadAllTranscripts = (event: React.MouseEvent<HTMLButtonElement>) => {
     stopPropagation(event);
-    if (data.url)
-      window.open(data.url, '_blank', 'noopener,noreferrer');
+    const selectedVideos = data.channelVideos?.filter(v => v.selected && v.transcript) || [];
+    if (selectedVideos.length === 0) return;
+
+    const allTranscripts = selectedVideos.map(v =>
+      `=== ${v.title} ===\n\n${v.transcript}\n\n`
+    ).join('\n');
+
+    const blob = new Blob([allTranscripts], { type: 'text/plain;charset=utf-8' });
+    const urlObject = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = urlObject;
+    link.download = `${data.channelTitle || 'channel'}-transcripts.txt`;
+    link.click();
+    URL.revokeObjectURL(urlObject);
   };
 
-  // Transcript status indicator
+  const openVideo = (event: React.MouseEvent<HTMLButtonElement>) => {
+    stopPropagation(event);
+    if (data.url) window.open(data.url, '_blank', 'noopener,noreferrer');
+  };
+
+  const toggleVideoSelection = async (videoId: string) => {
+    const videos = data.channelVideos || [];
+    const videoIndex = videos.findIndex(v => v.id === videoId);
+    if (videoIndex === -1) return;
+
+    const video = videos[videoIndex];
+    const newSelected = !video.selected;
+
+    // Update selection
+    const updatedVideos = [...videos];
+    updatedVideos[videoIndex] = { ...video, selected: newSelected };
+
+    updateNodeData(id, {
+      channelVideos: updatedVideos,
+    } as Partial<YouTubeNodeData>);
+
+    // If selecting and no transcript, fetch it
+    if (newSelected && !video.transcript && video.transcriptStatus !== 'loading') {
+      updatedVideos[videoIndex].transcriptStatus = 'loading';
+      updateNodeData(id, { channelVideos: updatedVideos } as Partial<YouTubeNodeData>);
+
+      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const result = await fetchTranscript(videoUrl);
+
+      updatedVideos[videoIndex] = {
+        ...updatedVideos[videoIndex],
+        transcript: result.transcript,
+        transcriptStatus: result.status,
+      };
+
+      updateNodeData(id, { channelVideos: updatedVideos } as Partial<YouTubeNodeData>);
+    }
+  };
+
+  // Transcript status indicator for single video
   const TranscriptStatus = () => {
     if (!data.transcriptStatus) return null;
 
@@ -261,101 +399,283 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
     }
   };
 
+  // Render channel view
+  const renderChannelView = () => (
+    <div className="w-[400px] space-y-3">
+      {/* Channel Header */}
+      <div className="flex gap-3">
+        {data.channelThumbnail && (
+          <img
+            src={data.channelThumbnail}
+            alt={data.channelTitle}
+            className="w-16 h-16 rounded-full object-cover"
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-[14px] text-[#0F172A] truncate">{data.channelTitle}</div>
+          <div className="flex items-center gap-3 text-[11px] text-[#64748B] mt-1">
+            <span className="flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              {parseInt(data.channelSubscriberCount || '0').toLocaleString()} subscribers
+            </span>
+            <span>{data.channelVideoCount} videos</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Channel Description */}
+      {data.channelDescription && (
+        <div className="text-[11px] text-[#475569] line-clamp-2">
+          {data.channelDescription}
+        </div>
+      )}
+
+      {/* Loading/Error States */}
+      {data.channelLoadStatus === 'loading' && (
+        <div className="flex items-center gap-2 text-[12px] text-[#475569] py-4">
+          <Loader2 className="h-4 w-4 animate-spin text-[#2563EB]" />
+          <span>Loading channel videos...</span>
+        </div>
+      )}
+
+      {data.channelLoadStatus === 'error' && (
+        <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[11px] text-[#991B1B]">
+          {data.channelError}
+        </div>
+      )}
+
+      {/* Videos List */}
+      {data.channelVideos && data.channelVideos.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-[12px] font-medium text-[#0F172A]">
+              Videos ({selectedVideosCount} selected)
+            </div>
+            <button
+              onClick={(e) => {
+                stopPropagation(e);
+                setExpandedVideos(!expandedVideos);
+              }}
+              className="text-[11px] text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1"
+            >
+              {expandedVideos ? (
+                <>
+                  <ChevronUp className="h-3 w-3" />
+                  Collapse
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3 w-3" />
+                  Expand
+                </>
+              )}
+            </button>
+          </div>
+
+          {expandedVideos && (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+              {data.channelVideos.map((video) => (
+                <div
+                  key={video.id}
+                  onClick={(e) => {
+                    stopPropagation(e);
+                    toggleVideoSelection(video.id);
+                  }}
+                  className={`
+                    relative rounded-lg border p-2 cursor-pointer transition-all
+                    ${video.selected
+                      ? 'border-[#2563EB] bg-[#EFF6FF] shadow-sm'
+                      : 'border-[#E5E7EB] bg-white hover:border-[#94A3B8]'
+                    }
+                  `}
+                >
+                  <div className="flex gap-2">
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={video.thumbnail}
+                        alt={video.title}
+                        className="w-32 h-18 object-cover rounded"
+                      />
+                      <div className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] px-1 rounded">
+                        {formatDuration(video.duration)}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-medium text-[#0F172A] line-clamp-2 mb-1">
+                        {video.title}
+                      </div>
+                      <div className="text-[10px] text-[#64748B]">
+                        {formatViewCount(video.viewCount)} views
+                      </div>
+                      {video.selected && (
+                        <div className="mt-1">
+                          {video.transcriptStatus === 'loading' && (
+                            <div className="flex items-center gap-1 text-[9px] text-[#475569]">
+                              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                              Loading...
+                            </div>
+                          )}
+                          {video.transcriptStatus === 'success' && (
+                            <div className="flex items-center gap-1 text-[9px] text-[#0F766E]">
+                              <CheckCircle2 className="h-2.5 w-2.5" />
+                              Ready
+                            </div>
+                          )}
+                          {video.transcriptStatus === 'unavailable' && (
+                            <div className="flex items-center gap-1 text-[9px] text-[#B45309]">
+                              <AlertCircle className="h-2.5 w-2.5" />
+                              No captions
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {video.selected && (
+                      <div className="absolute top-2 right-2">
+                        <CheckCircle2 className="h-4 w-4 text-[#2563EB]" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex flex-wrap gap-1.5 pt-1 text-[11px]">
+        <button
+          onClick={(event) => {
+            stopPropagation(event);
+            setIsEditing(true);
+          }}
+          className="rounded-md px-2.5 py-1 text-[#475569] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+        >
+          Edit link
+        </button>
+        {data.url && (
+          <button
+            onClick={openVideo}
+            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-[#94A3B8]" />
+            Open channel
+          </button>
+        )}
+        {selectedVideosCount > 0 && (
+          <button
+            onClick={downloadAllTranscripts}
+            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+          >
+            <Download className="h-3.5 w-3.5 text-[#94A3B8]" />
+            Export ({selectedVideosCount})
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  // Render single video view
+  const renderVideoView = () => (
+    <div className="w-[340px] space-y-2">
+      {displayTitle && (
+        <div className="text-[13px] font-medium text-[#0F172A] leading-snug">{displayTitle}</div>
+      )}
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={handleKeyDown}
+          placeholder="Paste YouTube URL or channel..."
+          className="w-full px-4 py-2.5 text-[14px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] transition-all"
+          style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif' }}
+        />
+      ) : data.videoId ? (
+        <div className="space-y-2">
+          <div className="relative aspect-video rounded-xl overflow-hidden border border-[#E5E7EB] bg-[#F9FAFB]">
+            {data.videoId ? (
+              <iframe
+                src={`https://www.youtube.com/embed/${data.videoId}?rel=0`}
+                title={data.title || 'YouTube video'}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="absolute inset-0 h-full w-full"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Youtube className="h-12 w-12 text-[#9CA3AF]" />
+              </div>
+            )}
+          </div>
+          <TranscriptStatus />
+          {data.transcriptStatus === 'error' && data.transcriptError && (
+            <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[11px] text-[#991B1B]">
+              {data.transcriptError}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1.5 pt-1 text-[11px]">
+            <button
+              onClick={(event) => {
+                stopPropagation(event);
+                setIsEditing(true);
+              }}
+              className="rounded-md px-2.5 py-1 text-[#475569] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+            >
+              Edit link
+            </button>
+            {data.url && (
+              <button
+                onClick={openVideo}
+                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+              >
+                <ExternalLink className="h-3.5 w-3.5 text-[#94A3B8]" />
+                Open video
+              </button>
+            )}
+            {hasTranscript && (
+              <button
+                onClick={downloadTranscript}
+                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+              >
+                <Download className="h-3.5 w-3.5 text-[#94A3B8]" />
+                Export transcript
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => setIsEditing(true)}
+          className="aspect-video rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] flex items-center justify-center cursor-pointer transition-transform duration-200 hover:-translate-y-0.5"
+        >
+          <div className="text-center">
+            <Youtube className="h-10 w-10 text-[#9CA3AF] mx-auto mb-2.5" />
+            <div className="text-[11px] text-[#6B7280] font-medium">Click to add video/channel</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <BaseNode
       id={id}
-      type="YouTube"
-      icon={<Youtube className="h-3.5 w-3.5 text-red-600" />}
+      type={isChannel ? 'YouTube Channel' : 'YouTube'}
+      icon={isChannel ? <Users className="h-3.5 w-3.5 text-red-600" /> : <Youtube className="h-3.5 w-3.5 text-red-600" />}
       iconBg="bg-red-100"
       showTargetHandle={false}
     >
-      <div className="w-[340px] space-y-2">
-        {displayTitle && (
-          <div className="text-[13px] font-medium text-[#0F172A] leading-snug">{displayTitle}</div>
-        )}
-        {isEditing ? (
-          <input
-            ref={inputRef}
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onBlur={handleSave}
-            onKeyDown={handleKeyDown}
-            placeholder="Paste YouTube URL..."
-            className="w-full px-4 py-2.5 text-[14px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] transition-all"
-            style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif' }}
-          />
-        ) : data.videoId ? (
-          <div className="space-y-2">
-            <div className="relative aspect-video rounded-xl overflow-hidden border border-[#E5E7EB] bg-[#F9FAFB]">
-              {data.videoId ? (
-                <iframe
-                  src={`https://www.youtube.com/embed/${data.videoId}?rel=0`}
-                  title={data.title || 'YouTube video'}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  className="absolute inset-0 h-full w-full"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Youtube className="h-12 w-12 text-[#9CA3AF]" />
-                </div>
-              )}
-            </div>
-            <TranscriptStatus />
-            {data.transcriptStatus === 'error' && data.transcriptError && (
-              <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[11px] text-[#991B1B]">
-                {data.transcriptError}
-              </div>
-            )}
-            <div className="flex flex-wrap gap-1.5 pt-1 text-[11px]">
-              <button
-                onClick={(event) => {
-                  stopPropagation(event);
-                  setIsEditing(true);
-                }}
-                className="rounded-md px-2.5 py-1 text-[#475569] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
-              >
-                Edit link
-              </button>
-              {data.url && (
-                <button
-                  onClick={openVideo}
-                  className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 text-[#94A3B8]" />
-                  Open video
-                </button>
-              )}
-              {hasTranscript && (
-                <button
-                  onClick={downloadTranscript}
-                  className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
-                >
-                  <Download className="h-3.5 w-3.5 text-[#94A3B8]" />
-                  Export transcript
-                </button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div
-            onClick={() => setIsEditing(true)}
-            className="aspect-video rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] flex items-center justify-center cursor-pointer transition-transform duration-200 hover:-translate-y-0.5"
-          >
-            <div className="text-center">
-              <Youtube className="h-10 w-10 text-[#9CA3AF] mx-auto mb-2.5" />
-              <div className="text-[11px] text-[#6B7280] font-medium">Click to add video</div>
-            </div>
-          </div>
-        )}
-        <AIInstructionsInline
-          value={data.aiInstructions}
-          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<YouTubeNodeData>)}
-          nodeId={id}
-          nodeType="youtube"
-        />
-      </div>
+      {isChannel ? renderChannelView() : renderVideoView()}
+      <AIInstructionsInline
+        value={data.aiInstructions}
+        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<YouTubeNodeData>)}
+        nodeId={id}
+        nodeType="youtube"
+      />
     </BaseNode>
   );
 }

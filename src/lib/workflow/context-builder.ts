@@ -144,7 +144,24 @@ export function buildChatContext(
 
       case 'youtube': {
         const youtubeData = node.data as YouTubeNodeData;
-        if (youtubeData.url) {
+
+        // Handle channel mode - include all selected videos
+        if (youtubeData.mode === 'channel' && youtubeData.channelVideos) {
+          const selectedVideos = youtubeData.channelVideos.filter(v => v.selected);
+          selectedVideos.forEach(video => {
+            if (video.transcript) {
+              context.youtubeTranscripts.push({
+                url: `https://www.youtube.com/watch?v=${video.id}`,
+                transcript: video.transcript,
+                status: video.transcriptStatus || 'success',
+                method: 'channel',
+                aiInstructions: safeGetInstructions(youtubeData),
+              });
+            }
+          });
+        }
+        // Handle single video mode
+        else if (youtubeData.url) {
           context.youtubeTranscripts.push({
             url: youtubeData.url,
             transcript: youtubeData.transcript,
@@ -292,6 +309,16 @@ function extractNodeContext(node: WorkflowNode): string | null {
     }
     case 'youtube': {
       const data = node.data as YouTubeNodeData;
+      // Handle channel mode - combine all selected video transcripts
+      if (data.mode === 'channel' && data.channelVideos) {
+        const selectedVideos = data.channelVideos.filter(v => v.selected && v.transcript);
+        if (selectedVideos.length > 0) {
+          return selectedVideos
+            .map(v => `[Video: ${v.title}]\n${v.transcript}`)
+            .join('\n\n---\n\n');
+        }
+      }
+      // Handle single video mode
       return data.transcript || null;
     }
     case 'voice': {

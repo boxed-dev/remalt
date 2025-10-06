@@ -121,9 +121,13 @@ export interface VoiceNodeData extends BaseNodeData {
   isLiveRecording?: boolean; // Flag for active live recording
 }
 
-// YouTube Video Node
+// YouTube Video/Channel Node
 export interface YouTubeNodeData extends BaseNodeData {
+  // Common fields
   url?: string;
+  mode?: 'video' | 'channel'; // Determines if this is a video or channel node
+
+  // Video-specific fields
   videoId?: string;
   title?: string;
   thumbnail?: string;
@@ -131,6 +135,32 @@ export interface YouTubeNodeData extends BaseNodeData {
   transcriptStatus?: 'loading' | 'success' | 'unavailable' | 'error';
   transcriptMethod?: string;
   transcriptError?: string;
+
+  // Channel-specific fields
+  channelId?: string;
+  channelTitle?: string;
+  channelDescription?: string;
+  channelThumbnail?: string;
+  channelSubscriberCount?: string;
+  channelVideoCount?: string;
+  channelCustomUrl?: string;
+
+  // Channel videos
+  channelVideos?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    thumbnail: string;
+    publishedAt: string;
+    duration: string;
+    viewCount: string;
+    selected: boolean; // Whether this video is selected for transcript extraction
+    transcript?: string;
+    transcriptStatus?: 'loading' | 'success' | 'unavailable' | 'error';
+  }>;
+  channelLoadStatus?: 'idle' | 'loading' | 'success' | 'error';
+  channelError?: string;
+  nextPageToken?: string;
 }
 
 // Image Node

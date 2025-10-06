@@ -46,6 +46,10 @@ interface WorkflowStore {
   saveError: string | null;
   lastSaved: string | null;
 
+  // Canvas Control State
+  controlMode: 'pointer' | 'hand';
+  snapToGrid: boolean;
+
   // Workflow Actions
   createWorkflow: (name: string, description?: string) => void;
   loadWorkflow: (workflow: Workflow) => void;
@@ -103,6 +107,14 @@ interface WorkflowStore {
   canUndo: () => boolean;
   canRedo: () => boolean;
   pushHistory: () => void;
+
+  // Canvas Control Actions
+  setControlMode: (mode: 'pointer' | 'hand') => void;
+  toggleSnapToGrid: () => void;
+
+  // Alignment Actions
+  alignNodes: (nodeIds: string[], direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
+  distributeNodes: (nodeIds: string[], direction: 'horizontal' | 'vertical') => void;
 }
 
 const createDefaultWorkflow = (name: string, description?: string): Workflow => ({
@@ -169,9 +181,11 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
       } as NodeData;
     case 'group':
       return {
+        label: 'Group',
         groupedNodes: [],
         collapsed: false,
         groupChatEnabled: false,
+        groupChatMessages: [],
       } as NodeData;
     default:
       return {} as NodeData;
@@ -190,6 +204,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
     isSaving: false,
     saveError: null,
     lastSaved: null,
+    controlMode: 'pointer',
+    snapToGrid: false,
 
     // Workflow Actions
     createWorkflow: (name, description) => {
@@ -512,14 +528,31 @@ export const useWorkflowStore = create<WorkflowStore>()(
           const existingIds = new Set(state.workflow.nodes.map((n) => n.id));
           const uniqueIds = Array.from(new Set(nodeIds)).filter((nodeId) => existingIds.has(nodeId) && nodeId);
 
+          // Auto-increment group naming
+          const existingGroupNodes = state.workflow.nodes.filter(n => n.type === 'group');
+          const groupNumbers = existingGroupNodes
+            .map(n => {
+              const label = (n.data as any).label;
+              if (label && typeof label === 'string') {
+                const match = label.match(/^Group (\d+)$/);
+                return match ? parseInt(match[1], 10) : 0;
+              }
+              return 0;
+            })
+            .filter(num => num > 0);
+
+          const nextGroupNumber = groupNumbers.length > 0 ? Math.max(...groupNumbers) + 1 : 1;
+          const groupLabel = `Group ${nextGroupNumber}`;
+
           const groupNode: WorkflowNode = {
             id: crypto.randomUUID(),
             type: 'group',
             position,
             data: {
+              label: groupLabel,
               groupedNodes: uniqueIds,
               collapsed: false,
-              groupChatEnabled: true,
+              groupChatEnabled: false,
               groupChatMessages: [],
             } as NodeData,
           };
@@ -688,6 +721,82 @@ export const useWorkflowStore = create<WorkflowStore>()(
     canRedo: () => {
       const { history, historyIndex } = get();
       return historyIndex < history.length - 1;
+    },
+
+    // Canvas Control Actions
+    setControlMode: (mode) => {
+      set((state) => {
+        state.controlMode = mode;
+      });
+    },
+
+    toggleSnapToGrid: () => {
+      set((state) => {
+        state.snapToGrid = !state.snapToGrid;
+      });
+    },
+
+    // Alignment Actions
+    alignNodes: (nodeIds, direction) => {
+      set((state) => {
+        if (!state.workflow) return;
+
+        const nodes = state.workflow.nodes.filter(n => nodeIds.includes(n.id));
+        if (nodes.length < 2) return;
+
+        if (direction === 'left') {
+          const minX = Math.min(...nodes.map(n => n.position.x));
+          nodes.forEach(n => { n.position.x = minX; });
+        } else if (direction === 'center') {
+          const avgX = nodes.reduce((sum, n) => sum + n.position.x, 0) / nodes.length;
+          nodes.forEach(n => { n.position.x = avgX; });
+        } else if (direction === 'right') {
+          const maxX = Math.max(...nodes.map(n => n.position.x));
+          nodes.forEach(n => { n.position.x = maxX; });
+        } else if (direction === 'top') {
+          const minY = Math.min(...nodes.map(n => n.position.y));
+          nodes.forEach(n => { n.position.y = minY; });
+        } else if (direction === 'middle') {
+          const avgY = nodes.reduce((sum, n) => sum + n.position.y, 0) / nodes.length;
+          nodes.forEach(n => { n.position.y = avgY; });
+        } else if (direction === 'bottom') {
+          const maxY = Math.max(...nodes.map(n => n.position.y));
+          nodes.forEach(n => { n.position.y = maxY; });
+        }
+
+        state.workflow.updatedAt = new Date().toISOString();
+      });
+    },
+
+    distributeNodes: (nodeIds, direction) => {
+      set((state) => {
+        if (!state.workflow) return;
+
+        const nodes = state.workflow.nodes.filter(n => nodeIds.includes(n.id));
+        if (nodes.length < 3) return;
+
+        if (direction === 'horizontal') {
+          const sorted = [...nodes].sort((a, b) => a.position.x - b.position.x);
+          const first = sorted[0].position.x;
+          const last = sorted[sorted.length - 1].position.x;
+          const spacing = (last - first) / (sorted.length - 1);
+
+          sorted.forEach((node, i) => {
+            node.position.x = first + (spacing * i);
+          });
+        } else {
+          const sorted = [...nodes].sort((a, b) => a.position.y - b.position.y);
+          const first = sorted[0].position.y;
+          const last = sorted[sorted.length - 1].position.y;
+          const spacing = (last - first) / (sorted.length - 1);
+
+          sorted.forEach((node, i) => {
+            node.position.y = first + (spacing * i);
+          });
+        }
+
+        state.workflow.updatedAt = new Date().toISOString();
+      });
     },
   }))
 );

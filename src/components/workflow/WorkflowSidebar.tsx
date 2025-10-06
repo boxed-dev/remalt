@@ -222,7 +222,7 @@ export function WorkflowSidebar() {
     <>
       {/* Vertical Left Sidebar */}
       <aside
-        className={`fixed left-0 bottom-0 bg-white border-r border-[#D4AF7F]/20 flex flex-col z-[40] transition-all duration-300 ${
+        className={`fixed left-0 bottom-0 bg-white border-r border-[#D4AF7F]/20 flex flex-col z-[50] transition-all duration-300 ${
           isExpanded ? 'w-60' : 'w-14'
         }`}
         style={{ top: '56px' }}

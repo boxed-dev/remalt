@@ -1,8 +1,52 @@
 /* Custom React Flow Styles */
 
-/* Selected nodes */
+/* GPU Acceleration for smooth performance */
+.react-flow__node {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition: filter 200ms ease, box-shadow 250ms ease, transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.react-flow__edge-path {
+  will-change: d;
+  transform: translateZ(0);
+}
+
+.react-flow__viewport {
+  will-change: transform;
+}
+
+/* Selected nodes - Enhanced with ring and glow */
 .react-flow__node.selected {
-  box-shadow: 0 0 0 3px #095D40, 0 6px 20px rgba(9, 93, 64, 0.25);
+  box-shadow: 0 0 0 3px #095D40, 0 6px 20px rgba(9, 93, 64, 0.25), 0 0 40px rgba(9, 93, 64, 0.15);
+  animation: selection-ring 2s ease-in-out infinite;
+}
+
+@keyframes selection-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 3px #095D40, 0 6px 20px rgba(9, 93, 64, 0.25), 0 0 40px rgba(9, 93, 64, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 3px #095D40, 0 8px 24px rgba(9, 93, 64, 0.3), 0 0 50px rgba(9, 93, 64, 0.2);
+  }
+}
+
+/* Node entrance animation - Only on first appearance */
+@keyframes node-entrance {
+  from {
+    opacity: 0;
+    transform: translateZ(0) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateZ(0) scale(1);
+  }
+}
+
+/* Apply entrance animation only to new nodes, not on every render */
+.react-flow__node.node-entering {
+  animation: node-entrance 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Edge path */
@@ -70,30 +114,60 @@
   border: 1.5px solid #095D40;
 }
 
-/* Connection line */
+/* Connection line - Enhanced with animation */
 .react-flow__connectionline {
   stroke: #095D40;
-  stroke-width: 3.5;
+  stroke-width: 4;
   stroke-linecap: round;
+  filter: drop-shadow(0 2px 4px rgba(9, 93, 64, 0.3));
+  animation: connection-pulse 1.5s ease-in-out infinite;
 }
 
-/* Edges when connecting */
-.react-flow__edge.animated .react-flow__edge-path {
-  stroke-dasharray: 5;
-  animation: dashdraw 0.5s linear infinite;
-}
-
-@keyframes dashdraw {
-  from {
-    stroke-dashoffset: 10;
+@keyframes connection-pulse {
+  0%, 100% {
+    opacity: 0.8;
+    stroke-width: 4;
+  }
+  50% {
+    opacity: 1;
+    stroke-width: 4.5;
   }
 }
 
-/* Node dragging */
-.react-flow__node.dragging {
+/* Edges when connecting - Flow animation */
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 8 8;
+  animation: edge-flow 1.5s linear infinite;
+}
+
+@keyframes edge-flow {
+  from {
+    stroke-dashoffset: 16;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Edge hover - Smooth thickness transition */
+.react-flow__edge .react-flow__edge-path {
+  transition: stroke 250ms cubic-bezier(0.4, 0, 0.2, 1), stroke-width 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Edge selected - Enhanced glow */
+.react-flow__edge.selected .react-flow__edge-path {
+  filter: drop-shadow(0 2px 6px rgba(9, 93, 64, 0.35));
+}
+
+/* Node dragging - GPU optimized */
+.react-flow__node.dragging,
+.react-flow__node.dragging-node {
   cursor: grabbing;
   opacity: 0.85;
-  transform: scale(1.02);
+  transform: translateZ(0) scale(1.02);
+  transition: none; /* Disable transitions while dragging for smoothness */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 2px rgba(21, 94, 239, 0.3);
+  z-index: 1000;
 }
 
 /* Node hover */
@@ -101,22 +175,67 @@
   filter: brightness(0.98);
 }
 
-/* Handle hover states */
+/* Handle hover states - Enhanced with pulse animation */
 .react-flow__handle {
-  width: 14px !important;
-  height: 14px !important;
-  border-width: 2.5px !important;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 0.8;
+  width: 16px !important;
+  height: 16px !important;
+  border-width: 3px !important;
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.6;
+  transform: translateZ(0);
+  cursor: crosshair;
+  background: white !important;
 }
 
 .react-flow__handle:hover {
   opacity: 1;
-  transform: scale(1.35);
+  transform: translateZ(0) scale(1.6);
+  box-shadow: 0 0 0 4px rgba(9, 93, 64, 0.15), 0 2px 8px rgba(9, 93, 64, 0.2);
+  animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(9, 93, 64, 0.15), 0 2px 8px rgba(9, 93, 64, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(9, 93, 64, 0.08), 0 4px 12px rgba(9, 93, 64, 0.15);
+  }
 }
 
 .react-flow__node:hover .react-flow__handle {
   opacity: 1;
+}
+
+/* Valid connection target - glow effect */
+.react-flow__handle.connecting {
+  opacity: 1;
+  transform: translateZ(0) scale(1.8);
+  box-shadow: 0 0 0 6px rgba(9, 93, 64, 0.25), 0 0 20px rgba(9, 93, 64, 0.4);
+  animation: glow-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 6px rgba(9, 93, 64, 0.25), 0 0 20px rgba(9, 93, 64, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(9, 93, 64, 0.35), 0 0 30px rgba(9, 93, 64, 0.5);
+  }
+}
+
+/* Connection snapping magnetism effect */
+.react-flow__handle.valid-target {
+  opacity: 1;
+  transform: translateZ(0) scale(2);
+  box-shadow: 0 0 0 8px rgba(9, 93, 64, 0.3), 0 0 25px rgba(9, 93, 64, 0.5);
+  border-color: #095D40 !important;
+}
+
+/* Source handle (where connection starts) */
+.react-flow__handle-connecting {
+  opacity: 1;
+  transform: translateZ(0) scale(1.4);
 }
 
 /* Position handles on sides for horizontal flow */
@@ -139,7 +258,7 @@
 
 .react-flow__node:hover .react-flow__handle-left,
 .react-flow__node:hover .react-flow__handle-right {
-  transform: translateY(-50%) scale(1.25) !important;
+  transform: translateY(-50%) translateZ(0) scale(1.3) !important;
 }
 
 /* Connection line styling for horizontal flow */

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, type DragEvent } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import {
   ReactFlow,
   Background,
@@ -36,6 +36,13 @@ import { shallow } from 'zustand/shallow';
 import { nodeTypes } from './nodes';
 import { edgeTypes } from './edges';
 import { WorkflowControls } from './WorkflowControls';
+import { PanelContextMenu } from './PanelContextMenu';
+import { NodeContextMenu } from './NodeContextMenu';
+import { SelectionContextMenu } from './SelectionContextMenu';
+import { SelectionFloatingToolbar } from './SelectionFloatingToolbar';
+import { AlignmentGuides } from './AlignmentGuides';
+import { QuickAddMenu } from './QuickAddMenu';
+import { ExportDialog } from './ExportDialog';
 
 type UrlNodeMapping = {
   type: NodeType;
@@ -123,6 +130,14 @@ function WorkflowCanvasInner() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const rafHandle = useRef<number | null>(null);
   const hasAppliedStoredViewport = useRef(false);
+  const [spacePressed, setSpacePressed] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [nodeContextMenu, setNodeContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
+  const [selectionContextMenu, setSelectionContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+  const [quickAddMenuOpen, setQuickAddMenuOpen] = useState(false);
+  const [quickAddMenuPosition, setQuickAddMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const { screenToFlowPosition, getViewport, setViewport } = useReactFlow();
 
   const workflow = useWorkflowStore((state) => state.workflow);
@@ -135,6 +150,8 @@ function WorkflowCanvasInner() {
     shallow
   );
   const workflowViewport = useWorkflowStore((state) => state.workflow?.viewport);
+  const controlMode = useWorkflowStore((state) => state.controlMode);
+  const snapToGrid = useWorkflowStore((state) => state.snapToGrid);
   const addNode = useWorkflowStore((state) => state.addNode);
   const updateNodePosition = useWorkflowStore((state) => state.updateNodePosition);
   const deleteNode = useWorkflowStore((state) => state.deleteNode);
@@ -146,7 +163,13 @@ function WorkflowCanvasInner() {
   const selectNode = useWorkflowStore((state) => state.selectNode);
   const clearSelection = useWorkflowStore((state) => state.clearSelection);
   const pasteNodes = useWorkflowStore((state) => state.pasteNodes);
+  const copyNodes = useWorkflowStore((state) => state.copyNodes);
+  const duplicateNode = useWorkflowStore((state) => state.duplicateNode);
+  const clipboard = useWorkflowStore((state) => state.clipboard);
   const addNodesToGroup = useWorkflowStore((state) => state.addNodesToGroup);
+  const selectedNodes = useWorkflowStore((state) => state.selectedNodes);
+  const alignNodes = useWorkflowStore((state) => state.alignNodes);
+  const distributeNodes = useWorkflowStore((state) => state.distributeNodes);
 
   // Track dragged node for group drop
   const draggedNodeIdRef = useRef<string | null>(null);
@@ -176,9 +199,11 @@ function WorkflowCanvasInner() {
         position: node.position,
         data: node.data,
         style: node.style,
+        dragging: node.id === draggingNodeId,
+        className: node.id === draggingNodeId ? 'dragging-node' : undefined,
       }))
     );
-  }, [workflowNodes, setNodes]);
+  }, [workflowNodes, setNodes, draggingNodeId]);
 
   useEffect(() => {
     setEdges(
@@ -303,10 +328,48 @@ function WorkflowCanvasInner() {
     [scheduleViewportPersist]
   );
 
-  // Handle pane click (deselect all)
+  // Handle pane click (deselect all and close context menus)
   const onPaneClick = useCallback(() => {
     clearSelection();
+    setContextMenuPosition(null);
+    setNodeContextMenu(null);
+    setSelectionContextMenu(null);
   }, [clearSelection]);
+
+  // Handle pane context menu (right-click on canvas)
+  const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+
+    // If 2+ nodes are selected, show selection context menu
+    if (selectedNodes.length >= 2) {
+      setContextMenuPosition(null);
+      setNodeContextMenu(null);
+      setSelectionContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+      });
+    } else {
+      // Otherwise show panel context menu
+      setNodeContextMenu(null);
+      setSelectionContextMenu(null);
+      setContextMenuPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+    }
+  }, [selectedNodes]);
+
+  // Handle node context menu (right-click on node)
+  const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault();
+    setContextMenuPosition(null);
+    setSelectionContextMenu(null);
+    setNodeContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      nodeId: node.id,
+    });
+  }, []);
 
   // Handle node deletion via keyboard
   const onNodesDelete = useCallback(
@@ -327,6 +390,7 @@ function WorkflowCanvasInner() {
   // Handle node drag start
   const onNodeDragStart = useCallback((_event: React.MouseEvent, node: Node) => {
     draggedNodeIdRef.current = node.id;
+    setDraggingNodeId(node.id);
   }, []);
 
   // Handle node drag stop
@@ -337,6 +401,7 @@ function WorkflowCanvasInner() {
 
       draggedNodeIdRef.current = null;
       (window as any).__targetGroupId = null;
+      setDraggingNodeId(null);
 
       // If we have a target group, add the node to it
       if (draggedId && targetGroupId && draggedId !== targetGroupId) {
@@ -413,6 +478,70 @@ function WorkflowCanvasInner() {
     };
   }, [addNode, clearSelection, pasteNodes, screenToFlowPosition, selectNode]);
 
+  // Space bar temporary pan mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !spacePressed) {
+        const target = e.target;
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          (target instanceof HTMLElement && target.isContentEditable)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        setSpacePressed(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setSpacePressed(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [spacePressed]);
+
+  // Quick add menu with slash command
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '/' && !quickAddMenuOpen) {
+        const target = e.target;
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          (target instanceof HTMLElement && target.isContentEditable)
+        ) {
+          return;
+        }
+        e.preventDefault();
+
+        // Get cursor position
+        const wrapperBounds = reactFlowWrapper.current?.getBoundingClientRect();
+        if (wrapperBounds) {
+          setQuickAddMenuPosition({
+            x: wrapperBounds.left + wrapperBounds.width / 2,
+            y: wrapperBounds.top + wrapperBounds.height / 2,
+          });
+          setQuickAddMenuOpen(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [quickAddMenuOpen]);
+
   if (!workflow) {
     return (
       <div className="flex items-center justify-center h-full bg-[#FAFBFC]">
@@ -452,6 +581,8 @@ function WorkflowCanvasInner() {
         onMove={onMove}
         onMoveEnd={onMoveEnd}
         onPaneClick={onPaneClick}
+        onPaneContextMenu={onPaneContextMenu}
+        onNodeContextMenu={onNodeContextMenu}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         onNodeDragStart={onNodeDragStart}
@@ -462,14 +593,14 @@ function WorkflowCanvasInner() {
         minZoom={0.1}
         maxZoom={4}
         panOnScroll={true}
-        panOnScrollSpeed={0.5}
-        panOnDrag={true}
+        panOnScrollSpeed={1.2}
+        panOnDrag={controlMode === 'hand' || spacePressed}
         zoomOnScroll={true}
         zoomOnPinch={true}
         zoomOnDoubleClick={false}
-        selectionOnDrag={false}
+        selectionOnDrag={controlMode === 'pointer' && !spacePressed}
         selectionMode="partial"
-        panActivationKeyCode="Space"
+        panActivationKeyCode={null}
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{
           type: 'smoothstep',
@@ -477,7 +608,7 @@ function WorkflowCanvasInner() {
         }}
         deleteKeyCode={['Backspace', 'Delete']}
         multiSelectionKeyCode="Shift"
-        snapToGrid={true}
+        snapToGrid={snapToGrid}
         snapGrid={[15, 15]}
       >
         <Background
@@ -487,6 +618,134 @@ function WorkflowCanvasInner() {
           style={{ backgroundColor: '#FAFBFC' }}
         />
       </ReactFlow>
+
+      <PanelContextMenu
+        position={contextMenuPosition}
+        onClose={() => setContextMenuPosition(null)}
+        onAddNode={(type) => {
+          // Future: Open node selector
+          console.log('Add node:', type);
+        }}
+        onAddNote={() => {
+          // Future: Add note functionality
+          console.log('Add note');
+        }}
+        onRunWorkflow={() => {
+          // Future: Run workflow
+          console.log('Run workflow');
+        }}
+        onPaste={() => {
+          if (clipboard.length > 0) {
+            pasteNodes();
+          }
+        }}
+        onExport={() => {
+          setExportDialogOpen(true);
+        }}
+        onImport={() => {
+          // Future: Import functionality
+          console.log('Import');
+        }}
+        onOrganize={() => {
+          // Future: Auto-layout
+          console.log('Organize');
+        }}
+        canPaste={clipboard.length > 0}
+      />
+
+      <NodeContextMenu
+        position={nodeContextMenu ? { x: nodeContextMenu.x, y: nodeContextMenu.y } : null}
+        nodeId={nodeContextMenu?.nodeId || null}
+        onClose={() => setNodeContextMenu(null)}
+        onCopy={(nodeId) => {
+          copyNodes([nodeId]);
+        }}
+        onDuplicate={(nodeId) => {
+          duplicateNode(nodeId);
+        }}
+        onDelete={(nodeId) => {
+          deleteNode(nodeId);
+        }}
+        onAddToGroup={(nodeId) => {
+          // Future: Show group selector
+          console.log('Add to group:', nodeId);
+        }}
+        onAddNote={() => {
+          // Future: Add note
+          console.log('Add note');
+        }}
+        onHelp={() => {
+          // Future: Show help
+          console.log('Show help');
+        }}
+      />
+
+      <SelectionContextMenu
+        position={selectionContextMenu}
+        selectedNodeIds={selectedNodes}
+        onClose={() => setSelectionContextMenu(null)}
+        onCopy={() => {
+          copyNodes(selectedNodes);
+        }}
+        onGroup={() => {
+          // Future: Create group from selection
+          console.log('Create group from selection');
+        }}
+        onAlign={(direction) => {
+          alignNodes(selectedNodes, direction);
+        }}
+        onDistribute={(direction) => {
+          distributeNodes(selectedNodes, direction);
+        }}
+        onDelete={() => {
+          deleteNodes(selectedNodes);
+        }}
+      />
+
+      <SelectionFloatingToolbar
+        selectedNodeIds={selectedNodes}
+        onCopy={() => {
+          copyNodes(selectedNodes);
+        }}
+        onDelete={() => {
+          deleteNodes(selectedNodes);
+        }}
+        onAlign={(direction) => {
+          alignNodes(selectedNodes, direction);
+        }}
+        onDistribute={(direction) => {
+          distributeNodes(selectedNodes, direction);
+        }}
+        onGroup={() => {
+          // Future: Create group from selection
+          console.log('Create group from selection');
+        }}
+      />
+
+      <AlignmentGuides draggingNodeId={draggingNodeId} />
+
+      <QuickAddMenu
+        isOpen={quickAddMenuOpen}
+        position={quickAddMenuPosition}
+        onClose={() => {
+          setQuickAddMenuOpen(false);
+          setQuickAddMenuPosition(null);
+        }}
+        onSelectNode={(type) => {
+          if (quickAddMenuPosition) {
+            const position = screenToFlowPosition({
+              x: quickAddMenuPosition.x,
+              y: quickAddMenuPosition.y,
+            });
+            addNode(type, position);
+          }
+        }}
+      />
+
+      <ExportDialog
+        isOpen={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+      />
     </div>
   );
 }
