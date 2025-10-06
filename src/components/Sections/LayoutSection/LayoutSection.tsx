@@ -15,7 +15,7 @@ import GetStartedButton from "@/components/ui/buttonAnimation";
 const features = [
   {
     icon: Clock,
-    text: "Time-saving",
+    text: "Time-saving workflows",
   },
   {
     icon: Users,
@@ -54,12 +54,12 @@ export default function CTA() {
 
             <div className="text-center space-y-2">
               <h1 className="[font-family:'Geist',Helvetica] font-semibold text-white text-3xl sm:text-4xl lg:text-[55px] text-center tracking-[-2.20px] leading-tight px-4">
-                The ecosystem that gives founders clarity
+                Scale Your Content. Scale Your Business.
               </h1>
 
-              <h1 className="[font-family:'Geist',Helvetica] font-semibold text-white text-3xl sm:text-4xl lg:text-[55px] text-center tracking-[-2.20px] leading-tight px-4">
-                and predictable growth.
-              </h1>
+                <p className="[font-family:'Inter',Helvetica] font-medium text-white text-base sm:text-lg lg:text-2xl text-center tracking-[-0.18px] leading-relaxed max-w-4xl mx-auto  mt-4">
+Remalt gives founders and creators the ecosystem to plan, produce, and repurpose content 11X faster — so every idea becomes a growth asset.
+              </p>
             </div>
           </div>
 
@@ -76,7 +76,7 @@ export default function CTA() {
             </GetStartedButton>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-4 sm:gap-6 lg:gap-8 mt-4 sm:mt-6">
+          {/* <div className="flex flex-wrap justify-center gap-4 sm:gap-6 lg:gap-8 mt-4 sm:mt-6">
             {features.map((feature, index) => (
               <div key={index} className="flex gap-2 sm:gap-3 items-center">
                 <div className="h-6 w-6 sm:h-8 sm:w-8 bg-white/20 rounded flex items-center justify-center">
@@ -87,7 +87,7 @@ export default function CTA() {
                 </span>
               </div>
             ))}
-          </div>
+          </div> */}
         </div>
       </motion.div>
     </section>

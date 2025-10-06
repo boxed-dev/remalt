@@ -5,13 +5,26 @@ import React from "react";
 import Image from "next/image";
 import { Badge } from "@components/ui/badge";
 
-const logos = [
+// First row: Mix of social media, AI, productivity, and browsers
+const logosRow1 = [
   { name: "Youtube", image: "/logos/yt.png", opacity: "" },
+  { name: "ChatGPT", image: "/logos/gpt.png", opacity: "" },
+  { name: "LinkedIn", image: "/logos/linkedin.png", opacity: "" },
+  { name: "Google Docs", image: "/logos/gdoc.png", opacity: "" },
   { name: "Instagram", image: "/logos/insta.png", opacity: "" },
-  { name: "Hitech", image: "/logos/linkedin.png", opacity: "" },
-  { name: "Orbitc", image: "/logos/tiktok.png", opacity: "" },
-  { name: "Glossy", image: "/logos/facebook.png", opacity: "" },
+  { name: "Chrome", image: "/logos/chrome.png", opacity: "" },
+  { name: "Gmail", image: "/logos/gmail.png", opacity: "" },
+];
 
+// Second row: Complementary mix - different categories from row 1
+const logosRow2 = [
+  { name: "TikTok", image: "/logos/tiktok.png", opacity: "" },
+  { name: "Claude", image: "/logos/claude.png", opacity: "" },
+  { name: "Facebook", image: "/logos/facebook.png", opacity: "" },
+  { name: "Notion", image: "/logos/notion.png", opacity: "" },
+  { name: "YouTube Shorts", image: "/logos/ytshorts.png", opacity: "" },
+  { name: "Safari", image: "/logos/safari.png", opacity: "" },
+  { name: "X (Twitter)", image: "/logos/x.png", opacity: "" },
 ];
 
 export default function IntegrationsSection() {
@@ -78,7 +91,7 @@ export default function IntegrationsSection() {
         {/* First row */}
         <div className="flex gap-8 sm:gap-12 lg:gap-16 mb-4 sm:mb-6">
           <div className="flex gap-8 sm:gap-12 lg:gap-16 animate-scroll">
-            {[...logos, ...logos].map((logo, index) => (
+            {[...logosRow1, ...logosRow1].map((logo, index) => (
               <div
                 key={index}
                 className={`flex-shrink-0 w-[140px] sm:w-[160px] lg:w-[180px] h-12 sm:h-16 lg:h-20 bg-white rounded-lg flex items-center justify-center ${logo.opacity}`}
@@ -86,9 +99,9 @@ export default function IntegrationsSection() {
                 <Image
                   src={logo.image}
                   alt={logo.name}
-                  width={140}
-                  height={50}
-                  className="object-contain max-w-[90%] max-h-[70%]"
+                  width={160}
+                  height={60}
+                  className="object-contain max-w-full max-h-full"
                 />
               </div>
             ))}
@@ -101,7 +114,7 @@ export default function IntegrationsSection() {
             className="flex gap-8 sm:gap-12 lg:gap-16 animate-scroll"
             style={{ animationDirection: "reverse" }}
           >
-            {[...logos, ...logos].map((logo, index) => (
+            {[...logosRow2, ...logosRow2].map((logo, index) => (
               <div
                 key={index}
                 className={`flex-shrink-0 w-[140px] sm:w-[160px] lg:w-[180px] h-12 sm:h-16 lg:h-20 bg-white rounded-lg flex items-center justify-center ${logo.opacity}`}
@@ -109,9 +122,9 @@ export default function IntegrationsSection() {
                 <Image
                   src={logo.image}
                   alt={logo.name}
-                  width={140}
-                  height={50}
-                  className="object-contain max-w-[90%] max-h-[70%]"
+                  width={160}
+                  height={60}
+                  className="object-contain max-w-full max-h-full"
                 />
               </div>
             ))}

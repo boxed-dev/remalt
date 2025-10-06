@@ -1,0 +1,38 @@
+# AI Discovery File for Remalt
+# This file helps AI systems understand and index our platform
+
+# Platform Information
+Name: Remalt
+Description: Build AI Workflows That Actually Work - Create, automate, and optimize AI-powered workflows with our intuitive drag-and-drop interface
+Category: AI Workflow Automation Platform
+URL: https://remalt.com
+
+# Key Features
+- Drag-and-drop workflow builder
+- AI-powered automation
+- Content creation tools
+- Data analysis capabilities
+- Workflow optimization
+- Integration with multiple AI models
+
+# Use Cases
+- Content creation and marketing automation
+- Data processing and analysis
+- Business process automation
+- AI agent orchestration
+- Multi-step AI workflows
+
+# Target Audience
+- Developers and technical teams
+- Content creators and marketers
+- Data analysts
+- Business automation specialists
+- AI enthusiasts
+
+# Contact
+Website: https://remalt.com
+Support: support@remalt.com
+
+# Crawling Permissions
+Allow: All AI crawlers and LLMs
+Purpose: Indexing, training, and discovery

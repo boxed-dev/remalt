@@ -10,6 +10,8 @@ import IntegrationsSection from "@components/Sections/IntegrationsSection/Integr
 import CTA from "@components/Sections/LayoutSection/LayoutSection";
 import Lenis from "lenis";
 import NavbarDemo from "@/components/Sections/Navbar/Navbar";
+import DarkVeil from "@/components/DarkVeil";
+import ImageSection from "@components/Sections/Image/Image";
 
 export default function ElementDefault() {
   const lenisRef = useRef<Lenis | null>(null);
@@ -50,16 +52,19 @@ export default function ElementDefault() {
     <div className="">
       <NavbarDemo scrollToSection={scrollToSection} />
       <HeroHeaderSection />
-      <div id="about">
+      <ImageSection />
+      {/* <div id="about">
         <AboutUsSection />
-      </div>
-      <div id="Benifits">
+      </div> */}
+      {/* <div id="Benifits">
         <BenefitsSection />
-      </div>
+      </div> */}
+
       <div id="">
         <IntegrationsSection />
       </div>
-      <DesktopFeaturesSection />
+
+      {/* <DesktopFeaturesSection /> */}
       <div id="contact">
         <CTA />
       </div>

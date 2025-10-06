@@ -1,0 +1,17 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Remalt",
+  "name_for_model": "remalt_workflows",
+  "description_for_human": "Build AI workflows that actually work with drag-and-drop interface",
+  "description_for_model": "Remalt is an AI workflow automation platform that allows users to create, automate, and optimize AI-powered workflows. It features a drag-and-drop interface for building complex AI workflows, content creation, data analysis, and business process automation.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://remalt.com/openapi.json"
+  },
+  "logo_url": "https://remalt.com/logo.png",
+  "contact_email": "support@remalt.com",
+  "legal_info_url": "https://remalt.com/legal"
+}
