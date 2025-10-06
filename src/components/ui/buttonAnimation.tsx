@@ -28,6 +28,9 @@ const GetStartedButton = React.forwardRef<
       variant="default"
       className={cn("group relative overflow-hidden", className)}
       {...restProps}
+        data-tally-open="np8V18"
+            data-tally-emoji-text="👋"
+            data-tally-emoji-animation="wave"
     >
       <span className="mr-8 transition-opacity duration-300 group-hover:opacity-0">
         {children}

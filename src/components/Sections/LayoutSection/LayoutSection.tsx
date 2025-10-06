@@ -30,7 +30,7 @@ const features = [
 export default function CTA() {
   return (
     <section className="w-full min-h-[400px] sm:min-h-[450px] lg:min-h-[512px] flex items-center bg-[linear-gradient(131deg,rgba(255,255,255,1)_0%,rgba(18,120,90,1)_48%,rgba(212,175,127,1)_80%)] py-12 sm:py-16 lg:py-20">
-      <motion.div 
+      <motion.div
         className="mx-auto  w-full px-4 sm:px-6 lg:px-8"
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -64,8 +64,15 @@ export default function CTA() {
           </div>
 
           <div className="flex justify-center w-full">
-            <GetStartedButton className=" right-1 top-1 h-10 px-10 py-4 bg-black  font-medium text-white text-sm text-center tracking-[-0.56px] leading-[14px] rounded-xl">
-              Get Notified
+            <GetStartedButton
+              className=" right-1 top-1 h-10 px-10 py-4 bg-black  font-medium text-white text-sm text-center tracking-[-0.56px] leading-[14px] rounded-xl"
+              data-tally-open="np8V18"
+              data-tally-emoji-text="👋"
+              data-tally-emoji-animation="wave"
+            >
+              <span className=" sm:inline mr-6">
+                Join the Early Access List
+              </span>
             </GetStartedButton>
           </div>
 

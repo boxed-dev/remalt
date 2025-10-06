@@ -13,22 +13,22 @@ export default function BenefitsSection() {
       icon: "/frame-2147224421-3.svg",
       title: "Founders",
       description:
-        "Get clarity on offers, messaging, and systems to scale without chaos.",
-      image: "/b/1.png", // Replace with actual image path
+        "Get clear on your offers, messaging, and systems to scale with focus, not chaos.",
+      image: "/b/1.png",
     },
     {
       icon: "/frame-2147224422.svg",
       title: "Consultants & Service Providers",
       description:
-        "Stop trading time for money — productize your expertise and create predictable inbound.",
-      image: "/about.png", // Replace with actual image path
+        "Stop trading hours for money. Turn your expertise into scalable offers with predictable inbound demand.",
+      image: "/b/2.png",
     },
     {
       icon: "/frame-2147224422-1.svg",
       title: "Creators & Educators",
       description:
-        "Turn your audience into a business with frameworks that grow community and revenue together.",
-      image: "/about.png", // Replace with actual image path
+        "Turn your content into a business. Grow your community and revenue with proven frameworks.",
+      image: "/b/3.png",
     },
   ];
 
@@ -36,7 +36,7 @@ export default function BenefitsSection() {
 
   return (
     <section className="w-full bg-white py-8 sm:py-12 lg:py-16">
-      <motion.div 
+      <motion.div
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -105,13 +105,20 @@ export default function BenefitsSection() {
               ))}
             </div>
 
-            <GetStartedButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 px-4 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center w-fit">
-              <span className=" sm:inline mr-2">Join the Waitlist</span>
+            <GetStartedButton
+              className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-4 px-4 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center w-fit"
+              data-tally-open="np8V18"
+              data-tally-emoji-text="👋"
+              data-tally-emoji-animation="wave"
+            >
+              <span className=" sm:inline mr-8">
+                Be First to Build with Remalt
+              </span>
             </GetStartedButton>
           </div>
 
           <div className="relative w-full h-[280px] sm:h-[350px] lg:h-[500px] lg:sticky lg:top-8">
-            <div className="rounded-2xl overflow-hidden relative w-full h-full bg-gray-50">
+            <div className="rounded-2xl overflow-hidden relative w-full h-full">
               <Image
                 src={benefitCards[selectedCard].image}
                 alt={benefitCards[selectedCard].title}

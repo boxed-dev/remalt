@@ -8,16 +8,10 @@ import { Badge } from "@components/ui/badge";
 const logos = [
   { name: "Youtube", image: "/logos/yt.png", opacity: "" },
   { name: "Instagram", image: "/logos/insta.png", opacity: "" },
-  { name: "Hitech", image: "/logos/hitech.png", opacity: "" },
-  {
-    name: "Automation",
-    image: "/logos/automation.png",
-    opacity: "opacity-100",
-  },
-  { name: "Glossy", image: "/logos/glossy.png", opacity: "opacity-100" },
-  { name: "Orbitc", image: "/logos/orbitc.png", opacity: "opacity-100" },
-  { name: "Chain", image: "/logos/chain.png", opacity: "opacity-100" },
-  { name: "Hitech", image: "/logos/hitech.png", opacity: "opacity-30" },
+  { name: "Hitech", image: "/logos/linkedin.png", opacity: "" },
+  { name: "Orbitc", image: "/logos/tiktok.png", opacity: "" },
+  { name: "Glossy", image: "/logos/facebook.png", opacity: "" },
+
 ];
 
 export default function IntegrationsSection() {
@@ -87,14 +81,14 @@ export default function IntegrationsSection() {
             {[...logos, ...logos].map((logo, index) => (
               <div
                 key={index}
-                className={`flex-shrink-0 h-12 sm:h-16 lg:h-20 px-6 sm:px-8 bg-white rounded-lg flex items-center justify-center ${logo.opacity}`}
+                className={`flex-shrink-0 w-[140px] sm:w-[160px] lg:w-[180px] h-12 sm:h-16 lg:h-20 bg-white rounded-lg flex items-center justify-center ${logo.opacity}`}
               >
                 <Image
                   src={logo.image}
                   alt={logo.name}
-                  width={120}
-                  height={40}
-                  className="object-contain"
+                  width={140}
+                  height={50}
+                  className="object-contain max-w-[90%] max-h-[70%]"
                 />
               </div>
             ))}
@@ -110,14 +104,14 @@ export default function IntegrationsSection() {
             {[...logos, ...logos].map((logo, index) => (
               <div
                 key={index}
-                className={`flex-shrink-0 h-12 sm:h-16 lg:h-20 px-6 sm:px-8 bg-white rounded-lg flex items-center justify-center ${logo.opacity}`}
+                className={`flex-shrink-0 w-[140px] sm:w-[160px] lg:w-[180px] h-12 sm:h-16 lg:h-20 bg-white rounded-lg flex items-center justify-center ${logo.opacity}`}
               >
                 <Image
                   src={logo.image}
                   alt={logo.name}
-                  width={120}
-                  height={40}
-                  className="object-contain"
+                  width={140}
+                  height={50}
+                  className="object-contain max-w-[90%] max-h-[70%]"
                 />
               </div>
             ))}

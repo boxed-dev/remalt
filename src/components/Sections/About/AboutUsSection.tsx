@@ -34,7 +34,7 @@ const featureCards = [
 export default function AboutUsSection() {
   return (
     <section className="w-full py-12 px-4">
-      <motion.div 
+      <motion.div
         className="max-w-7xl mx-auto"
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -59,29 +59,37 @@ export default function AboutUsSection() {
                 <div className="hidden sm:block w-[150px] sm:w-[225px] bg-[linear-gradient(90deg,rgba(18,120,90,1)_0%,rgba(18,120,90,0.5)_27%,rgba(255,255,255,0.25)_81%)] h-px" />
               </div>
               {/* Main content grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 mb-8 md:mb-16 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 mb-4 md:mb-16 items-start">
                 {/* Left content */}
                 <div className="space-y-4 md:space-y-6">
                   <h2 className="section-heading">
-                    Built for founders who want clarity and growth
+                    Built for founders who want clarity, not chaos.
                   </h2>
 
                   <p className="paragraph-text">
-                    Remalt is designed to cut through the noise and give online
-                    founders the frameworks, systems, and community they need to
-                    scale with confidence.
+                    Remalt gives online founders the frameworks, systems, and
+                    founder-led community to turn ideas into scalable results —
+                    fast. No fluff. No guesswork. Just the clarity, direction,
+                    and execution power you need to grow with confidence.
                   </p>
-                  <GetStartedButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center">
-                    <span className="sm:inline mr-2">Join the Waitlist</span>
+                  <GetStartedButton
+                    className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center"
+                    data-tally-open="np8V18"
+                    data-tally-emoji-text="👋"
+                    data-tally-emoji-animation="wave"
+                  >
+                    <span className=" sm:inline mr-6">
+                      Claim Early Founder Perks
+                    </span>
                   </GetStartedButton>
                 </div>
 
                 {/* Right content - Dashboard preview */}
-                <div className="relative min-h-[400px] lg:min-h-[500px]">
+                <div className="relative min-h-[250px] lg:min-h-[400px]">
                   <div
-                    className="rounded-xl overflow-hidden bg-cover bg-center bg-no-repeat relative h-full min-h-[400px] lg:min-h-[500px]"
+                    className="rounded-xl overflow-hidden bg-contain bg-start bg-no-repeat relative h-full min-h-[250px] lg:min-h-[400px]"
                     style={{
-                      backgroundImage: "url(/about.png)",
+                      backgroundImage: "url(/about01.png)",
                     }}
                   ></div>
                 </div>

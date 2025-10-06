@@ -36,14 +36,17 @@ export default function NavbarDemo({ scrollToSection }: NavbarDemoProps) {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, link: string) => {
+  const handleNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    link: string
+  ) => {
     e.preventDefault();
     if (scrollToSection) {
       scrollToSection(link);
     } else {
       // Fallback to default behavior
       const element = document.getElementById(link);
-      element?.scrollIntoView({ behavior: 'smooth' });
+      element?.scrollIntoView({ behavior: "smooth" });
     }
     setIsMobileMenuOpen(false);
   };
@@ -66,7 +69,12 @@ export default function NavbarDemo({ scrollToSection }: NavbarDemoProps) {
           ))}
         </div>
         <div className="flex items-center gap-4">
-          <GetStartedButton className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center">
+          <GetStartedButton
+            className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center"
+            data-tally-open="np8V18"
+            data-tally-emoji-text="👋"
+            data-tally-emoji-animation="wave"
+          >
             <span className="hidden sm:inline mr-2">Join the Waitlist</span>
           </GetStartedButton>
         </div>
@@ -101,8 +109,11 @@ export default function NavbarDemo({ scrollToSection }: NavbarDemoProps) {
               onClick={() => setIsMobileMenuOpen(false)}
               variant="primary"
               className="w-full bg-[#12785a] hover:bg-[#0f6b4d] text-white"
+            data-tally-open="np8V18"
+            data-tally-emoji-text="👋"
+            data-tally-emoji-animation="wave"
             >
-              <span className="sm:hidden">Join Waitlist</span> 
+              <span className="sm:hidden">Join Waitlist</span>
             </NavbarButton>
           </div>
         </MobileNavMenu>
@@ -110,5 +121,3 @@ export default function NavbarDemo({ scrollToSection }: NavbarDemoProps) {
     </Navbar>
   );
 }
-
-

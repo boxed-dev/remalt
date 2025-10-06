@@ -1,0 +1,43 @@
+/* ActiveCampaign Form Styles */
+._form_error {
+  display: block;
+  position: absolute;
+  font-size: 14px;
+  z-index: 10000001;
+}
+
+._error-inner {
+  padding: 12px;
+  background-color: #FFDDDD;
+  font-size: 14px;
+  font-family: arial, sans-serif;
+  font-weight: 600;
+  line-height: 16px;
+  color: #000;
+  text-align: center;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(31, 33, 41, 0.298295);
+  margin-top: 8px;
+}
+
+._form_error._no_arrow {
+  margin-bottom: 10px;
+}
+
+input._has_error {
+  border: 1px solid #F37C7B !important;
+}
+
+._form-thank-you {
+  display: none;
+  text-align: center;
+  font-size: 18px;
+  padding: 20px;
+  color: #12785a;
+  font-weight: 600;
+}
+
+button[type="submit"].processing {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
