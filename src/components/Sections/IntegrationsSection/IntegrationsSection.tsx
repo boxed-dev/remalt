@@ -51,7 +51,7 @@ export default function IntegrationsSection() {
         </div>
 
         <div className="flex flex-col items-center gap-3 sm:gap-4 max-w-[612px] px-4">
-          <h2 className="[font-family:'Geist',Helvetica] font-semibold text-black text-3xl sm:text-4xl lg:text-[55px] tracking-[-2.20px] leading-tight text-center">
+          <h2 className="font-inter font-semibold text-black text-3xl sm:text-4xl lg:text-[55px] tracking-[-2.20px] leading-tight text-center">
             Seamless Integrations
           </h2>
 

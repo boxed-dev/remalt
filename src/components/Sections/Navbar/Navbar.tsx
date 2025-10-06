@@ -19,20 +19,20 @@ interface NavbarDemoProps {
 }
 
 export default function NavbarDemo({ scrollToSection }: NavbarDemoProps) {
-  const navItems = [
-    {
-      name: "About Us",
-      link: "about",
-    },
-    {
-      name: "Benifits",
-      link: "Benifits",
-    },
-    {
-      name: "Contact",
-      link: "contact",
-    },
-  ];
+  // const navItems = [
+  //   {
+  //     name: "About Us",
+  //     link: "about",
+  //   },
+  //   {
+  //     name: "Benifits",
+  //     link: "Benifits",
+  //   },
+  //   {
+  //     name: "Contact",
+  //     link: "contact",
+  //   },
+  // ];
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -56,7 +56,7 @@ export default function NavbarDemo({ scrollToSection }: NavbarDemoProps) {
       {/* Desktop Navigation */}
       <NavBody>
         <NavbarLogo />
-        <div className="flex-1 flex items-center justify-center">
+        {/* <div className="flex-1 flex items-center justify-center">
           {navItems.map((item, idx) => (
             <a
               key={`nav-link-${idx}`}
@@ -67,10 +67,10 @@ export default function NavbarDemo({ scrollToSection }: NavbarDemoProps) {
               {item.name}
             </a>
           ))}
-        </div>
+        </div> */}
         <div className="flex items-center gap-4">
           <GetStartedButton
-            className="bg-[#12785a] hover:bg-[#0f6b4d] text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center"
+            className="bg-gradient-to-r from-black via-white-600 to-green-600  text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center"
             data-tally-open="np8V18"
             data-tally-emoji-text="👋"
             data-tally-emoji-animation="wave"
@@ -84,13 +84,21 @@ export default function NavbarDemo({ scrollToSection }: NavbarDemoProps) {
       <MobileNav>
         <MobileNavHeader>
           <NavbarLogo />
-          <MobileNavToggle
+           <div className="flex max-w-2xl flex-col gap-4">
+            <GetStartedButton
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-full bg-gradient-to-r from-black via-white-600 to-green-600  text-white"
+            >
+              <span className="sm:hidden">Join Waitlist</span>
+            </GetStartedButton>
+          </div>
+          {/* <MobileNavToggle
             isOpen={isMobileMenuOpen}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          />
+          /> */}
         </MobileNavHeader>
 
-        <MobileNavMenu
+        {/* <MobileNavMenu
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
         >
@@ -116,7 +124,7 @@ export default function NavbarDemo({ scrollToSection }: NavbarDemoProps) {
               <span className="sm:hidden">Join Waitlist</span>
             </NavbarButton>
           </div>
-        </MobileNavMenu>
+        </MobileNavMenu> */}
       </MobileNav>
     </Navbar>
   );

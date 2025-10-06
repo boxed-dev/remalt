@@ -53,7 +53,7 @@ export default function CTA() {
             </div>
 
             <div className="text-center space-y-2">
-              <h1 className="[font-family:'Geist',Helvetica] font-semibold text-white text-3xl sm:text-4xl lg:text-[55px] text-center tracking-[-2.20px] leading-tight px-4">
+              <h1 className="font-inter font-semibold text-white text-3xl sm:text-4xl lg:text-[55px] text-center tracking-[-2.20px] leading-tight px-4">
                 Scale Your Content. Scale Your Business.
               </h1>
 
@@ -65,7 +65,7 @@ Remalt gives founders and creators the ecosystem to plan, produce, and repurpose
 
           <div className="flex justify-center w-full">
             <GetStartedButton
-              className=" right-1 top-1 h-10 px-10 py-4 bg-black  font-medium text-white text-sm text-center tracking-[-0.56px] leading-[14px] rounded-xl"
+              className=" right-1 top-1 h-10 px-10 py-4 bg-gradient-to-r from-black via-white-600 to-green-600   font-medium text-white text-sm text-center tracking-[-0.56px] leading-[14px] rounded-xl"
               data-tally-open="np8V18"
               data-tally-emoji-text="👋"
               data-tally-emoji-animation="wave"

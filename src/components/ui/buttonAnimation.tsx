@@ -26,7 +26,7 @@ const GetStartedButton = React.forwardRef<
       ref={ref}
       size={size}
       variant="default"
-      className={cn("group relative overflow-hidden", className)}
+      className={cn("group relative overflow-hidden bg-gradient-to-r from-black via-white-600 to-green-600", className)}
       {...restProps}
       onClick={() => window.location.href = "/waitlist"}
     >

@@ -8,7 +8,7 @@ export default function HeroHeaderSection() {
     "font-inter font-semibold text-black text-[24px] sm:text-5xl lg:text-[84px] text-center tracking-[-0.5px] sm:tracking-[-2px] lg:tracking-[-3.36px] leading-tight sm:whitespace-nowrap";
 
   return (
-    <section className="w-full flex items-center justify-center bg-white py-12 sm:py-16 lg:py-20">
+    <section className="w-full h-full md:h-screen flex items-center justify-center bg-white py-12 sm:py-16 lg:py-20">
       <motion.div
         className="flex flex-col items-center gap-6 max-w-8xl px-4 py-10"
         initial={{ opacity: 0, y: 50 }}
@@ -39,7 +39,7 @@ export default function HeroHeaderSection() {
         <div className="flex flex-col items-center gap-4 w-full max-w-md">
           <div className="relative w-full flex justify-center">
             <GetStartedButton
-              className="h-10 px-6 bg-[linear-gradient(131deg,rgba(255,255,255,1)_0%,rgba(18,120,90,1)_48%,rgba(212,175,127,1)_80%)] hover:opacity-90 font-inter font-medium text-white text-sm text-center tracking-[-0.56px] leading-[14px] rounded-lg"
+              className="h-10 px-6 bg-gradient-to-r from-black via-white-600 to-green-600 hover:opacity-90 font-inter font-medium text-white text-sm text-center tracking-[-0.56px] leading-[14px] rounded-lg shadow-lg border border-gray-300"
               data-tally-open="np8V18"
               data-tally-emoji-text="👋"
               data-tally-emoji-animation="wave"
