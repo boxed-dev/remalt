@@ -166,6 +166,7 @@ function WorkflowCanvasInner() {
   const selectedNodes = useWorkflowStore((state) => state.selectedNodes);
   const alignNodes = useWorkflowStore((state) => state.alignNodes);
   const distributeNodes = useWorkflowStore((state) => state.distributeNodes);
+  const createGroup = useWorkflowStore((state) => state.createGroup);
 
   // Track dragged node for group drop
   const draggedNodeIdRef = useRef<string | null>(null);
@@ -617,32 +618,48 @@ function WorkflowCanvasInner() {
         position={contextMenuPosition}
         onClose={() => setContextMenuPosition(null)}
         onAddNode={(type) => {
-          // Future: Open node selector
-          console.log('Add node:', type);
+          if (contextMenuPosition) {
+            const position = screenToFlowPosition({
+              x: contextMenuPosition.x,
+              y: contextMenuPosition.y,
+            });
+            addNode(type as NodeType, position);
+          }
         }}
         onAddNote={() => {
-          // Future: Add note functionality
-          console.log('Add note');
+          if (contextMenuPosition) {
+            const position = screenToFlowPosition({
+              x: contextMenuPosition.x,
+              y: contextMenuPosition.y,
+            });
+            addNode('text', position);
+          }
         }}
         onRunWorkflow={() => {
-          // Future: Run workflow
+          // Future: Run workflow functionality
           console.log('Run workflow');
         }}
         onPaste={() => {
           if (clipboard.length > 0) {
-            pasteNodes();
+            const position = contextMenuPosition
+              ? screenToFlowPosition({
+                  x: contextMenuPosition.x,
+                  y: contextMenuPosition.y,
+                })
+              : undefined;
+            pasteNodes(position);
           }
         }}
         onExport={() => {
           setExportDialogOpen(true);
         }}
         onImport={() => {
-          // Future: Import functionality
-          console.log('Import');
+          // Future: Import DSL functionality
+          console.log('Import DSL');
         }}
         onOrganize={() => {
-          // Future: Auto-layout
-          console.log('Organize');
+          // Future: Auto-layout functionality
+          console.log('Auto-organize nodes');
         }}
         canPaste={clipboard.length > 0}
       />
@@ -661,16 +678,29 @@ function WorkflowCanvasInner() {
           deleteNode(nodeId);
         }}
         onAddToGroup={(nodeId) => {
-          // Future: Show group selector
-          console.log('Add to group:', nodeId);
+          // Find all group nodes
+          const groups = workflowNodes.filter((n) => n.type === 'group');
+          if (groups.length > 0) {
+            // Add to first group for now
+            // Future: Show group selector dialog
+            addNodesToGroup(groups[0].id, [nodeId]);
+          } else {
+            // Create new group with this node
+            const node = workflowNodes.find((n) => n.id === nodeId);
+            if (node) {
+              createGroup([nodeId], { x: node.position.x - 50, y: node.position.y - 50 });
+            }
+          }
         }}
         onAddNote={() => {
-          // Future: Add note
-          console.log('Add note');
+          const node = workflowNodes.find((n) => n.id === nodeContextMenu?.nodeId);
+          if (node) {
+            addNode('text', { x: node.position.x + 50, y: node.position.y + 50 });
+          }
         }}
         onHelp={() => {
-          // Future: Show help
-          console.log('Show help');
+          // Open help in new tab
+          window.open('https://github.com/your-repo/docs', '_blank');
         }}
       />
 
@@ -682,8 +712,13 @@ function WorkflowCanvasInner() {
           copyNodes(selectedNodes);
         }}
         onGroup={() => {
-          // Future: Create group from selection
-          console.log('Create group from selection');
+          // Calculate center position of selected nodes
+          const selectedNodeObjects = workflowNodes.filter((n) => selectedNodes.includes(n.id));
+          if (selectedNodeObjects.length > 0) {
+            const avgX = selectedNodeObjects.reduce((sum, n) => sum + n.position.x, 0) / selectedNodeObjects.length;
+            const avgY = selectedNodeObjects.reduce((sum, n) => sum + n.position.y, 0) / selectedNodeObjects.length;
+            createGroup(selectedNodes, { x: avgX - 150, y: avgY - 150 });
+          }
         }}
         onAlign={(direction) => {
           alignNodes(selectedNodes, direction);
@@ -711,8 +746,13 @@ function WorkflowCanvasInner() {
           distributeNodes(selectedNodes, direction);
         }}
         onGroup={() => {
-          // Future: Create group from selection
-          console.log('Create group from selection');
+          // Calculate center position of selected nodes
+          const selectedNodeObjects = workflowNodes.filter((n) => selectedNodes.includes(n.id));
+          if (selectedNodeObjects.length > 0) {
+            const avgX = selectedNodeObjects.reduce((sum, n) => sum + n.position.x, 0) / selectedNodeObjects.length;
+            const avgY = selectedNodeObjects.reduce((sum, n) => sum + n.position.y, 0) / selectedNodeObjects.length;
+            createGroup(selectedNodes, { x: avgX - 150, y: avgY - 150 });
+          }
         }}
       />
 

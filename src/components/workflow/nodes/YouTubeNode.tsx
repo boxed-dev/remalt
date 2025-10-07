@@ -1,5 +1,6 @@
 import { Youtube, Loader2, CheckCircle2, AlertCircle, Download, ExternalLink, Users, ChevronDown, ChevronUp, PlayCircle } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import type { SyntheticEvent } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { YouTubeNodeData } from '@/types/workflow';
@@ -71,6 +72,13 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
   const selectedVideosCount = useMemo(() => {
     return data.channelVideos?.filter(v => v.selected).length || 0;
   }, [data.channelVideos]);
+
+  type NativeEventWithStop = Event & { stopImmediatePropagation?: () => void };
+
+  const stopReactFlowPropagation = useCallback((event: SyntheticEvent) => {
+    event.stopPropagation();
+    (event.nativeEvent as NativeEventWithStop).stopImmediatePropagation?.();
+  }, []);
 
   const stopPropagation = (event: React.MouseEvent | React.TouchEvent) => {
     event.stopPropagation();
@@ -484,10 +492,18 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
               style={{
                 scrollbarWidth: 'thin',
                 scrollbarColor: '#CBD5E1 #F1F5F9',
+                overscrollBehavior: 'contain',
+                WebkitOverflowScrolling: 'touch',
               }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onWheel={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.stopPropagation()}
+              onWheel={(event) => stopReactFlowPropagation(event)}
+              onWheelCapture={(event) => stopReactFlowPropagation(event)}
+              onMouseDown={(event) => stopReactFlowPropagation(event)}
+              onPointerDown={(event) => stopReactFlowPropagation(event)}
+              onTouchStart={(event) => stopReactFlowPropagation(event)}
+              onTouchMove={(event) => stopReactFlowPropagation(event)}
+              data-lenis-prevent
+              data-lenis-prevent-wheel
+              data-lenis-prevent-touch
             >
               <style jsx>{`
                 div::-webkit-scrollbar {
@@ -699,6 +715,7 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
       icon={isChannel ? <Users className="h-3.5 w-3.5 text-red-600" /> : <Youtube className="h-3.5 w-3.5 text-red-600" />}
       iconBg="bg-red-100"
       showTargetHandle={false}
+      allowOverflow={isChannel}
     >
       {isChannel ? renderChannelView() : renderVideoView()}
       <AIInstructionsInline
