@@ -336,7 +336,7 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
     const newSelected = !video.selected;
 
     // Update selection
-    const updatedVideos = [...videos];
+    let updatedVideos = [...videos];
     updatedVideos[videoIndex] = { ...video, selected: newSelected };
 
     updateNodeData(id, {
@@ -345,14 +345,20 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
 
     // If selecting and no transcript, fetch it
     if (newSelected && !video.transcript && video.transcriptStatus !== 'loading') {
-      updatedVideos[videoIndex].transcriptStatus = 'loading';
+      // Create a new array with the loading status
+      updatedVideos = [...videos];
+      updatedVideos[videoIndex] = { ...video, selected: newSelected, transcriptStatus: 'loading' };
       updateNodeData(id, { channelVideos: updatedVideos } as Partial<YouTubeNodeData>);
 
       const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
       const result = await fetchTranscript(videoUrl);
 
+      // Create another new array with the transcript result
+      updatedVideos = data.channelVideos || [];
+      const currentVideo = updatedVideos[videoIndex];
+      updatedVideos = [...updatedVideos];
       updatedVideos[videoIndex] = {
-        ...updatedVideos[videoIndex],
+        ...currentVideo,
         transcript: result.transcript,
         transcriptStatus: result.status,
       };
@@ -401,14 +407,14 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
 
   // Render channel view
   const renderChannelView = () => (
-    <div className="w-[400px] space-y-3">
+    <div className="w-[480px] space-y-3">
       {/* Channel Header */}
       <div className="flex gap-3">
         {data.channelThumbnail && (
           <img
             src={data.channelThumbnail}
             alt={data.channelTitle}
-            className="w-16 h-16 rounded-full object-cover"
+            className="w-16 h-16 rounded-full object-cover flex-shrink-0"
           />
         )}
         <div className="flex-1 min-w-0">
@@ -447,33 +453,58 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
       {/* Videos List */}
       {data.channelVideos && data.channelVideos.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between bg-[#F8FAFC] -mx-3 px-3 py-2 rounded-lg">
             <div className="text-[12px] font-medium text-[#0F172A]">
-              Videos ({selectedVideosCount} selected)
+              {data.channelVideos.length} Videos ({selectedVideosCount} selected)
             </div>
             <button
               onClick={(e) => {
                 stopPropagation(e);
                 setExpandedVideos(!expandedVideos);
               }}
-              className="text-[11px] text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1"
+              className="text-[11px] text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1 font-medium"
             >
               {expandedVideos ? (
                 <>
-                  <ChevronUp className="h-3 w-3" />
+                  <ChevronUp className="h-3.5 w-3.5" />
                   Collapse
                 </>
               ) : (
                 <>
-                  <ChevronDown className="h-3 w-3" />
-                  Expand
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  Show all
                 </>
               )}
             </button>
           </div>
 
           {expandedVideos && (
-            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+            <div
+              className="space-y-2 max-h-[500px] overflow-y-auto pr-2 -mr-2"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#CBD5E1 #F1F5F9',
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onWheel={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+            >
+              <style jsx>{`
+                div::-webkit-scrollbar {
+                  width: 8px;
+                }
+                div::-webkit-scrollbar-track {
+                  background: #F1F5F9;
+                  border-radius: 4px;
+                }
+                div::-webkit-scrollbar-thumb {
+                  background: #CBD5E1;
+                  border-radius: 4px;
+                }
+                div::-webkit-scrollbar-thumb:hover {
+                  background: #94A3B8;
+                }
+              `}</style>
               {data.channelVideos.map((video) => (
                 <div
                   key={video.id}
@@ -482,43 +513,43 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
                     toggleVideoSelection(video.id);
                   }}
                   className={`
-                    relative rounded-lg border p-2 cursor-pointer transition-all
+                    relative rounded-lg border p-2.5 cursor-pointer transition-all flex-shrink-0
                     ${video.selected
                       ? 'border-[#2563EB] bg-[#EFF6FF] shadow-sm'
                       : 'border-[#E5E7EB] bg-white hover:border-[#94A3B8]'
                     }
                   `}
                 >
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <div className="relative flex-shrink-0">
                       <img
                         src={video.thumbnail}
                         alt={video.title}
-                        className="w-32 h-18 object-cover rounded"
+                        className="w-36 h-20 object-cover rounded"
                       />
-                      <div className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] px-1 rounded">
+                      <div className="absolute bottom-1 right-1 bg-black/90 text-white text-[9px] px-1.5 py-0.5 rounded font-medium">
                         {formatDuration(video.duration)}
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[11px] font-medium text-[#0F172A] line-clamp-2 mb-1">
+                      <div className="text-[11px] font-medium text-[#0F172A] line-clamp-2 mb-1 leading-tight">
                         {video.title}
                       </div>
                       <div className="text-[10px] text-[#64748B]">
                         {formatViewCount(video.viewCount)} views
                       </div>
                       {video.selected && (
-                        <div className="mt-1">
+                        <div className="mt-1.5">
                           {video.transcriptStatus === 'loading' && (
                             <div className="flex items-center gap-1 text-[9px] text-[#475569]">
                               <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                              Loading...
+                              Loading transcript...
                             </div>
                           )}
                           {video.transcriptStatus === 'success' && (
-                            <div className="flex items-center gap-1 text-[9px] text-[#0F766E]">
+                            <div className="flex items-center gap-1 text-[9px] text-[#0F766E] font-medium">
                               <CheckCircle2 className="h-2.5 w-2.5" />
-                              Ready
+                              Transcript ready
                             </div>
                           )}
                           {video.transcriptStatus === 'unavailable' && (
@@ -531,7 +562,7 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
                       )}
                     </div>
                     {video.selected && (
-                      <div className="absolute top-2 right-2">
+                      <div className="absolute top-2 right-2 bg-white rounded-full p-0.5 shadow-sm">
                         <CheckCircle2 className="h-4 w-4 text-[#2563EB]" />
                       </div>
                     )}
@@ -550,14 +581,14 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
             stopPropagation(event);
             setIsEditing(true);
           }}
-          className="rounded-md px-2.5 py-1 text-[#475569] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+          className="rounded-md px-2.5 py-1 text-[#475569] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
         >
           Edit link
         </button>
         {data.url && (
           <button
             onClick={openVideo}
-            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
           >
             <ExternalLink className="h-3.5 w-3.5 text-[#94A3B8]" />
             Open channel
@@ -566,7 +597,7 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
         {selectedVideosCount > 0 && (
           <button
             onClick={downloadAllTranscripts}
-            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
           >
             <Download className="h-3.5 w-3.5 text-[#94A3B8]" />
             Export ({selectedVideosCount})
@@ -623,14 +654,14 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
                 stopPropagation(event);
                 setIsEditing(true);
               }}
-              className="rounded-md px-2.5 py-1 text-[#475569] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+              className="rounded-md px-2.5 py-1 text-[#475569] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
             >
               Edit link
             </button>
             {data.url && (
               <button
                 onClick={openVideo}
-                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
               >
                 <ExternalLink className="h-3.5 w-3.5 text-[#94A3B8]" />
                 Open video
@@ -639,7 +670,7 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
             {hasTranscript && (
               <button
                 onClick={downloadTranscript}
-                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
               >
                 <Download className="h-3.5 w-3.5 text-[#94A3B8]" />
                 Export transcript

@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { WorkflowCanvas } from '@/components/workflow/WorkflowCanvas';
-import { WorkflowSidebar } from '@/components/workflow/WorkflowSidebar';
+import { DifyWorkflowHeader } from '@/components/workflow/DifyWorkflowHeader';
+import { DifyWorkflowSidebar } from '@/components/workflow/DifyWorkflowSidebar';
+import { StickyNoteOverlay } from '@/components/workflow/StickyNoteOverlay';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -191,13 +193,21 @@ export default function WorkflowEditorPage() {
   }
 
   return (
-    <div className="fixed inset-0 bg-[#FAFBFC]" style={{ top: '56px' }}>
-      {/* Left Sidebar - Independently fixed, completely isolated */}
-      <WorkflowSidebar />
+    <div className="fixed inset-0 flex flex-col bg-[#F3F4F6]">
+      {/* Dify-style workflow header */}
+      <div className="flex-shrink-0">
+        <DifyWorkflowHeader />
+      </div>
 
-      {/* Main Canvas Area - Isolated zoom container with proper offset */}
-      <div className="h-full ml-14 transition-[margin] duration-300">
+      {/* Main content - canvas with floating sidebar */}
+      <div className="flex-1 relative overflow-hidden">
         <WorkflowCanvas />
+
+        {/* Floating Dify-style Sidebar */}
+        <DifyWorkflowSidebar />
+
+        {/* Sticky Notes Overlay - disabled by default, can be enabled via props */}
+        <StickyNoteOverlay enabled={false} notes={[]} />
       </div>
     </div>
   );

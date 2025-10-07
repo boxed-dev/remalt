@@ -28,11 +28,11 @@ export function GlobalHeader() {
     setMounted(true);
   }, []);
 
-  // Don't show header on auth pages
+  // Don't show header on auth pages or workflow editor
   const isAuthPage = pathname?.startsWith('/auth/');
   const isWorkflowEditor = pathname?.match(/^\/flows\/[^/]+$/);
 
-  if (isAuthPage) {
+  if (isAuthPage || isWorkflowEditor) {
     return null;
   }
 

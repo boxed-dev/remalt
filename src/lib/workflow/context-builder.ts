@@ -147,6 +147,23 @@ export function buildChatContext(
 
         // Handle channel mode - include all selected videos
         if (youtubeData.mode === 'channel' && youtubeData.channelVideos) {
+          // Add channel metadata to text context
+          if (youtubeData.channelTitle) {
+            const channelInfo = [
+              `YouTube Channel: ${youtubeData.channelTitle}`,
+              youtubeData.channelCustomUrl ? `Handle: ${youtubeData.channelCustomUrl}` : '',
+              youtubeData.channelSubscriberCount ? `Subscribers: ${parseInt(youtubeData.channelSubscriberCount).toLocaleString()}` : '',
+              youtubeData.channelVideoCount ? `Total Videos: ${youtubeData.channelVideoCount}` : '',
+              youtubeData.channelDescription ? `\nDescription:\n${youtubeData.channelDescription}` : '',
+            ].filter(Boolean).join('\n');
+
+            context.textContext.push({
+              content: channelInfo,
+              aiInstructions: safeGetInstructions(youtubeData),
+            });
+          }
+
+          // Add selected video transcripts
           const selectedVideos = youtubeData.channelVideos.filter(v => v.selected);
           selectedVideos.forEach(video => {
             if (video.transcript) {
@@ -309,14 +326,32 @@ function extractNodeContext(node: WorkflowNode): string | null {
     }
     case 'youtube': {
       const data = node.data as YouTubeNodeData;
-      // Handle channel mode - combine all selected video transcripts
+      // Handle channel mode - combine channel info and selected video transcripts
       if (data.mode === 'channel' && data.channelVideos) {
+        const parts: string[] = [];
+
+        // Add channel metadata
+        if (data.channelTitle) {
+          const channelInfo = [
+            `YouTube Channel: ${data.channelTitle}`,
+            data.channelCustomUrl ? `Handle: ${data.channelCustomUrl}` : '',
+            data.channelSubscriberCount ? `Subscribers: ${parseInt(data.channelSubscriberCount).toLocaleString()}` : '',
+            data.channelVideoCount ? `Total Videos: ${data.channelVideoCount}` : '',
+            data.channelDescription ? `\nDescription:\n${data.channelDescription}` : '',
+          ].filter(Boolean).join('\n');
+          parts.push(channelInfo);
+        }
+
+        // Add selected video transcripts
         const selectedVideos = data.channelVideos.filter(v => v.selected && v.transcript);
         if (selectedVideos.length > 0) {
-          return selectedVideos
+          const transcripts = selectedVideos
             .map(v => `[Video: ${v.title}]\n${v.transcript}`)
             .join('\n\n---\n\n');
+          parts.push(transcripts);
         }
+
+        return parts.length > 0 ? parts.join('\n\n---\n\n') : null;
       }
       // Handle single video mode
       return data.transcript || null;

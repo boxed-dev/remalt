@@ -369,8 +369,8 @@ export function ChatNode({ id, data }: ChatNodeProps) {
                       {message.content === '' && isLoading ? (
                         <div className="flex items-center gap-2 py-2">
                           <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse"></div>
-                          <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                          <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                          <div className="w-2 h-2 bg-[#14B8A6] rounded-full" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '0.2s' }}></div>
+                          <div className="w-2 h-2 bg-[#14B8A6] rounded-full" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '0.4s' }}></div>
                         </div>
                       ) : (
                       <ReactMarkdown
@@ -566,8 +566,8 @@ export function ChatNode({ id, data }: ChatNodeProps) {
                     {message.content === '' && isLoading ? (
                       <div className="flex items-center gap-2 py-2">
                         <div className="w-2.5 h-2.5 bg-[#14B8A6] rounded-full animate-pulse"></div>
-                        <div className="w-2.5 h-2.5 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="w-2.5 h-2.5 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                        <div className="w-2.5 h-2.5 bg-[#14B8A6] rounded-full" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '0.2s' }}></div>
+                        <div className="w-2.5 h-2.5 bg-[#14B8A6] rounded-full" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '0.4s' }}></div>
                       </div>
                     ) : (
                     <ReactMarkdown

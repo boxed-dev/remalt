@@ -32,10 +32,8 @@ import type {
   ImageNodeData,
   VoiceNodeData,
 } from '@/types/workflow';
-import { shallow } from 'zustand/shallow';
 import { nodeTypes } from './nodes';
 import { edgeTypes } from './edges';
-import { WorkflowControls } from './WorkflowControls';
 import { PanelContextMenu } from './PanelContextMenu';
 import { NodeContextMenu } from './NodeContextMenu';
 import { SelectionContextMenu } from './SelectionContextMenu';
@@ -142,12 +140,10 @@ function WorkflowCanvasInner() {
 
   const workflow = useWorkflowStore((state) => state.workflow);
   const workflowNodes = useWorkflowStore(
-    (state) => state.workflow?.nodes ?? EMPTY_NODES,
-    shallow
+    (state) => state.workflow?.nodes ?? EMPTY_NODES
   );
   const workflowEdges = useWorkflowStore(
-    (state) => state.workflow?.edges ?? EMPTY_EDGES,
-    shallow
+    (state) => state.workflow?.edges ?? EMPTY_EDGES
   );
   const workflowViewport = useWorkflowStore((state) => state.workflow?.viewport);
   const controlMode = useWorkflowStore((state) => state.controlMode);
@@ -193,11 +189,11 @@ function WorkflowCanvasInner() {
   // Sync workflow state to React Flow
   useEffect(() => {
     setNodes(
-      workflowNodes.map((node) => ({
+      (workflowNodes as WorkflowNode[]).map((node: WorkflowNode) => ({
         id: node.id,
         type: node.type,
         position: node.position,
-        data: node.data,
+        data: node.data as Record<string, unknown>,
         style: node.style,
         dragging: node.id === draggingNodeId,
         className: node.id === draggingNodeId ? 'dragging-node' : undefined,
@@ -207,7 +203,7 @@ function WorkflowCanvasInner() {
 
   useEffect(() => {
     setEdges(
-      workflowEdges.map((edge) => ({
+      (workflowEdges as WorkflowEdge[]).map((edge: WorkflowEdge) => ({
         id: edge.id,
         source: edge.source,
         target: edge.target,
@@ -217,7 +213,7 @@ function WorkflowCanvasInner() {
         animated: edge.animated,
         style: edge.style,
         label: edge.label,
-        data: edge.data,
+        data: edge.data as Record<string, unknown>,
       }))
     );
   }, [workflowEdges, setEdges]);
@@ -258,7 +254,6 @@ function WorkflowCanvasInner() {
     if (isDifferent) {
       setViewport(workflowViewport, {
         duration: hasAppliedStoredViewport.current ? 180 : 0,
-        easing: (t) => 1 - Math.pow(1 - t, 3),
       });
       hasAppliedStoredViewport.current = true;
     }
@@ -337,7 +332,7 @@ function WorkflowCanvasInner() {
   }, [clearSelection]);
 
   // Handle pane context menu (right-click on canvas)
-  const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
+  const onPaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
     event.preventDefault();
 
     // If 2+ nodes are selected, show selection context menu
@@ -544,15 +539,15 @@ function WorkflowCanvasInner() {
 
   if (!workflow) {
     return (
-      <div className="flex items-center justify-center h-full bg-[#FAFBFC]">
+      <div className="flex items-center justify-center h-full bg-[#F3F4F6]">
         <div className="text-center max-w-md">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-white border border-[#E8ECEF] flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center shadow-sm">
             <svg className="h-10 w-10 text-[#9CA3AF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h2 className="text-[20px] font-semibold text-[#1A1D21] mb-2">No Workflow Loaded</h2>
-          <p className="text-[14px] text-[#6B7280] leading-relaxed">
+          <h2 className="text-[20px] font-semibold text-gray-900 mb-2">No Workflow Loaded</h2>
+          <p className="text-[14px] text-gray-600 leading-relaxed">
             Click nodes from the sidebar to add them to your workflow
           </p>
         </div>
@@ -599,7 +594,6 @@ function WorkflowCanvasInner() {
         zoomOnPinch={true}
         zoomOnDoubleClick={false}
         selectionOnDrag={controlMode === 'pointer' && !spacePressed}
-        selectionMode="partial"
         panActivationKeyCode={null}
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{
@@ -612,10 +606,10 @@ function WorkflowCanvasInner() {
         snapGrid={[15, 15]}
       >
         <Background
-          gap={24}
-          size={1.5}
+          gap={16}
+          size={2}
           color="#D1D5DB"
-          style={{ backgroundColor: '#FAFBFC' }}
+          style={{ backgroundColor: '#F9FAFB' }}
         />
       </ReactFlow>
 
@@ -750,11 +744,13 @@ function WorkflowCanvasInner() {
   );
 }
 
+import { DifyCanvasToolbar } from './DifyCanvasToolbar';
+
 export function WorkflowCanvas() {
   return (
     <ReactFlowProvider>
       <WorkflowCanvasInner />
-      <WorkflowControls />
+      <DifyCanvasToolbar />
     </ReactFlowProvider>
   );
 }
