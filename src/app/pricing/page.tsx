@@ -1,7 +1,7 @@
 'use client'
 
 import { PricingCard } from '@/components/subscription/pricing-card'
-import { AppHeader } from '@/components/layout/app-header'
+// import { AppHeader } from '@/components/layout/app-header'
 import { useRouter } from 'next/navigation'
 
 // Mock product data
@@ -58,7 +58,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-[#FAFBFC] flex flex-col">
-      <AppHeader />
+      {/* <AppHeader /> */}
       <div className="flex-1 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto" style={{
           fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif'
