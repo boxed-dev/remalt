@@ -29,7 +29,7 @@ const features = [
 
 export default function CTA() {
   return (
-    <section className="w-full min-h-[400px] sm:min-h-[450px] lg:min-h-[512px] flex items-center bg-[linear-gradient(131deg,rgba(255,255,255,1)_0%,rgba(18,120,90,1)_48%,rgba(212,175,127,1)_80%)] py-12 sm:py-16 lg:py-20">
+    <section className="w-full min-h-[400px] sm:min-h-[450px] lg:min-h-[512px] flex items-center bg-gradient-to-br from-black via-emerald-700 to-black py-12 sm:py-16 lg:py-20">
       <motion.div
         className="mx-auto  w-full px-4 sm:px-6 lg:px-8"
         initial={{ opacity: 0, y: 50 }}
@@ -57,8 +57,10 @@ export default function CTA() {
                 Scale Your Content. Scale Your Business.
               </h1>
 
-                <p className="[font-family:'Inter',Helvetica] font-medium text-white text-base sm:text-lg lg:text-2xl text-center tracking-[-0.18px] leading-relaxed max-w-4xl mx-auto  mt-4">
-Remalt gives founders and creators the ecosystem to plan, produce, and repurpose content 11X faster — so every idea becomes a growth asset.
+              <p className="[font-family:'Inter',Helvetica] font-medium text-white text-base sm:text-lg lg:text-2xl text-center tracking-[-0.18px] leading-relaxed max-w-4xl mx-auto  mt-4">
+                Remalt gives founders and creators the ecosystem to plan,
+                produce, and repurpose content 11X faster — so every idea
+                becomes a growth asset.
               </p>
             </div>
           </div>

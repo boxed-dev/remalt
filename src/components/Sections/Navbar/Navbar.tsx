@@ -70,10 +70,8 @@ export default function NavbarDemo({ scrollToSection }: NavbarDemoProps) {
         </div> */}
         <div className="flex items-center gap-4">
           <GetStartedButton
-            className="bg-gradient-to-r from-black via-white-600 to-green-600  text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg border border-[#7c5ac5] flex items-center"
-            data-tally-open="np8V18"
-            data-tally-emoji-text="👋"
-            data-tally-emoji-animation="wave"
+            className="bg-gradient-to-r from-black via-white-600 to-green-600  text-white text-xs sm:text-sm py-2 sm:px-6 sm:py-3 rounded-lg shadow-lg  flex items-center"
+
           >
             <span className="hidden sm:inline mr-2">Join the Waitlist</span>
           </GetStartedButton>
