@@ -216,15 +216,18 @@ export const MobileNavMenu = ({
 
 export const MobileNavToggle = ({
   isOpen,
-  onClick,
+  onToggleAction,
 }: {
   isOpen: boolean;
-  onClick: () => void;
+  onToggleAction: () => void;
 }) => {
   return isOpen ? (
-    <IconX className="text-black dark:text-white" onClick={onClick} />
+    <IconX className="text-black dark:text-white" onClick={onToggleAction} />
   ) : (
-    <IconMenu2 className="text-black dark:text-white" onClick={onClick} />
+    <IconMenu2
+      className="text-black dark:text-white"
+      onClick={onToggleAction}
+    />
   );
 };
 
@@ -240,7 +243,9 @@ export const NavbarLogo = () => {
         width={30}
         height={30}
       /> */}
-      <span className="font-bold text-black text-2xl dark:text-white">Remalt</span>
+      <span className="font-bold text-black text-2xl dark:text-white">
+        Remalt
+      </span>
     </a>
   );
 };
@@ -258,10 +263,8 @@ export const NavbarButton = ({
   children: React.ReactNode;
   className?: string;
   variant?: "primary" | "secondary" | "dark" | "gradient";
-} & (
-  | React.ComponentPropsWithoutRef<"a">
-  | React.ComponentPropsWithoutRef<"button">
-)) => {
+  [key: string]: any;
+}) => {
   const baseStyles =
     "px-4 py-2 rounded-md bg-white button bg-white text-black text-sm font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center";
 
@@ -274,13 +277,15 @@ export const NavbarButton = ({
       "bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]",
   };
 
+  const Component = Tag as any;
+
   return (
-    <Tag
-      href={href || undefined}
+    <Component
+      href={href}
       className={cn(baseStyles, variantStyles[variant], className)}
       {...props}
     >
       {children}
-    </Tag>
+    </Component>
   );
 };

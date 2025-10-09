@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Remalt - Build AI Workflows That Actually Work",
+  title: "Remalt - The AI Canvas for creating content that sells",
   description:
     "Create, automate, and optimize AI-powered workflows with our intuitive drag-and-drop interface. From content creation to data analysis.",
   keywords: [
@@ -135,6 +135,7 @@ export default function RootLayout({
           name="google-site-verification"
           content="your-verification-code"
         />
+        <script src="https://getlaunchlist.com/js/widget.js" defer></script>
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         {/* <AuthHeader /> */}

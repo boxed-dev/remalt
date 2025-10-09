@@ -151,7 +151,7 @@ export default function FooterSection  () {
           </div> */}
 
           <div className="flex items-center justify-center w-full my-10 ">
-            <div className="[text-shadow:0px_4px_4px_#00000040] [-webkit-text-stroke:1px_#00000036] bg-[linear-gradient(131deg,rgba(255,255,255,1)_0%,rgba(18,120,90,1)_48%,rgba(212,175,127,1)_80%)] [-webkit-background-clip:text] bg-clip-text [-webkit-text-fill-color:transparent] [text-fill-color:transparent] [font-family:'Geist',Helvetica] font-medium text-transparent text-[100px] sm:text-[120px] md:text-[160px] lg:text-[200px] xl:text-[280px] 2xl:text-[350px] text-center tracking-[-0.18px] leading-none">
+<div className="[text-shadow:0px_4px_4px_#00000040] [-webkit-text-stroke:1px_#00000036] bg-[linear-gradient(131deg,rgba(255,255,255,1)_0%,rgba(18,120,90,1)_48%,rgba(0,0,0,1)_80%)] [-webkit-background-clip:text] bg-clip-text [-webkit-text-fill-color:transparent] [text-fill-color:transparent] [font-family:'Geist',Helvetica] font-medium text-transparent text-[100px] sm:text-[120px] md:text-[160px] lg:text-[200px] xl:text-[280px] 2xl:text-[350px] text-center tracking-[-0.18px] leading-none">
               Remalt
             </div>
           </div>

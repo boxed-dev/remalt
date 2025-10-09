@@ -4,6 +4,7 @@ import { TrendingUp as TrendingUpIcon } from "lucide-react";
 import React from "react";
 import Image from "next/image";
 import { Badge } from "@components/ui/badge";
+import { OrbitingCirclesDemo } from "@/components/Logoorbit";
 
 // First row: Mix of social media, AI, productivity, and browsers
 const logosRow1 = [
@@ -29,7 +30,7 @@ const logosRow2 = [
 
 export default function IntegrationsSection() {
   return (
-    <section className="w-full py-12 sm:py-16 lg:py-[100px] px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <section className="w-full py-12 sm:py-16 lg:py-[100px]  sm:px-6 lg:px-8 relative overflow-hidden">
       <motion.div
         className="max-w-[1240px] mx-auto flex flex-col items-center gap-6 sm:gap-8"
         initial={{ opacity: 0, y: 50 }}
@@ -66,8 +67,9 @@ export default function IntegrationsSection() {
         </div>
       </motion.div>
 
+      <OrbitingCirclesDemo />
       {/* Infinite scrolling logos */}
-      <motion.div
+      {/* <motion.div
         className="w-full mt-8 sm:mt-10 lg:mt-[41px] overflow-hidden"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -88,7 +90,7 @@ export default function IntegrationsSection() {
           }
         `}</style>
 
-        {/* First row */}
+
         <div className="flex gap-8 sm:gap-12 lg:gap-16 mb-4 sm:mb-6">
           <div className="flex gap-8 sm:gap-12 lg:gap-16 animate-scroll">
             {[...logosRow1, ...logosRow1].map((logo, index) => (
@@ -108,7 +110,7 @@ export default function IntegrationsSection() {
           </div>
         </div>
 
-        {/* Second row - reverse direction */}
+
         <div className="flex gap-8 sm:gap-12 lg:gap-16">
           <div
             className="flex gap-8 sm:gap-12 lg:gap-16 animate-scroll"
@@ -130,7 +132,7 @@ export default function IntegrationsSection() {
             ))}
           </div>
         </div>
-      </motion.div>
+      </motion.div> */}
     </section>
   );
 }

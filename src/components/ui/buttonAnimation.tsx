@@ -28,7 +28,7 @@ const GetStartedButton = React.forwardRef<
       variant="default"
       className={cn("group relative overflow-hidden bg-gradient-to-r from-black via-white-600 to-green-600", className)}
       {...restProps}
-      onClick={() => window.location.href = "/waitlist"}
+      // onClick={() => window.location.href = "/waitlist"}
     >
       <span className="mr-8 transition-opacity duration-300 group-hover:opacity-0">
         {children}

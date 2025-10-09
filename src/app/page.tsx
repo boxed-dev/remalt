@@ -15,6 +15,9 @@ import ImageSection from "@components/Sections/Image/Image";
 import { MagicText } from "@/components/ui/magic-text";
 import Silk from "@/components/Silk";
 import ViralScriptsSection from "@components/Sections/ViralScriptsSection/ViralScriptsSection";
+import MultiOrbitSemiCircle from "@/components/ui/multi-orbit-semi-circle";
+import Feature from "@/components/Sections/Feature/Feature";
+import { OrbitingCirclesDemo } from "@/components/Logoorbit";
 
 export default function ElementDefault() {
   const lenisRef = useRef<Lenis | null>(null);
@@ -57,14 +60,10 @@ export default function ElementDefault() {
       <HeroHeaderSection />
       <ViralScriptsSection />
 
-      {/* <div className="relative flex items-center max-w-4xl mx-auto justify-center pb-[10rem] mt-[10rem]">
-        <MagicText
-          text={
-            "Hi there! I'm preet, creator of HextaUI. Thank you so much of all the support and love you've shown me. I hope you enjoy using HextaUI as much as I enjoyed creating it."
-          }
-        />
-      </div> */}
+    
       <ImageSection />
+      {/* <Feature /> */}
+
       {/* <div id="about">
         <AboutUsSection />
       </div> */}
@@ -73,7 +72,9 @@ export default function ElementDefault() {
       </div> */}
 
       <div id="">
+        {/* <MultiOrbitSemiCircle/> */}
         <IntegrationsSection />
+        {/* <OrbitingCirclesDemo/> */}
       </div>
 
       {/* <DesktopFeaturesSection /> */}

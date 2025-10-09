@@ -40,16 +40,16 @@ export default function CTA() {
         <div className="flex flex-col gap-6 sm:gap-8 items-center">
           <div className="flex flex-col gap-4 items-center">
             <div className="relative flex items-center justify-center w-full max-w-md">
-              <div className="hidden sm:block absolute left-0 w-[25%] bg-[linear-gradient(90deg,rgba(0,0,0,0)_19%,rgba(198,180,237,0.5)_73%,rgba(149,115,222,1)_100%)] h-px" />
+<div className="hidden sm:block absolute left-0 w-[25%] bg-[linear-gradient(90deg,rgba(0,0,0,0)_19%,rgba(180,237,198,0.5)_73%,rgba(115,222,149,1)_100%)] h-px" />
 
-              <Badge className="h-8 bg-[#f5f1ff] text-black border-[#e3d6ff] rounded-[50px] flex items-center justify-center gap-2 px-3 sm:px-4 hover:bg-[#f5f1ff] text-xs whitespace-nowrap">
+              <Badge className="h-8 bg-white text-black  rounded-[50px] flex items-center justify-center gap-2 px-3 sm:px-4 hover:bg-[#f5f1ff] text-xs whitespace-nowrap">
                 <TrendingUpIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="[font-family:'Inter',Helvetica] font-normal tracking-[-0.12px] leading-[14.4px]">
                   Reserve Your Spot
                 </span>
               </Badge>
 
-              <div className="hidden sm:block absolute right-0 w-[25%] bg-[linear-gradient(90deg,rgba(255,255,255,0.25)_19%,rgba(198,180,237,0.5)_73%,rgba(149,115,222,1)_100%)] h-px rotate-180" />
+<div className="hidden sm:block absolute right-0 w-[25%] bg-[linear-gradient(90deg,rgba(255,255,255,0.25)_19%,rgba(180,237,198,0.5)_73%,rgba(115,222,149,1)_100%)] h-px rotate-180" />
             </div>
 
             <div className="text-center space-y-2">
@@ -67,10 +67,7 @@ export default function CTA() {
 
           <div className="flex justify-center w-full">
             <GetStartedButton
-              className=" right-1 top-1 h-10 px-10 py-4 bg-gradient-to-r from-black via-white-600 to-green-600   font-medium text-white text-sm text-center tracking-[-0.56px] leading-[14px] rounded-xl"
-              data-tally-open="np8V18"
-              data-tally-emoji-text="👋"
-              data-tally-emoji-animation="wave"
+              className=" right-1 top-1 h-10 px-10 py-4 bg-gradient-to-r from-black via-white-600 to-[#1F7854]   font-medium text-white text-sm text-center tracking-[-0.56px] leading-[14px] rounded-xl"
             >
               <span className=" sm:inline mr-6">
                 Join the Early Access List
