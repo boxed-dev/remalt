@@ -49,8 +49,15 @@ export function useWorkflowPersistence({
     setSaveStatus(true, null, null);
 
     try {
-      // Validate and sanitize the workflow data using the Zod schema
-      const workflowToPersist = WorkflowSchema.parse(workflow);
+      // First, validate the workflow structure
+      const validationResult = WorkflowSchema.safeParse(workflow);
+
+      if (!validationResult.success) {
+        console.error('❌ Validation failed:', validationResult.error.issues);
+        throw validationResult.error;
+      }
+
+      const workflowToPersist = validationResult.data;
 
       const { data, error } = await supabase
         .from('workflows')
@@ -59,7 +66,7 @@ export function useWorkflowPersistence({
           user_id: userId,
           name: workflowToPersist.name,
           description: workflowToPersist.description || null,
-          nodes: workflowToPersist.nodes as any, // Supabase types might not match Zod's perfectly
+          nodes: workflowToPersist.nodes as any,
           edges: workflowToPersist.edges as any,
           viewport: workflowToPersist.viewport as any,
           metadata: workflowToPersist.metadata as any,
@@ -74,7 +81,6 @@ export function useWorkflowPersistence({
           details: error.details,
           hint: error.hint,
           code: error.code,
-          fullError: error
         });
         throw error;
       }
@@ -96,7 +102,7 @@ export function useWorkflowPersistence({
         });
       }
 
-      lastSavedWorkflow.current = workflowToPersist;
+      lastSavedWorkflow.current = workflow;
       setSaveStatus(false, null, new Date().toISOString());
 
       console.log('✅ Workflow saved and verified:', workflow.name, 'at', new Date().toLocaleTimeString());
@@ -106,8 +112,14 @@ export function useWorkflowPersistence({
         setTimeout(() => saveWorkflow(retries - 1), 2000); // Wait 2 seconds before retrying
       } else {
         if (error instanceof ZodError) {
-          console.error('❌ Zod validation failed after multiple retries:', error.issues);
-          setSaveStatus(false, 'Data validation failed before saving.', null);
+          console.error('❌ Zod validation failed after multiple retries:',
+            error.issues.map(issue => ({
+              path: issue.path.join('.'),
+              message: issue.message,
+              code: issue.code,
+            }))
+          );
+          setSaveStatus(false, 'Data validation failed. Check console for details.', null);
         } else if (error instanceof Error) {
           console.error('❌ Failed to save workflow after multiple retries:', {
             error,

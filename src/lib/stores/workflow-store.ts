@@ -136,50 +136,67 @@ const createDefaultWorkflow = (name: string, description?: string): Workflow => 
 });
 
 const createDefaultNodeData = (type: NodeType): NodeData => {
+  const baseData = { type };
   switch (type) {
     case 'pdf':
       return {
+        ...baseData,
         parseStatus: 'idle',
       } as NodeData;
     case 'voice':
       return {
+        ...baseData,
         transcriptStatus: 'idle',
         uploadStatus: 'idle',
       } as NodeData;
     case 'image':
       return {
+        ...baseData,
         analysisStatus: 'idle',
+      } as NodeData;
+    case 'youtube':
+      return {
+        ...baseData,
+        mode: 'video',
+        transcriptStatus: 'unavailable',
       } as NodeData;
     case 'instagram':
       return {
+        ...baseData,
         fetchStatus: 'idle',
       } as NodeData;
     case 'linkedin':
       return {
+        ...baseData,
         fetchStatus: 'idle',
         analysisStatus: 'idle',
       } as NodeData;
     case 'text':
       return {
+        ...baseData,
         content: '', // BlockNote JSON will be stored here
       } as NodeData;
     case 'mindmap':
       return {
+        ...baseData,
         concept: '',
         tags: [],
       } as NodeData;
     case 'template':
       return {
+        ...baseData,
         templateType: 'custom',
         generationStatus: 'idle',
       } as NodeData;
     case 'webpage':
       return {
+        ...baseData,
         url: '',
         scrapeStatus: 'idle',
       } as NodeData;
     case 'chat':
       return {
+        ...baseData,
         messages: [],
         linkedNodes: [],
         model: 'gemini-2.5-flash',
@@ -187,10 +204,12 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
       } as NodeData;
     case 'connector':
       return {
+        ...baseData,
         relationshipType: 'workflow',
       } as NodeData;
     case 'group':
       return {
+        ...baseData,
         label: 'Group',
         groupedNodes: [],
         collapsed: false,
@@ -198,7 +217,7 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
         groupChatMessages: [],
       } as NodeData;
     default:
-      return {} as NodeData;
+      return { type } as NodeData;
   }
 };
 
