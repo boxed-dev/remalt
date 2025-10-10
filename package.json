@@ -65,7 +65,7 @@
     "youtube-transcript": "^1.2.1",
     "yt-dlp-wrap": "^2.3.12",
     "ytdl-core": "^4.11.5",
-    "zod": "^4.1.11",
+    "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

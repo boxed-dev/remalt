@@ -1,18 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Workflow } from '@/types/workflow';
+import type { Database } from '@/types/supabase';
 
-export interface WorkflowRow {
-  id: string;
-  user_id: string;
-  name: string;
-  description: string | null;
-  nodes: any;
-  edges: any;
-  viewport: any;
-  metadata: any;
-  created_at: string;
-  updated_at: string;
-}
+// Use generated Supabase types for type safety
+export type WorkflowRow = Database['public']['Tables']['workflows']['Row'];
+export type WorkflowInsert = Database['public']['Tables']['workflows']['Insert'];
+export type WorkflowUpdate = Database['public']['Tables']['workflows']['Update'];
 
 /**
  * Convert database row to Workflow type

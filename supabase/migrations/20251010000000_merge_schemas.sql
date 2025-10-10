@@ -43,9 +43,27 @@ CREATE TABLE IF NOT EXISTS public.customers (
   stripe_customer_id TEXT UNIQUE
 );
 
-CREATE TYPE IF NOT EXISTS pricing_type AS ENUM ('one_time', 'recurring');
-CREATE TYPE IF NOT EXISTS pricing_plan_interval AS ENUM ('day', 'week', 'month', 'year');
-CREATE TYPE IF NOT EXISTS subscription_status AS ENUM ('trialing', 'active', 'canceled', 'incomplete', 'incomplete_expired', 'past_due', 'unpaid', 'paused');
+-- Create enums only if they don't exist (PostgreSQL doesn't support IF NOT EXISTS for types)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'pricing_type') THEN
+    CREATE TYPE pricing_type AS ENUM ('one_time', 'recurring');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'pricing_plan_interval') THEN
+    CREATE TYPE pricing_plan_interval AS ENUM ('day', 'week', 'month', 'year');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'subscription_status') THEN
+    CREATE TYPE subscription_status AS ENUM ('trialing', 'active', 'canceled', 'incomplete', 'incomplete_expired', 'past_due', 'unpaid', 'paused');
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.products (
   id TEXT PRIMARY KEY,

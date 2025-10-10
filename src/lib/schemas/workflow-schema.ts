@@ -193,7 +193,7 @@ const WebpageMetadataSchema = z.object({
 });
 
 const WebpageNodeDataSchema = BaseNodeDataSchema.extend({
-  url: z.string(),
+  url: z.string().optional(), // Allow empty URL initially
   pageTitle: z.string().optional(),
   pageContent: z.string().optional(),
   metadata: WebpageMetadataSchema.optional(),
@@ -235,38 +235,93 @@ const GroupNodeDataSchema = BaseNodeDataSchema.extend({
   groupChatMessages: z.array(ChatMessageSchema).optional(),
 });
 
-// A discriminated union to handle the different node data types.
-// This ensures that the `data` field of a node matches its `type`.
-const NodeDataSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('pdf'), data: PDFNodeDataSchema }),
-  z.object({ type: z.literal('voice'), data: VoiceNodeDataSchema }),
-  z.object({ type: z.literal('youtube'), data: YouTubeNodeDataSchema }),
-  z.object({ type: z.literal('instagram'), data: InstagramNodeDataSchema }),
-  z.object({ type: z.literal('linkedin'), data: LinkedInNodeDataSchema }),
-  z.object({ type: z.literal('image'), data: ImageNodeDataSchema }),
-  z.object({ type: z.literal('text'), data: TextNodeDataSchema }),
-  z.object({ type: z.literal('mindmap'), data: MindMapNodeDataSchema }),
-  z.object({ type: z.literal('template'), data: TemplateNodeDataSchema }),
-  z.object({ type: z.literal('webpage'), data: WebpageNodeDataSchema }),
-  z.object({ type: z.literal('chat'), data: ChatNodeDataSchema }),
-  z.object({ type: z.literal('connector'), data: ConnectorNodeDataSchema }),
-  z.object({ type: z.literal('group'), data: GroupNodeDataSchema }),
-]);
-
 const PositionSchema = z.object({
   x: z.number(),
   y: z.number(),
 });
 
-const WorkflowNodeSchema = z.object({
-  id: z.string(),
-  type: z.enum([
-    'pdf', 'voice', 'image', 'youtube', 'instagram', 'linkedin', 'text',
-    'mindmap', 'template', 'webpage', 'chat', 'connector', 'group'
-  ]),
-  position: PositionSchema,
-  data: z.record(z.unknown()), // We'll validate this with the discriminated union later
-}).catchall(z.unknown());
+// A discriminated union to handle the different node data types.
+// This ensures that the `data` field of a node matches its `type`.
+const WorkflowNodeSchema = z.discriminatedUnion('type', [
+  z.object({
+    id: z.string(),
+    type: z.literal('pdf'),
+    position: PositionSchema,
+    data: PDFNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('voice'),
+    position: PositionSchema,
+    data: VoiceNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('youtube'),
+    position: PositionSchema,
+    data: YouTubeNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('instagram'),
+    position: PositionSchema,
+    data: InstagramNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('linkedin'),
+    position: PositionSchema,
+    data: LinkedInNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('image'),
+    position: PositionSchema,
+    data: ImageNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('text'),
+    position: PositionSchema,
+    data: TextNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('mindmap'),
+    position: PositionSchema,
+    data: MindMapNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('template'),
+    position: PositionSchema,
+    data: TemplateNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('webpage'),
+    position: PositionSchema,
+    data: WebpageNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('chat'),
+    position: PositionSchema,
+    data: ChatNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('connector'),
+    position: PositionSchema,
+    data: ConnectorNodeDataSchema,
+  }).catchall(z.unknown()),
+  z.object({
+    id: z.string(),
+    type: z.literal('group'),
+    position: PositionSchema,
+    data: GroupNodeDataSchema,
+  }).catchall(z.unknown()),
+]);
 
 const WorkflowEdgeSchema = z.object({
   id: z.string(),
@@ -299,17 +354,4 @@ export const WorkflowSchema = z.object({
   metadata: WorkflowMetadataSchema,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-}).refine(data => {
-  // Custom refinement to validate the `data` field of each node against its `type`.
-  // This is a workaround because Zod's discriminatedUnion can't be directly applied to `nodes.data`.
-  for (const node of data.nodes) {
-    const result = NodeDataSchema.safeParse({ type: node.type, data: node.data });
-    if (!result.success) {
-      // console.error(`Node data validation failed for node ${node.id} of type ${node.type}:`, result.error);
-      return false;
-    }
-  }
-  return true;
-}, {
-  message: "Node data does not match node type",
 });

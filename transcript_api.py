@@ -306,7 +306,7 @@ if __name__ == '__main__':
         print("  GET  /health - Health check")
         print("  POST /api/clear-cache - Clear transcript cache")
         print("\nExample usage:")
-        print('  curl -X POST http://localhost:5000/api/transcribe \\')
+        print('  curl -X POST http://localhost:5001/api/transcribe \\')
         print('    -H "Content-Type: application/json" \\')
         print('    -d \'{"url": "WW42RFaduW4"}\'')
         print("\n" + "="*60 + "\n")

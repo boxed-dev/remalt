@@ -284,7 +284,7 @@ export async function getGeminiAnalysis(url: string, videoId: string): Promise<T
     console.log(`[Gemini] 🤖 Analyzing YouTube video: ${videoId}`);
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 
     const result = await retryWithBackoff(async () => {
       const prompt = `Analyze this YouTube video and provide a comprehensive content breakdown:
