@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { MessageSquare, Send, Loader2, Copy, Check, Maximize2, X, User } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { SyntheticEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
@@ -82,7 +83,7 @@ function CodeBlock({ inline, className, children, isUserMessage }: any) {
   );
 }
 
-export function ChatNode({ id, data }: ChatNodeProps) {
+export const ChatNode = memo(({ id, data }: ChatNodeProps) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -194,6 +195,8 @@ export function ChatNode({ id, data }: ChatNodeProps) {
         pdfDocuments: [],
         images: [],
         webpages: [],
+        instagramReels: [],
+        linkedInPosts: [],
         mindMaps: [],
         templates: [],
         groupChats: [],
@@ -214,6 +217,8 @@ export function ChatNode({ id, data }: ChatNodeProps) {
           pdfDocuments: context.pdfDocuments,
           images: context.images,
           webpages: context.webpages,
+          instagramReels: context.instagramReels,
+          linkedInPosts: context.linkedInPosts,
           mindMaps: context.mindMaps,
           templates: context.templates,
           groupChats: context.groupChats,
@@ -673,4 +678,4 @@ export function ChatNode({ id, data }: ChatNodeProps) {
     )}
     </>
   );
-}
+});

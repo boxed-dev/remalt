@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from 'react';
 import { Image as ImageIcon, Loader2, RefreshCw, ChevronDown, ChevronUp, Eye, CheckCircle2, AlertCircle, Upload } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
@@ -8,7 +9,7 @@ import type { NodeProps } from '@xyflow/react';
 import type { ImageNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
 
-export function ImageNode({ id, data }: NodeProps<ImageNodeData>) {
+export const ImageNode = memo(({ id, data }: NodeProps<ImageNodeData>) => {
   const [mode, setMode] = useState<'idle' | 'url' | 'upload'>('idle');
   const [url, setUrl] = useState(data.imageUrl || '');
   const [imageError, setImageError] = useState(false);
@@ -551,4 +552,4 @@ export function ImageNode({ id, data }: NodeProps<ImageNodeData>) {
       </div>
     </BaseNode>
   );
-}
+});

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Youtube, Loader2, CheckCircle2, AlertCircle, Download, ExternalLink, Users, ChevronDown, ChevronUp, PlayCircle } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { SyntheticEvent } from 'react';
@@ -52,7 +53,7 @@ function formatDuration(isoDuration: string): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-export function YouTubeNode({ id, data }: YouTubeNodeProps) {
+export const YouTubeNode = memo(({ id, data }: YouTubeNodeProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [expandedVideos, setExpandedVideos] = useState(false);
@@ -359,19 +360,25 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
       updateNodeData(id, { channelVideos: updatedVideos } as Partial<YouTubeNodeData>);
 
       const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      console.log(`[YouTubeNode] Fetching transcript for channel video: ${videoId}`);
       const result = await fetchTranscript(videoUrl);
+      console.log(`[YouTubeNode] Transcript fetch result for ${videoId}:`, result.status, result.method);
 
-      // Create another new array with the transcript result
-      updatedVideos = data.channelVideos || [];
-      const currentVideo = updatedVideos[videoIndex];
-      updatedVideos = [...updatedVideos];
-      updatedVideos[videoIndex] = {
-        ...currentVideo,
-        transcript: result.transcript,
-        transcriptStatus: result.status,
-      };
+      // Get fresh state after async operation
+      const currentState = useWorkflowStore.getState().getNode(id);
+      const currentVideos = (currentState?.type === 'youtube' ? (currentState.data as YouTubeNodeData).channelVideos : undefined) || [];
+      const currentIndex = currentVideos.findIndex(v => v.id === videoId);
 
-      updateNodeData(id, { channelVideos: updatedVideos } as Partial<YouTubeNodeData>);
+      if (currentIndex !== -1) {
+        const newVideos = [...currentVideos];
+        newVideos[currentIndex] = {
+          ...newVideos[currentIndex],
+          transcript: result.transcript,
+          transcriptStatus: result.status,
+        };
+
+        updateNodeData(id, { channelVideos: newVideos } as Partial<YouTubeNodeData>);
+      }
     }
   };
 
@@ -726,4 +733,4 @@ export function YouTubeNode({ id, data }: YouTubeNodeProps) {
       />
     </BaseNode>
   );
-}
+});

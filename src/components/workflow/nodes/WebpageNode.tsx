@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Globe, Loader2, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -62,7 +63,7 @@ function setCachedEntry<T>(cache: Map<string, CacheRecord<T>>, key: string, data
   cache.set(key, { data, fetchedAt: Date.now() });
 }
 
-export function WebpageNode({ id, data }: NodeProps<WebpageNodeData>) {
+export const WebpageNode = memo(({ id, data }: NodeProps<WebpageNodeData>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [showSummary, setShowSummary] = useState(false);
@@ -524,4 +525,4 @@ export function WebpageNode({ id, data }: NodeProps<WebpageNodeData>) {
       </div>
     </BaseNode>
   );
-}
+});

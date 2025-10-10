@@ -35,6 +35,8 @@ export type NodeType =
   | 'voice'
   | 'image'
   | 'youtube'
+  | 'instagram'
+  | 'linkedin'
   | 'text'
   | 'mindmap'
   | 'template'
@@ -181,14 +183,68 @@ export interface ImageNodeData extends BaseNodeData {
   analysisError?: string;
 }
 
+// Instagram Node
+export interface InstagramNodeData extends BaseNodeData {
+  url?: string;
+  reelCode?: string;
+  videoUrl?: string;
+  thumbnail?: string;
+  thumbnailFallback?: string;
+  images?: string[]; // All images for carousel posts (Sidecar type)
+  caption?: string;
+  author?: {
+    username?: string;
+    fullName?: string;
+    profilePicUrl?: string;
+  };
+  likes?: number;
+  views?: number;
+  comments?: number;
+  duration?: number;
+  fetchStatus?: 'idle' | 'loading' | 'success' | 'error';
+  fetchError?: string;
+  isVideo?: boolean;
+  postType?: string; // 'Video', 'Image', 'Sidecar'
+  storageStatus?: 'idle' | 'uploading' | 'success' | 'error';
+  storedVideoUrl?: string;
+  analysisStatus?: 'idle' | 'analyzing' | 'success' | 'error';
+  transcript?: string;
+  summary?: string;
+  fullAnalysis?: string; // Complete Gemini video/image analysis
+  ocrText?: string; // Text extracted from image posts
+  analysisError?: string;
+}
+
+// LinkedIn Node
+export interface LinkedInNodeData extends BaseNodeData {
+  url?: string;
+  postId?: string;
+  content?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  author?: {
+    name?: string;
+    headline?: string;
+    profileUrl?: string;
+    profilePicUrl?: string;
+  };
+  reactions?: number;
+  comments?: number;
+  reposts?: number;
+  fetchStatus?: 'idle' | 'loading' | 'success' | 'error';
+  fetchError?: string;
+  postType?: string; // 'Text', 'Image', 'Video', 'Article', 'Poll'
+  analysisStatus?: 'idle' | 'analyzing' | 'success' | 'error';
+  summary?: string;
+  keyPoints?: string[];
+  fullAnalysis?: string; // Complete AI analysis of post
+  ocrText?: string; // Text extracted from images
+  analysisError?: string;
+}
+
 // Text Node
 export interface TextNodeData extends BaseNodeData {
-  content: string;
-  contentType: 'plain' | 'markdown' | 'html';
-  fontSize?: number;
-  fontFamily?: string;
-  color?: string;
-  alignment?: 'left' | 'center' | 'right';
+  content: string; // BlockNote JSON format as string
 }
 
 // Mind Map / Idea Node
@@ -272,6 +328,8 @@ export type NodeData =
   | PDFNodeData
   | VoiceNodeData
   | YouTubeNodeData
+  | InstagramNodeData
+  | LinkedInNodeData
   | ImageNodeData
   | TextNodeData
   | MindMapNodeData

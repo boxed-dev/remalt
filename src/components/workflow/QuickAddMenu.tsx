@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Command } from 'lucide-react';
+import { Command, Instagram, Linkedin, Youtube, Camera } from 'lucide-react';
 import type { NodeType } from '@/types/workflow';
 import { getNodeMetadata } from '@/lib/workflow/node-registry';
 
@@ -10,14 +10,13 @@ interface QuickAddMenuProps {
   position: { x: number; y: number } | null;
   onClose: () => void;
   onSelectNode: (type: NodeType) => void;
+  onOpenSocialMediaDialog?: () => void;
 }
 
 const NODE_TYPES: NodeType[] = [
   'pdf',
   'voice',
-  'youtube',
   'image',
-  'webpage',
   'text',
   'mindmap',
   'template',
@@ -31,6 +30,7 @@ export function QuickAddMenu({
   position,
   onClose,
   onSelectNode,
+  onOpenSocialMediaDialog,
 }: QuickAddMenuProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -135,6 +135,30 @@ export function QuickAddMenu({
       </div>
 
       <div className="max-h-96 overflow-y-auto p-1">
+        {/* Social Media Group Button */}
+        {onOpenSocialMediaDialog && (
+          <button
+            onClick={() => {
+              onOpenSocialMediaDialog();
+              onClose();
+            }}
+            className="w-full flex items-start gap-3 px-3 py-2.5 rounded-md text-left transition-colors text-[#333333] hover:bg-[#D4AF7F]/5 mb-1"
+          >
+            <div className="w-8 h-8 rounded-md flex items-center justify-center bg-gradient-to-br from-pink-500 via-purple-500 to-blue-600 flex-shrink-0 mt-0.5">
+              <Camera className="h-4 w-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm">Social Media</div>
+              <div className="text-xs text-[#6B7280] mt-0.5 flex items-center gap-1">
+                <Instagram className="h-3 w-3" />
+                <Linkedin className="h-3 w-3" />
+                <Youtube className="h-3 w-3" />
+                <span className="ml-1">Auto-detect platform</span>
+              </div>
+            </div>
+          </button>
+        )}
+
         {filteredNodes.length === 0 ? (
           <div className="px-3 py-8 text-center text-sm text-[#6B7280]">
             No nodes found

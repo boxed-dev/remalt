@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Sparkles, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { BaseNode } from './BaseNode';
@@ -23,7 +24,7 @@ const templateOptions: Array<TemplateNodeData['templateType']> = [
   'custom',
 ];
 
-export function TemplateNode({ id, data }: NodeProps<TemplateNodeData>) {
+export const TemplateNode = memo(({ id, data }: NodeProps<TemplateNodeData>) => {
   const [isSelecting, setIsSelecting] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
@@ -185,4 +186,4 @@ export function TemplateNode({ id, data }: NodeProps<TemplateNodeData>) {
       </div>
     </BaseNode>
   );
-}
+});

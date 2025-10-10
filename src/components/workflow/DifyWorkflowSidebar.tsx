@@ -6,6 +6,8 @@ import {
   Mic,
   Video,
   Image as ImageIcon,
+  Instagram,
+  Linkedin,
   Type,
   Lightbulb,
   FileCode,
@@ -29,23 +31,23 @@ interface NodeItem {
 
 const NODES: NodeItem[] = [
   // Media
-  { id: 'pdf', icon: <FileText className="h-4 w-4" />, label: 'PDF / Document', category: 'media', iconBgColor: 'bg-emerald-50' },
-  { id: 'voice', icon: <Mic className="h-4 w-4" />, label: 'Voice Note', category: 'media', iconBgColor: 'bg-amber-50' },
-  { id: 'youtube', icon: <Video className="h-4 w-4" />, label: 'YouTube Video', category: 'media', iconBgColor: 'bg-emerald-50' },
-  { id: 'image', icon: <ImageIcon className="h-4 w-4" />, label: 'Image', category: 'media', iconBgColor: 'bg-amber-50' },
-  { id: 'webpage', icon: <Globe className="h-4 w-4" />, label: 'Webpage / URL', category: 'media', iconBgColor: 'bg-amber-50' },
+  { id: 'pdf', icon: <FileText className="h-6 w-6" />, label: 'PDF / Document', category: 'media' },
+  { id: 'voice', icon: <Mic className="h-6 w-6" />, label: 'Voice Note', category: 'media' },
+  { id: 'youtube', icon: <Video className="h-6 w-6" />, label: 'YouTube Video', category: 'media' },
+  { id: 'instagram', icon: <Instagram className="h-6 w-6" />, label: 'Instagram', category: 'media' },
+  { id: 'linkedin', icon: <Linkedin className="h-6 w-6" />, label: 'LinkedIn', category: 'media' },
+  { id: 'image', icon: <ImageIcon className="h-6 w-6" />, label: 'Image', category: 'media' },
+  { id: 'webpage', icon: <Globe className="h-6 w-6" />, label: 'Webpage / URL', category: 'media' },
 
   // Content
-  { id: 'text', icon: <Type className="h-4 w-4" />, label: 'Text / Note', category: 'content', iconBgColor: 'bg-emerald-50' },
-  { id: 'mindmap', icon: <Lightbulb className="h-4 w-4" />, label: 'Mind Map / Idea', category: 'content', iconBgColor: 'bg-amber-50' },
+  { id: 'text', icon: <Type className="h-6 w-6" />, label: 'Text / Note', category: 'content' },
+  { id: 'mindmap', icon: <Lightbulb className="h-6 w-6" />, label: 'Mind Map / Idea', category: 'content' },
 
   // AI
-  { id: 'template', icon: <FileCode className="h-4 w-4" />, label: 'Template / Workflow', category: 'ai', iconBgColor: 'bg-emerald-50' },
-  { id: 'chat', icon: <MessageSquare className="h-4 w-4" />, label: 'Chat / Assistant', category: 'ai', iconBgColor: 'bg-emerald-50' },
+  { id: 'chat', icon: <MessageSquare className="h-6 w-6" />, label: 'Chat / Assistant', category: 'ai' },
 
   // Structure
-  { id: 'connector', icon: <Link className="h-4 w-4" />, label: 'Connector', category: 'structure', iconBgColor: 'bg-gray-100' },
-  { id: 'group', icon: <GroupIcon className="h-4 w-4" />, label: 'Group', category: 'structure', iconBgColor: 'bg-gray-100' },
+  { id: 'group', icon: <GroupIcon className="h-6 w-6" />, label: 'Group', category: 'structure' },
 ];
 
 const CATEGORIES = [
@@ -151,7 +153,7 @@ export function DifyWorkflowSidebar() {
                 className="flex items-center justify-center p-2 rounded-lg cursor-pointer transition-all select-none hover:bg-gray-50"
                 title={node.label}
               >
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${node.iconBgColor || 'bg-gray-100'}`}>
+                <div className={`w-8 h-8 flex items-center justify-center flex-shrink-0`}>
                   <div className="text-gray-700">
                     {node.icon}
                   </div>

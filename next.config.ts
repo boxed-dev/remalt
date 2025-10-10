@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  transpilePackages: ['@uploadcare/react-uploader'],
+  transpilePackages: ['@uploadcare/react-uploader', '@blocknote/core', '@blocknote/react', '@blocknote/shadcn'],
 };
 
 export default nextConfig;

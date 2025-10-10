@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link2 } from 'lucide-react';
 import { useState } from 'react';
 import { BaseNode } from './BaseNode';
@@ -6,7 +7,7 @@ import type { NodeProps } from '@xyflow/react';
 import type { ConnectorNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
 
-export function ConnectorNode({ id, data }: NodeProps<ConnectorNodeData>) {
+export const ConnectorNode = memo(({ id, data }: NodeProps<ConnectorNodeData>) => {
   const [isSelecting, setIsSelecting] = useState(false);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
@@ -65,4 +66,4 @@ export function ConnectorNode({ id, data }: NodeProps<ConnectorNodeData>) {
       </div>
     </BaseNode>
   );
-}
+});

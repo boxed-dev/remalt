@@ -15,7 +15,6 @@ export function DifyWorkflowHeader() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const workflowName = workflow?.name || 'New workflow';
-  const isDraft = !workflow?.metadata?.isPublic;
 
   useEffect(() => {
     if (isEditingName && inputRef.current) {
@@ -85,16 +84,6 @@ export function DifyWorkflowHeader() {
                 <Pencil className="h-3.5 w-3.5" />
               </button>
             </>
-          )}
-
-          {isDraft && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-[11px] font-medium">
-              <svg className="w-3 h-3 mr-1" viewBox="0 0 12 12" fill="none">
-                <path d="M6 1L9 4L6 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M3 8L6 11L9 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Draft
-            </span>
           )}
         </div>
       </div>

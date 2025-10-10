@@ -36,13 +36,28 @@ export default function AccountPage() {
       if (user) {
         setUser(user);
 
+        // Try to fetch subscription data (may not exist if billing not configured)
         const { data: subscriptionData, error: subError } = await supabase
           .from("subscriptions")
           .select("id, plan, status, current_period_end")
           .eq("user_id", user.id)
           .single();
 
-        if (!subError) setSubscription(subscriptionData);
+        if (subError) {
+          // Check if error is because table doesn't exist vs. no subscription found
+          if (subError.code === 'PGRST116') {
+            // No subscription found for user (expected)
+            console.log('No active subscription found');
+          } else if (subError.code === '42P01') {
+            // Table doesn't exist (billing not configured)
+            console.log('Subscriptions table not found - billing not configured');
+          } else {
+            // Other error
+            console.error('Error fetching subscription:', subError);
+          }
+        } else {
+          setSubscription(subscriptionData);
+        }
       }
 
       setLoading(false);
@@ -152,8 +167,13 @@ export default function AccountPage() {
                   </p>
                 </div>
               ) : (
-                <div className="text-[#6B7280] italic text-[14px]">
-                  No active subscription found.
+                <div className="space-y-2">
+                  <div className="text-[#6B7280] italic text-[14px]">
+                    No active subscription found.
+                  </div>
+                  <p className="text-[13px] text-[#9CA3AF]">
+                    You're currently on the free tier. Billing features are not yet configured.
+                  </p>
                 </div>
               )}
             </CardContent>

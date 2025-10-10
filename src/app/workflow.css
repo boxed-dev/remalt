@@ -56,6 +56,20 @@
   stroke-linecap: round;
 }
 
+/* Keep threads above group surfaces while preserving node interactivity */
+.react-flow__edges {
+  z-index: 5 !important;
+}
+
+.react-flow__edge,
+.react-flow__edge-path {
+  pointer-events: visibleStroke;
+}
+
+.react-flow__connection {
+  z-index: 6 !important;
+}
+
 .react-flow__edge.selected .react-flow__edge-path {
   stroke: #095D40;
   stroke-width: 4.5;
@@ -173,6 +187,20 @@
 /* Node hover */
 .react-flow__node:hover {
   filter: brightness(0.98);
+  box-shadow:
+    0 8px 16px rgba(0, 0, 0, 0.08),
+    0 4px 8px rgba(0, 0, 0, 0.06);
+}
+
+@keyframes drag-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1.1);
+  }
 }
 
 /* Handle hover states - Enhanced with pulse animation */
@@ -188,6 +216,18 @@
 }
 
 .react-flow__handle:hover {
+  opacity: 1 !important;
+  transform: scale(1.5);
+  border-color: #095D40 !important;
+  border-width: 3px !important;
+  box-shadow:
+    0 0 0 4px rgba(9, 93, 64, 0.15),
+    0 0 12px rgba(9, 93, 64, 0.3),
+    0 4px 8px rgba(0, 0, 0, 0.1) !important;
+  animation: pulse-handle 1.5s ease-in-out infinite;
+}
+
+.react-flow__handle:hover::before {
   opacity: 1;
   transform: translateZ(0) scale(1.6);
   box-shadow: 0 0 0 4px rgba(9, 93, 64, 0.15), 0 2px 8px rgba(9, 93, 64, 0.2);

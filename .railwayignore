@@ -1,0 +1,8 @@
+# Exclude everything by default
+*
+
+# Only include Python API files
+!transcript_api.py
+!requirements.txt
+!Procfile
+!railway.json

@@ -1,25 +1,16 @@
-'use client';
-
-import React, { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import type { DragEvent as ReactDragEvent } from 'react';
 import {
   ReactFlow,
   Background,
-  useNodesState,
-  useEdgesState,
   useReactFlow,
   ReactFlowProvider,
-  type Connection,
+  useNodesState,
+  useEdgesState,
   type Node,
   type Edge,
-  type OnNodesChange,
-  type OnEdgesChange,
-  type OnMove,
-  type OnMoveEnd,
-  type Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import '@/app/workflow.css';
-
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type {
   WorkflowNode,
@@ -28,6 +19,7 @@ import type {
   NodeType,
   WebpageNodeData,
   YouTubeNodeData,
+  InstagramNodeData,
   PDFNodeData,
   ImageNodeData,
   VoiceNodeData,
@@ -38,9 +30,9 @@ import { PanelContextMenu } from './PanelContextMenu';
 import { NodeContextMenu } from './NodeContextMenu';
 import { SelectionContextMenu } from './SelectionContextMenu';
 import { SelectionFloatingToolbar } from './SelectionFloatingToolbar';
-import { AlignmentGuides } from './AlignmentGuides';
 import { QuickAddMenu } from './QuickAddMenu';
 import { ExportDialog } from './ExportDialog';
+import { SocialMediaDialog } from './SocialMediaDialog';
 
 type UrlNodeMapping = {
   type: NodeType;
@@ -97,6 +89,13 @@ function mapUrlToNode(url: URL): UrlNodeMapping {
     };
   }
 
+  if (host.includes('instagram.com') && (pathname.includes('/reel/') || pathname.includes('/p/') || pathname.includes('/reels/'))) {
+    return {
+      type: 'instagram',
+      data: { url: normalizedUrl } satisfies Partial<InstagramNodeData>,
+    };
+  }
+
   if (extension === 'pdf') {
     return {
       type: 'pdf',
@@ -132,22 +131,23 @@ function WorkflowCanvasInner() {
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [nodeContextMenu, setNodeContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   const [selectionContextMenu, setSelectionContextMenu] = useState<{ x: number; y: number } | null>(null);
-  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [quickAddMenuOpen, setQuickAddMenuOpen] = useState(false);
   const [quickAddMenuPosition, setQuickAddMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [socialMediaDialogOpen, setSocialMediaDialogOpen] = useState(false);
+  const [socialMediaDialogPosition, setSocialMediaDialogPosition] = useState<{ x: number; y: number } | null>(null);
   const { screenToFlowPosition, getViewport, setViewport } = useReactFlow();
 
+  // Use individual selectors to avoid infinite loops
   const workflow = useWorkflowStore((state) => state.workflow);
-  const workflowNodes = useWorkflowStore(
-    (state) => state.workflow?.nodes ?? EMPTY_NODES
-  );
-  const workflowEdges = useWorkflowStore(
-    (state) => state.workflow?.edges ?? EMPTY_EDGES
-  );
+  const workflowNodes = useWorkflowStore((state) => state.workflow?.nodes ?? EMPTY_NODES);
+  const workflowEdges = useWorkflowStore((state) => state.workflow?.edges ?? EMPTY_EDGES);
   const workflowViewport = useWorkflowStore((state) => state.workflow?.viewport);
   const controlMode = useWorkflowStore((state) => state.controlMode);
   const snapToGrid = useWorkflowStore((state) => state.snapToGrid);
+  const selectedNodes = useWorkflowStore((state) => state.selectedNodes);
+  const clipboard = useWorkflowStore((state) => state.clipboard);
+
   const addNode = useWorkflowStore((state) => state.addNode);
   const updateNodePosition = useWorkflowStore((state) => state.updateNodePosition);
   const deleteNode = useWorkflowStore((state) => state.deleteNode);
@@ -161,9 +161,7 @@ function WorkflowCanvasInner() {
   const pasteNodes = useWorkflowStore((state) => state.pasteNodes);
   const copyNodes = useWorkflowStore((state) => state.copyNodes);
   const duplicateNode = useWorkflowStore((state) => state.duplicateNode);
-  const clipboard = useWorkflowStore((state) => state.clipboard);
   const addNodesToGroup = useWorkflowStore((state) => state.addNodesToGroup);
-  const selectedNodes = useWorkflowStore((state) => state.selectedNodes);
   const alignNodes = useWorkflowStore((state) => state.alignNodes);
   const distributeNodes = useWorkflowStore((state) => state.distributeNodes);
   const createGroup = useWorkflowStore((state) => state.createGroup);
@@ -196,11 +194,10 @@ function WorkflowCanvasInner() {
         position: node.position,
         data: node.data as Record<string, unknown>,
         style: node.style,
-        dragging: node.id === draggingNodeId,
-        className: node.id === draggingNodeId ? 'dragging-node' : undefined,
+        className: draggedNodeIdRef.current === node.id ? 'dragging-node' : undefined,
       }))
     );
-  }, [workflowNodes, setNodes, draggingNodeId]);
+  }, [workflowNodes, setNodes]);
 
   useEffect(() => {
     setEdges(
@@ -281,18 +278,15 @@ function WorkflowCanvasInner() {
   );
 
   // Handle edge changes
-  const handleEdgesChange: OnEdgesChange = useCallback(
-    (changes) => {
-      onEdgesChange(changes);
+  const handleEdgesChange: OnEdgesChange = (changes) => {
+    onEdgesChange(changes);
 
-      changes.forEach((change) => {
-        if (change.type === 'remove') {
-          deleteEdge(change.id);
-        }
-      });
-    },
-    [onEdgesChange, deleteEdge]
-  );
+    changes.forEach((change) => {
+      if (change.type === 'remove') {
+        deleteEdge(change.id);
+      }
+    });
+  };
 
   // Handle new connections
   const onConnect = useCallback(
@@ -386,7 +380,6 @@ function WorkflowCanvasInner() {
   // Handle node drag start
   const onNodeDragStart = useCallback((_event: React.MouseEvent, node: Node) => {
     draggedNodeIdRef.current = node.id;
-    setDraggingNodeId(node.id);
   }, []);
 
   // Handle node drag stop
@@ -397,7 +390,6 @@ function WorkflowCanvasInner() {
 
       draggedNodeIdRef.current = null;
       (window as any).__targetGroupId = null;
-      setDraggingNodeId(null);
 
       // If we have a target group, add the node to it
       if (draggedId && targetGroupId && draggedId !== targetGroupId) {
@@ -407,13 +399,13 @@ function WorkflowCanvasInner() {
     [addNodesToGroup]
   );
 
-  const onDragOver = useCallback((event: DragEvent) => {
+  const onDragOver = useCallback((event: ReactDragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
   const onDrop = useCallback(
-    (event: DragEvent) => {
+    (event: ReactDragEvent) => {
       event.preventDefault();
 
       const type = event.dataTransfer.getData('application/reactflow') as NodeType;
@@ -749,14 +741,12 @@ function WorkflowCanvasInner() {
           // Calculate center position of selected nodes
           const selectedNodeObjects = workflowNodes.filter((n) => selectedNodes.includes(n.id));
           if (selectedNodeObjects.length > 0) {
-            const avgX = selectedNodeObjects.reduce((sum, n) => sum + n.position.x, 0) / selectedNodeObjects.length;
-            const avgY = selectedNodeObjects.reduce((sum, n) => sum + n.position.y, 0) / selectedNodeObjects.length;
+            const avgX = selectedNodeObjects.reduce((sum, n) => sum + n.position.x, 0) / selected_mod_0.length;
+            const avgY = selectedNodeObjects.reduce((sum, n) => sum + n.position.y, 0) / selected_mod_0.length;
             createGroup(selectedNodes, { x: avgX - 150, y: avgY - 150 });
           }
         }}
       />
-
-      <AlignmentGuides draggingNodeId={draggingNodeId} />
 
       <QuickAddMenu
         isOpen={quickAddMenuOpen}
@@ -772,6 +762,24 @@ function WorkflowCanvasInner() {
               y: quickAddMenuPosition.y,
             });
             addNode(type, position);
+          }
+        }}
+        onOpenSocialMediaDialog={() => {
+          setSocialMediaDialogPosition(quickAddMenuPosition);
+          setSocialMediaDialogOpen(true);
+        }}
+      />
+
+      <SocialMediaDialog
+        open={socialMediaDialogOpen}
+        onOpenChange={setSocialMediaDialogOpen}
+        onAddNode={(type, url) => {
+          if (socialMediaDialogPosition) {
+            const position = screenToFlowPosition({
+              x: socialMediaDialogPosition.x,
+              y: socialMediaDialogPosition.y,
+            });
+            addNode(type, position, { url } as Partial<NodeData>);
           }
         }}
       />

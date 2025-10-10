@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Mic, Loader2, CheckCircle2, ChevronDown, ChevronUp, Download, Square } from 'lucide-react';
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
@@ -9,7 +10,7 @@ import { recordingManager, type RecordingState } from '@/lib/recording-manager';
 // Global state to track which node is currently recording
 let currentRecordingNodeId: string | null = null;
 
-export function VoiceNode({ id, data }: NodeProps<VoiceNodeData>) {
+export const VoiceNode = memo(({ id, data }: NodeProps<VoiceNodeData>) => {
   const [showTranscript, setShowTranscript] = useState(false);
   const [isRecordingThisNode, setIsRecordingThisNode] = useState(false);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
@@ -464,4 +465,4 @@ export function VoiceNode({ id, data }: NodeProps<VoiceNodeData>) {
       `}</style>
     </BaseNode>
   );
-}
+});

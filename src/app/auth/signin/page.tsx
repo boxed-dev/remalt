@@ -29,16 +29,21 @@ function SignInForm() {
       });
 
       if (signInError) {
+        console.error('[SignIn] Error:', signInError);
         setError(signInError.message);
         setLoading(false);
         return;
       }
 
+      console.log('[SignIn] Success:', { user: data.user?.id, session: !!data.session });
+
       // Redirect to intended page or flows
       const redirectTo = redirectedFrom || '/flows';
-      router.push(redirectTo);
-      router.refresh();
+
+      // Force a hard navigation to ensure cookies are set
+      window.location.href = redirectTo;
     } catch (err: any) {
+      console.error('[SignIn] Exception:', err);
       setError(err.message || 'An unexpected error occurred');
       setLoading(false);
     }

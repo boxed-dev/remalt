@@ -16,7 +16,22 @@ export async function GET() {
       }, { status: 401 });
     }
 
-    // Test 2: Check if workflows table exists
+    // Test 2: Check if profiles table exists
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id')
+      .limit(1);
+
+    if (profilesError) {
+      return NextResponse.json({
+        success: false,
+        error: 'Profiles table missing - schema not applied',
+        details: profilesError,
+        hint: 'Run the migration: supabase/migrations/20251010000000_merge_schemas.sql in your Supabase SQL Editor',
+      }, { status: 500 });
+    }
+
+    // Test 3: Check if workflows table exists
     const { data: tables, error: tableError } = await supabase
       .from('workflows')
       .select('id')
@@ -25,13 +40,13 @@ export async function GET() {
     if (tableError) {
       return NextResponse.json({
         success: false,
-        error: 'Table query failed - schema likely not applied',
+        error: 'Workflows table query failed - schema likely not applied',
         details: tableError,
-        hint: 'Run the SQL in supabase/schema.sql in your Supabase SQL Editor',
+        hint: 'Run the migration: supabase/migrations/20251010000000_merge_schemas.sql in your Supabase SQL Editor',
       }, { status: 500 });
     }
 
-    // Test 3: Try to insert a test workflow
+    // Test 4: Try to insert a test workflow
     const testWorkflow = {
       id: crypto.randomUUID(),
       user_id: user!.id,

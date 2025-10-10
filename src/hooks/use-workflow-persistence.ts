@@ -2,76 +2,9 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useDebounce } from 'use-debounce';
 import { createClient } from '@/lib/supabase/client';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
-import type {
-  Workflow,
-  WorkflowNode,
-  NodeData,
-  NodeType,
-  WorkflowEdge,
-} from '@/types/workflow';
-
-type SerializableWorkflow = Omit<Workflow, 'nodes' | 'edges'> & {
-  nodes: WorkflowNode[];
-  edges: WorkflowEdge[];
-};
-
-function sanitizeValue(value: unknown): unknown {
-  if (value === null || value === undefined) {
-    return value;
-  }
-
-  if (typeof File !== 'undefined' && value instanceof File) {
-    return undefined;
-  }
-
-  if (typeof value === 'string' && value.startsWith('blob:')) {
-    return undefined;
-  }
-
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => sanitizeValue(item))
-      .filter((item) => item !== undefined);
-  }
-
-  if (typeof value === 'object') {
-    const sanitized: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-      const serialized = sanitizeValue(val);
-      if (serialized !== undefined) {
-        sanitized[key] = serialized;
-      }
-    }
-    return sanitized;
-  }
-
-  return value;
-}
-
-function sanitizeNodeData(_type: NodeType, data: NodeData): NodeData {
-  return sanitizeValue(data) as NodeData;
-}
-
-function sanitizeWorkflow(workflow: Workflow): SerializableWorkflow {
-  const sanitizedNodes = workflow.nodes.map((node) => ({
-    ...node,
-    data: sanitizeNodeData(node.type, node.data),
-    metadata: node.metadata ? sanitizeValue(node.metadata) : undefined,
-    style: node.style ? sanitizeValue(node.style) : undefined,
-  }));
-
-  const sanitizedEdges = workflow.edges.map((edge) => ({
-    ...edge,
-    data: edge.data ? (sanitizeValue(edge.data) as WorkflowEdge['data']) : undefined,
-    style: edge.style ? sanitizeValue(edge.style) : undefined,
-  }));
-
-  return {
-    ...workflow,
-    nodes: sanitizedNodes,
-    edges: sanitizedEdges,
-  };
-}
+import { WorkflowSchema } from '@/lib/schemas/workflow-schema';
+import type { Workflow } from '@/types/workflow';
+import { ZodError } from 'zod';
 
 function isWorkflowEmpty(workflow: Workflow | null): boolean {
   if (!workflow) return true;
@@ -99,11 +32,11 @@ export function useWorkflowPersistence({
 
   const [debouncedWorkflow] = useDebounce(workflow, autoSaveDelay);
   const isInitialMount = useRef(true);
-  const lastSavedWorkflow = useRef<SerializableWorkflow | null>(null);
+  const lastSavedWorkflow = useRef<Workflow | null>(null);
   const supabase = createClient();
 
   // Manual save function
-  const saveWorkflow = useCallback(async () => {
+  const saveWorkflow = useCallback(async (retries = 3) => {
     if (!workflow || !userId) {
       console.log('⏭️ Skipping save: no workflow or userId', {
         hasWorkflow: !!workflow,
@@ -116,9 +49,9 @@ export function useWorkflowPersistence({
     setSaveStatus(true, null, null);
 
     try {
-      const workflowToPersist = sanitizeWorkflow(workflow);
+      // Validate and sanitize the workflow data using the Zod schema
+      const workflowToPersist = WorkflowSchema.parse(workflow);
 
-      // Use upsert to handle both create and update
       const { data, error } = await supabase
         .from('workflows')
         .upsert({
@@ -126,11 +59,11 @@ export function useWorkflowPersistence({
           user_id: userId,
           name: workflowToPersist.name,
           description: workflowToPersist.description || null,
-          nodes: workflowToPersist.nodes,
-          edges: workflowToPersist.edges,
-          viewport: workflowToPersist.viewport,
-          metadata: workflowToPersist.metadata,
-          updated_at: new Date().toISOString(),
+          nodes: workflowToPersist.nodes as any, // Supabase types might not match Zod's perfectly
+          edges: workflowToPersist.edges as any,
+          viewport: workflowToPersist.viewport as any,
+          metadata: workflowToPersist.metadata as any,
+          // Note: updated_at is auto-set by database trigger
         })
         .select()
         .single();
@@ -146,21 +79,46 @@ export function useWorkflowPersistence({
         throw error;
       }
 
+      // Verify save by checking returned data
+      if (!data) {
+        throw new Error('Save succeeded but no data returned');
+      }
+
+      // Verify critical fields match
+      if (data.id !== workflowToPersist.id) {
+        throw new Error('Save verification failed: ID mismatch');
+      }
+
+      if (data.nodes.length !== workflowToPersist.nodes.length) {
+        console.warn('⚠️ Node count mismatch after save:', {
+          expected: workflowToPersist.nodes.length,
+          actual: data.nodes.length
+        });
+      }
+
       lastSavedWorkflow.current = workflowToPersist;
       setSaveStatus(false, null, new Date().toISOString());
 
-      console.log('✅ Workflow saved:', workflow.name, 'at', new Date().toLocaleTimeString());
+      console.log('✅ Workflow saved and verified:', workflow.name, 'at', new Date().toLocaleTimeString());
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('❌ Failed to save workflow:', {
-          error,
-          message: error.message,
-          stack: error.stack,
-        });
-        setSaveStatus(false, error.message || 'Failed to save workflow', null);
+      if (retries > 0) {
+        console.warn(`⚠️ Save failed, retrying... (${retries} attempts left)`);
+        setTimeout(() => saveWorkflow(retries - 1), 2000); // Wait 2 seconds before retrying
       } else {
-        console.error('❌ Failed to save workflow:', error);
-        setSaveStatus(false, 'Failed to save workflow', null);
+        if (error instanceof ZodError) {
+          console.error('❌ Zod validation failed after multiple retries:', error.issues);
+          setSaveStatus(false, 'Data validation failed before saving.', null);
+        } else if (error instanceof Error) {
+          console.error('❌ Failed to save workflow after multiple retries:', {
+            error,
+            message: error.message,
+            stack: error.stack,
+          });
+          setSaveStatus(false, error.message || 'Failed to save workflow', null);
+        } else {
+          console.error('❌ Failed to save workflow after multiple retries with unknown error:', error);
+          setSaveStatus(false, 'An unknown error occurred while saving.', null);
+        }
       }
     }
   }, [workflow, userId, supabase, setSaveStatus]);
@@ -184,8 +142,7 @@ export function useWorkflowPersistence({
 
     // Skip if workflow hasn't changed
     if (lastSavedWorkflow.current && debouncedWorkflow) {
-      const sanitizedDebounced = sanitizeWorkflow(debouncedWorkflow);
-      if (JSON.stringify(lastSavedWorkflow.current) === JSON.stringify(sanitizedDebounced)) {
+      if (JSON.stringify(lastSavedWorkflow.current) === JSON.stringify(debouncedWorkflow)) {
         return;
       }
     }

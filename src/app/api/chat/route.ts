@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
       pdfDocuments,
       images,
       webpages,
+      instagramReels,
+      linkedInPosts,
       mindMaps,
       templates,
       groupChats
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest) {
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-flash-latest',
       generationConfig: {
         temperature: 0.7,
         maxOutputTokens: 2048,
@@ -173,6 +175,155 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Add Instagram posts/reels
+    if (instagramReels && instagramReels.length > 0) {
+      systemContext += '\n\n=== Instagram Content ===\n';
+      instagramReels.forEach((post: {
+        url?: string;
+        reelCode?: string;
+        caption?: string;
+        transcript?: string;
+        summary?: string;
+        fullAnalysis?: string;
+        author?: { username?: string; fullName?: string };
+        likes?: number;
+        views?: number;
+        comments?: number;
+        isVideo?: boolean;
+        postType?: string;
+        status: string;
+        aiInstructions?: string
+      }, index: number) => {
+        try {
+          if (post.status === 'success') {
+            const postLabel = post.isVideo ? 'Reel' : 'Post';
+            const author = post.author?.username ? `@${post.author.username}` : 'Unknown';
+            systemContext += `\n[Instagram ${postLabel} ${index + 1} by ${author}]:\n`;
+
+            if (post.aiInstructions) {
+              systemContext += `📝 AI Processing Instructions: ${post.aiInstructions}\n\n`;
+            }
+
+            // Add URL
+            if (post.url) {
+              systemContext += `URL: ${post.url}\n`;
+            }
+
+            // Add caption
+            if (post.caption) {
+              systemContext += `\nCaption:\n${post.caption}\n`;
+            }
+
+            // If we have full Gemini analysis (for videos), use that - it's comprehensive
+            if (post.fullAnalysis) {
+              systemContext += `\n--- Detailed Video Analysis (by Gemini AI) ---\n${post.fullAnalysis}\n`;
+            } else {
+              // Fallback to individual fields for non-video posts
+              if (post.transcript) {
+                systemContext += `\nVideo Transcript:\n${post.transcript}\n`;
+              }
+              if (post.summary) {
+                systemContext += `\nAI Summary:\n${post.summary}\n`;
+              }
+            }
+
+            // Add engagement metrics
+            const metrics = [];
+            if (post.likes !== undefined) metrics.push(`${post.likes.toLocaleString()} likes`);
+            if (post.views !== undefined) metrics.push(`${post.views.toLocaleString()} views`);
+            if (post.comments !== undefined) metrics.push(`${post.comments.toLocaleString()} comments`);
+            if (metrics.length > 0) {
+              systemContext += `\nEngagement: ${metrics.join(' • ')}\n`;
+            }
+          } else if (post.status === 'loading') {
+            systemContext += `\n[Instagram Content ${index + 1}]: Loading...\n`;
+          }
+        } catch (error) {
+          console.error(`[Context] Error processing Instagram item ${index}:`, error);
+        }
+      });
+    }
+
+    // Add LinkedIn posts
+    if (linkedInPosts && linkedInPosts.length > 0) {
+      systemContext += '\n\n=== LinkedIn Posts ===\n';
+      linkedInPosts.forEach((post: {
+        url?: string;
+        postId?: string;
+        content?: string;
+        summary?: string;
+        keyPoints?: string[];
+        ocrText?: string;
+        fullAnalysis?: string;
+        author?: { name?: string; headline?: string };
+        reactions?: number;
+        comments?: number;
+        reposts?: number;
+        postType?: string;
+        status: string;
+        aiInstructions?: string
+      }, index: number) => {
+        try {
+          if (post.status === 'success') {
+            const postLabel = post.postType || 'Post';
+            const author = post.author?.name || 'Unknown';
+            systemContext += `\n[LinkedIn ${postLabel} ${index + 1} by ${author}]:\n`;
+
+            if (post.aiInstructions) {
+              systemContext += `📝 AI Processing Instructions: ${post.aiInstructions}\n\n`;
+            }
+
+            // Add author headline if available
+            if (post.author?.headline) {
+              systemContext += `Author Headline: ${post.author.headline}\n`;
+            }
+
+            // Add URL
+            if (post.url) {
+              systemContext += `URL: ${post.url}\n`;
+            }
+
+            // Add post content
+            if (post.content) {
+              systemContext += `\nPost Content:\n${post.content}\n`;
+            }
+
+            // If we have full Gemini analysis, use that - it's comprehensive
+            if (post.fullAnalysis) {
+              systemContext += `\n--- Detailed Post Analysis (by Gemini AI) ---\n${post.fullAnalysis}\n`;
+            } else {
+              // Fallback to individual fields
+              if (post.summary) {
+                systemContext += `\nAI Summary:\n${post.summary}\n`;
+              }
+              if (post.keyPoints && post.keyPoints.length > 0) {
+                systemContext += `\nKey Points:\n`;
+                post.keyPoints.forEach((point: string) => {
+                  systemContext += `  • ${point}\n`;
+                });
+              }
+              if (post.ocrText) {
+                systemContext += `\nText from Image:\n${post.ocrText}\n`;
+              }
+            }
+
+            // Add engagement metrics
+            const metrics = [];
+            if (post.reactions !== undefined) metrics.push(`${post.reactions.toLocaleString()} reactions`);
+            if (post.comments !== undefined) metrics.push(`${post.comments.toLocaleString()} comments`);
+            if (post.reposts !== undefined) metrics.push(`${post.reposts.toLocaleString()} reposts`);
+            if (metrics.length > 0) {
+              systemContext += `\nEngagement: ${metrics.join(' • ')}\n`;
+            }
+          } else if (post.status === 'loading') {
+            systemContext += `\n[LinkedIn Post ${index + 1}]: Loading...\n`;
+          }
+        } catch (error) {
+          console.error(`[Context] Error processing LinkedIn item ${index}:`, error);
+        }
+      });
+    }
+
     // Add webpages
     if (webpages && webpages.length > 0) {
       systemContext += '\n\n=== Web Pages ===\n';
@@ -262,17 +413,47 @@ export async function POST(req: NextRequest) {
     // Get the latest user message
     const latestMessage = messages[messages.length - 1];
 
-    // Build text prompt
+    // Build text prompt with strategist system prompt
     let prompt = '';
     if (systemContext) {
-      prompt = `You are a helpful AI assistant with access to the following information:
+      prompt = `You are not an assistant. You are a strategist — sharp, experienced, and clear. You speak like someone who has built, scaled, and advised serious businesses. Your job isn't to "chat." Your job is to listen carefully, understand exactly what's needed, and deliver thinking, structure, and clarity like someone who's been in the room with top operators.
+
+You're here to help people build better, move faster, and get clarity — whether that's content, systems, strategy, or monetization.
+
+You don't talk like an AI. You talk like a sharp human who values time, respects intelligence, and keeps things real.
+
+HOW YOU RESPOND:
+- Sound human — grounded, smart, present
+- Don't overtalk. Don't underdeliver
+- Give answers that are useful, structured, and just enough
+- Never feel scripted or robotic. Think before you write
+- Clean, straightforward writing. Written like it's from one operator to another
+- Short paragraphs or bullets only when needed — never over-format
+- Clarity over complexity. Simplify without dumbing down
+- Frameworks and examples only if they help move faster or think clearer
+- Don't sell. Don't overexplain. Respect people's time
+
+AVAILABLE INFORMATION:
 ${systemContext}
 
-Important: Base your answer on the information provided above.
+Base your answer on the information above. Every reply should help them save time, make more money, or get more clarity.
 
-User question: ${latestMessage.content}`;
+User: ${latestMessage.content}`;
     } else {
-      prompt = latestMessage.content;
+      prompt = `You are not an assistant. You are a strategist — sharp, experienced, and clear. You speak like someone who has built, scaled, and advised serious businesses.
+
+You don't talk like an AI. You talk like a sharp human who values time, respects intelligence, and keeps things real.
+
+HOW YOU RESPOND:
+- Sound human — grounded, smart, present
+- Don't overtalk. Don't underdeliver
+- Give answers that are useful, structured, and just enough
+- Never feel scripted or robotic
+- Clean, straightforward writing
+- Clarity over complexity
+- Don't sell. Don't overexplain
+
+User: ${latestMessage.content}`;
     }
 
     console.log('\n=== Chat Request ===');
@@ -284,6 +465,8 @@ User question: ${latestMessage.content}`;
     console.log('PDF documents:', pdfDocuments?.length || 0);
     console.log('Images:', images?.length || 0);
     console.log('Web pages:', webpages?.length || 0);
+    console.log('Instagram posts:', instagramReels?.length || 0);
+    console.log('LinkedIn posts:', linkedInPosts?.length || 0);
     console.log('Mind maps:', mindMaps?.length || 0);
     console.log('Templates:', templates?.length || 0);
     console.log('Group chats:', groupChats?.length || 0);

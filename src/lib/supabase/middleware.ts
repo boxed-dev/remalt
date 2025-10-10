@@ -35,6 +35,14 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Middleware]', {
+      path: request.nextUrl.pathname,
+      user: user?.id,
+      cookies: request.cookies.getAll().map(c => c.name),
+    });
+  }
+
   // Protected routes
   const protectedRoutes = ['/flows', '/account'];
   const isProtectedRoute = protectedRoutes.some(route =>
@@ -43,6 +51,7 @@ export async function updateSession(request: NextRequest) {
 
   // Redirect to signin if accessing protected route without auth
   if (isProtectedRoute && !user) {
+    console.log('[Middleware] Redirecting to signin:', request.nextUrl.pathname);
     const url = request.nextUrl.clone();
     url.pathname = '/auth/signin';
     url.searchParams.set('redirectedFrom', request.nextUrl.pathname);

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Lightbulb } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
@@ -7,7 +8,7 @@ import type { MindMapNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
 import { VoiceInput, VoiceTextarea } from '../VoiceInput';
 
-export function MindMapNode({ id, data }: NodeProps<MindMapNodeData>) {
+export const MindMapNode = memo(({ id, data }: NodeProps<MindMapNodeData>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [concept, setConcept] = useState(data.concept || '');
   const [notes, setNotes] = useState(data.notes || '');
@@ -97,4 +98,4 @@ export function MindMapNode({ id, data }: NodeProps<MindMapNodeData>) {
       </div>
     </BaseNode>
   );
-}
+});

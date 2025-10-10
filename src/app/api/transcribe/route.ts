@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { transcriptCache } from '@/lib/cache/transcript-cache';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
+import { getRobustTranscript } from '@/lib/youtube/robust-transcription';
 
 // Extract YouTube video ID from URL
 function extractYouTubeId(url: string): string | null {
@@ -16,43 +17,6 @@ function extractYouTubeId(url: string): string | null {
     if (match) return match[1];
   }
   return null;
-}
-
-// Call Python API for transcription (using youtube_transcript_api)
-async function getPythonTranscript(url: string): Promise<{ 
-  transcript: string; 
-  method: string; 
-  language: string; 
-  videoId: string;
-  cached: boolean;
-  elapsed_ms: number;
-} | null> {
-  try {
-    const pythonApiUrl = process.env.PYTHON_API_URL || 'http://localhost:5001';
-    console.log(`[Python API] Calling ${pythonApiUrl}/api/transcribe for URL: ${url}`);
-
-    const response = await fetch(`${pythonApiUrl}/api/transcribe`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('[Python API] ❌ Error:', errorData);
-      return null;
-    }
-
-    const data = await response.json();
-    console.log(`[Python API] ✅ Success - ${data.transcript.length} chars (${data.language}) in ${data.elapsed_ms.toFixed(0)}ms`);
-    return data;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[Python API] ❌ Failed:', errorMessage);
-    return null;
-  }
 }
 
 export async function POST(req: NextRequest) {
@@ -96,40 +60,46 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Call Python API for transcription
-    const pythonResult = await getPythonTranscript(url);
-    if (pythonResult) {
-      // Cache the successful result
-      transcriptCache.set(pythonResult.videoId, pythonResult.transcript);
-      console.log(`[Cache] Stored transcript for ${pythonResult.videoId}`);
-      console.log(`[Result] ✅ Success via Python API (${pythonResult.language})\n`);
-      
-      return NextResponse.json({
-        transcript: pythonResult.transcript,
-        method: pythonResult.method,
-        language: pythonResult.language,
-        videoId: pythonResult.videoId,
-        cached: false,
-        elapsed_ms: pythonResult.elapsed_ms,
-      });
-    }
+    // Use robust transcription pipeline with all fallback methods
+    try {
+      const result = await getRobustTranscript(url, videoId);
 
-    // Python API failed
-    console.log('[Result] ❌ Python API transcription failed\n');
-    return NextResponse.json(
-      {
-        error: 'Transcription failed',
-        details: 'Unable to extract transcript using Python API.',
-        videoId,
-      },
-      { status: 500 }
-    );
+      // Cache the successful result
+      transcriptCache.set(result.videoId, result.transcript);
+      console.log(`[Cache] Stored transcript for ${result.videoId}`);
+      console.log(`[Result] ✅ Success via ${result.method}\n`);
+
+      return NextResponse.json({
+        transcript: result.transcript,
+        method: result.method,
+        language: result.language,
+        videoId: result.videoId,
+        cached: false,
+        elapsed_ms: result.elapsed_ms,
+      });
+    } catch (pipelineError) {
+      // All methods in the pipeline failed
+      console.log('[Result] ❌ All transcription methods failed\n');
+
+      const errorMessage = pipelineError instanceof Error
+        ? pipelineError.message
+        : 'All transcription methods exhausted';
+
+      return NextResponse.json(
+        {
+          error: 'Transcription failed',
+          details: errorMessage,
+          videoId,
+        },
+        { status: 500 }
+      );
+    }
 
   } catch (error) {
     console.error('Transcription API Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to extract transcript';
     const errorDetails = error instanceof Error ? error.toString() : String(error);
-    
+
     return NextResponse.json(
       {
         error: errorMessage,

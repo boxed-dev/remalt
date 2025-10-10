@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { persist } from 'zustand/middleware';
 import type {
   Workflow,
   WorkflowNode,
@@ -7,7 +8,7 @@ import type {
   NodeData,
   NodeType,
   Position,
-  Viewport
+  Viewport,
 } from '@/types/workflow';
 
 function deepClone<T>(value: T): T {
@@ -53,6 +54,7 @@ interface WorkflowStore {
   // Workflow Actions
   createWorkflow: (name: string, description?: string) => void;
   loadWorkflow: (workflow: Workflow) => void;
+  setWorkflow: (workflow: Workflow) => void;
   updateWorkflowMetadata: (updates: Partial<Workflow>) => void;
   clearWorkflow: () => void;
 
@@ -148,10 +150,18 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
       return {
         analysisStatus: 'idle',
       } as NodeData;
+    case 'instagram':
+      return {
+        fetchStatus: 'idle',
+      } as NodeData;
+    case 'linkedin':
+      return {
+        fetchStatus: 'idle',
+        analysisStatus: 'idle',
+      } as NodeData;
     case 'text':
       return {
-        content: '',
-        contentType: 'plain',
+        content: '', // BlockNote JSON will be stored here
       } as NodeData;
     case 'mindmap':
       return {
@@ -219,6 +229,12 @@ export const useWorkflowStore = create<WorkflowStore>()(
         state.workflow = workflow;
         state.selectedNodes = [];
         state.selectedEdges = [];
+      });
+    },
+
+    setWorkflow: (workflow) => {
+      set((state) => {
+        state.workflow = workflow;
       });
     },
 

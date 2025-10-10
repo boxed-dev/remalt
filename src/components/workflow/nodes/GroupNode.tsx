@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Folder, X, MessageSquare, ChevronDown, ChevronUp, Pencil, Check, Send, Loader2, Sparkles } from 'lucide-react';
 import { Handle, Position } from '@xyflow/react';
@@ -38,7 +39,7 @@ function CodeBlock({ inline, className, children }: any) {
   );
 }
 
-export function GroupNode({ id, data }: NodeProps<GroupNodeData>) {
+export const GroupNode = memo(({ id, data }: NodeProps<GroupNodeData>) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(data.label || 'Group');
@@ -511,4 +512,4 @@ export function GroupNode({ id, data }: NodeProps<GroupNodeData>) {
       </div>
     </div>
   );
-}
+});

@@ -4,6 +4,8 @@ import type {
   TextNodeData,
   VoiceNodeData,
   YouTubeNodeData,
+  InstagramNodeData,
+  LinkedInNodeData,
   PDFNodeData,
   ImageNodeData,
   WebpageNodeData,
@@ -64,6 +66,45 @@ export interface ChatContext {
     status: 'idle' | 'scraping' | 'success' | 'error';
     aiInstructions?: string;
   }>;
+  instagramReels: Array<{
+    url: string;
+    reelCode?: string;
+    caption?: string;
+    author?: {
+      username?: string;
+      fullName?: string;
+    };
+    likes?: number;
+    views?: number;
+    comments?: number;
+    status: 'idle' | 'loading' | 'success' | 'error';
+    transcript?: string;
+    ocrText?: string;
+    summary?: string;
+    fullAnalysis?: string;
+    isVideo?: boolean;
+    postType?: string;
+    aiInstructions?: string;
+  }>;
+  linkedInPosts: Array<{
+    url: string;
+    postId?: string;
+    content?: string;
+    author?: {
+      name?: string;
+      headline?: string;
+    };
+    reactions?: number;
+    comments?: number;
+    reposts?: number;
+    status: 'idle' | 'loading' | 'success' | 'error';
+    summary?: string;
+    keyPoints?: string[];
+    ocrText?: string;
+    fullAnalysis?: string;
+    postType?: string;
+    aiInstructions?: string;
+  }>;
   mindMaps: Array<{
     concept: string;
     notes?: string;
@@ -97,6 +138,33 @@ function safeGetInstructions(data: any): string | undefined {
 }
 
 /**
+ * Convert BlockNote JSON format to plain text
+ */
+function blockNoteToPlainText(content: string | undefined): string {
+  if (!content) return '';
+
+  try {
+    const blocks = JSON.parse(content);
+    if (!Array.isArray(blocks)) return content;
+
+    return blocks
+      .map((block: any) => {
+        if (block.content && Array.isArray(block.content)) {
+          return block.content
+            .map((item: any) => item.text || '')
+            .join('');
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n');
+  } catch {
+    // If not JSON, return as-is (backward compatibility)
+    return content;
+  }
+}
+
+/**
  * Build context for a chat node from its linked nodes
  */
 export function buildChatContext(
@@ -110,6 +178,8 @@ export function buildChatContext(
     pdfDocuments: [],
     images: [],
     webpages: [],
+    instagramReels: [],
+    linkedInPosts: [],
     mindMaps: [],
     templates: [],
     groupChats: [],
@@ -133,9 +203,10 @@ export function buildChatContext(
     switch (node.type) {
       case 'text': {
         const textData = node.data as TextNodeData;
-        if (textData.content && textData.content.trim()) {
+        const plainText = blockNoteToPlainText(textData.content);
+        if (plainText && plainText.trim()) {
           context.textContext.push({
-            content: textData.content,
+            content: plainText,
             aiInstructions: safeGetInstructions(textData),
           });
         }
@@ -241,6 +312,53 @@ export function buildChatContext(
         break;
       }
 
+      case 'instagram': {
+        const instagramData = node.data as InstagramNodeData;
+        if (instagramData.url) {
+          context.instagramReels.push({
+            url: instagramData.url,
+            reelCode: instagramData.reelCode,
+            caption: instagramData.caption,
+            author: instagramData.author,
+            likes: instagramData.likes,
+            views: instagramData.views,
+            comments: instagramData.comments,
+            status: instagramData.fetchStatus || 'idle',
+            transcript: instagramData.transcript,
+            ocrText: instagramData.ocrText,
+            summary: instagramData.summary,
+            fullAnalysis: instagramData.fullAnalysis,
+            isVideo: instagramData.isVideo,
+            postType: instagramData.postType,
+            aiInstructions: safeGetInstructions(instagramData),
+          });
+        }
+        break;
+      }
+
+      case 'linkedin': {
+        const linkedInData = node.data as LinkedInNodeData;
+        if (linkedInData.url) {
+          context.linkedInPosts.push({
+            url: linkedInData.url,
+            postId: linkedInData.postId,
+            content: linkedInData.content,
+            author: linkedInData.author,
+            reactions: linkedInData.reactions,
+            comments: linkedInData.comments,
+            reposts: linkedInData.reposts,
+            status: linkedInData.fetchStatus || 'idle',
+            summary: linkedInData.summary,
+            keyPoints: linkedInData.keyPoints,
+            ocrText: linkedInData.ocrText,
+            fullAnalysis: linkedInData.fullAnalysis,
+            postType: linkedInData.postType,
+            aiInstructions: safeGetInstructions(linkedInData),
+          });
+        }
+        break;
+      }
+
       case 'mindmap': {
         const mindMapData = node.data as MindMapNodeData;
         context.mindMaps.push({
@@ -322,7 +440,8 @@ function extractNodeContext(node: WorkflowNode): string | null {
   switch (node.type) {
     case 'text': {
       const data = node.data as TextNodeData;
-      return data.content?.trim() || null;
+      const plainText = blockNoteToPlainText(data.content);
+      return plainText?.trim() || null;
     }
     case 'youtube': {
       const data = node.data as YouTubeNodeData;
@@ -379,6 +498,98 @@ function extractNodeContext(node: WorkflowNode): string | null {
     case 'webpage': {
       const data = node.data as WebpageNodeData;
       return data.pageContent || null;
+    }
+    case 'instagram': {
+      const data = node.data as InstagramNodeData;
+      const parts = [];
+
+      // Add post type and author
+      const postLabel = data.isVideo ? 'Instagram Reel' : 'Instagram Post';
+      if (data.author?.username) {
+        parts.push(`${postLabel} by @${data.author.username}`);
+      } else {
+        parts.push(postLabel);
+      }
+
+      // Add caption if available
+      if (data.caption) {
+        parts.push(`\nCaption:\n${data.caption}`);
+      }
+
+      // If we have full Gemini analysis (for both videos and images), use that - it's much more detailed
+      if (data.fullAnalysis) {
+        const analysisLabel = data.isVideo ? 'Detailed Video Analysis' : 'Detailed Image Analysis';
+        parts.push(`\n--- ${analysisLabel} ---\n${data.fullAnalysis}`);
+      } else {
+        // Fallback to individual fields
+        if (data.transcript) {
+          parts.push(`\nVideo Transcript:\n${data.transcript}`);
+        }
+        if (data.ocrText) {
+          parts.push(`\nText from Image:\n${data.ocrText}`);
+        }
+        if (data.summary) {
+          parts.push(`\nSummary:\n${data.summary}`);
+        }
+      }
+
+      // Add engagement metrics
+      const metrics = [];
+      if (data.likes !== undefined) metrics.push(`Likes: ${data.likes.toLocaleString()}`);
+      if (data.views !== undefined) metrics.push(`Views: ${data.views.toLocaleString()}`);
+      if (data.comments !== undefined) metrics.push(`Comments: ${data.comments.toLocaleString()}`);
+      if (metrics.length > 0) {
+        parts.push(`\nEngagement: ${metrics.join(' • ')}`);
+      }
+
+      return parts.length > 0 ? parts.join('\n') : null;
+    }
+    case 'linkedin': {
+      const data = node.data as LinkedInNodeData;
+      const parts = [];
+
+      // Add post type and author
+      const postLabel = data.postType || 'LinkedIn Post';
+      if (data.author?.name) {
+        parts.push(`${postLabel} by ${data.author.name}`);
+        if (data.author.headline) {
+          parts.push(`  ${data.author.headline}`);
+        }
+      } else {
+        parts.push(postLabel);
+      }
+
+      // Add post content
+      if (data.content) {
+        parts.push(`\nPost Content:\n${data.content}`);
+      }
+
+      // If we have full analysis, use that - it's much more detailed
+      if (data.fullAnalysis) {
+        parts.push(`\n--- Detailed Post Analysis ---\n${data.fullAnalysis}`);
+      } else {
+        // Fallback to individual fields
+        if (data.summary) {
+          parts.push(`\nSummary:\n${data.summary}`);
+        }
+        if (data.keyPoints && data.keyPoints.length > 0) {
+          parts.push(`\nKey Points:\n${data.keyPoints.map(p => `• ${p}`).join('\n')}`);
+        }
+        if (data.ocrText) {
+          parts.push(`\nText from Image:\n${data.ocrText}`);
+        }
+      }
+
+      // Add engagement metrics
+      const metrics = [];
+      if (data.reactions !== undefined) metrics.push(`Reactions: ${data.reactions.toLocaleString()}`);
+      if (data.comments !== undefined) metrics.push(`Comments: ${data.comments.toLocaleString()}`);
+      if (data.reposts !== undefined) metrics.push(`Reposts: ${data.reposts.toLocaleString()}`);
+      if (metrics.length > 0) {
+        parts.push(`\nEngagement: ${metrics.join(' • ')}`);
+      }
+
+      return parts.length > 0 ? parts.join('\n') : null;
     }
     case 'mindmap': {
       const data = node.data as MindMapNodeData;

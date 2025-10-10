@@ -2,6 +2,8 @@ import type { NodeTypes } from '@xyflow/react';
 import { PDFNode } from './PDFNode';
 import { VoiceNode } from './VoiceNode';
 import { YouTubeNode } from './YouTubeNode';
+import { InstagramNode } from './InstagramNode';
+import { LinkedInNode } from './LinkedInNode';
 import { ImageNode } from './ImageNode';
 import { TextNode } from './TextNode';
 import { MindMapNode } from './MindMapNode';
@@ -15,6 +17,8 @@ export const nodeTypes: NodeTypes = {
   pdf: PDFNode,
   voice: VoiceNode,
   youtube: YouTubeNode,
+  instagram: InstagramNode,
+  linkedin: LinkedInNode,
   image: ImageNode,
   text: TextNode,
   mindmap: MindMapNode,
@@ -29,6 +33,8 @@ export {
   PDFNode,
   VoiceNode,
   YouTubeNode,
+  InstagramNode,
+  LinkedInNode,
   ImageNode,
   TextNode,
   MindMapNode,

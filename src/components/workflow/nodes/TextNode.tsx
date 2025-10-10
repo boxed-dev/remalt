@@ -1,9 +1,9 @@
+import { memo } from 'react';
 import { Type } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { AIInstructionsInline } from './AIInstructionsInline';
-import { VoiceTextarea } from '../VoiceInput';
+import { BlockNoteEditor } from '../BlockNoteEditor';
 import type { TextNodeData } from '@/types/workflow';
 
 interface TextNodeProps {
@@ -11,77 +11,44 @@ interface TextNodeProps {
   data: TextNodeData;
 }
 
-export function TextNode({ id, data }: TextNodeProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [content, setContent] = useState(data.content || '');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+export const TextNode = memo(({ id, data }: TextNodeProps) => {
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
-  useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.select();
-    }
-  }, [isEditing]);
-
-  const handleSave = () => {
+  const handleContentChange = (content: string) => {
     updateNodeData(id, { content } as Partial<TextNodeData>);
-    setIsEditing(false);
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      setContent(data.content || '');
-      setIsEditing(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!isEditing) {
-      setContent(data.content || '');
-    }
-  }, [data.content, isEditing]);
 
   return (
     <BaseNode id={id}>
-      <div className="space-y-2 w-[280px]">
-        <div className="flex items-center gap-2">
-          <Type className="h-4 w-4 text-[#3B82F6]" />
-          <span className="text-[13px] font-medium text-[#1A1D21]">Text</span>
-        </div>
-        {isEditing ? (
-          <VoiceTextarea
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onBlur={handleSave}
-            onKeyDown={handleKeyDown}
-            voiceMode="append"
-            className="w-full min-h-[100px] text-[12px] border-0 focus:outline-none resize-none text-[#1A1D21] leading-relaxed bg-transparent pr-10"
-            placeholder="Type or speak..."
-          />
-        ) : (
-          <div
-            onClick={() => setIsEditing(true)}
-            className="cursor-text min-h-[100px]"
-          >
-            {data.content ? (
-              <div className="text-[12px] text-[#1A1D21] whitespace-pre-wrap leading-[1.6]">{data.content}</div>
-            ) : (
-              <div className="text-[12px] text-[#9CA3AF]">
-                Click to add text
-              </div>
-            )}
+      <div className="w-[520px] rounded-xl overflow-hidden">
+        {/* Blue Header - exactly like the image */}
+        <div className="bg-[#5B7FE8] px-4 py-2.5 flex items-center gap-2.5 rounded-t-xl">
+          <div className="bg-white rounded-md p-1.5 flex items-center justify-center">
+            <Type className="h-3.5 w-3.5 text-[#5B7FE8]" strokeWidth={2.5} />
           </div>
-        )}
+          <span className="text-[13px] font-semibold text-white tracking-wide">Text</span>
+        </div>
 
-        <AIInstructionsInline
-          value={data.aiInstructions}
-          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<TextNodeData>)}
-          nodeId={id}
-          nodeType="text"
-        />
+        {/* Editor Content - Full clickable area */}
+        <div className="bg-white">
+          <BlockNoteEditor
+            initialContent={data.content}
+            onChange={handleContentChange}
+            placeholder="Enter text or type '/' for commands"
+            className="min-h-[200px] max-h-[500px]"
+          />
+        </div>
+
+        {/* AI Instructions at bottom */}
+        <div className="px-4 pb-3 bg-white border-t border-[#F3F4F6] rounded-b-xl">
+          <AIInstructionsInline
+            value={data.aiInstructions}
+            onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<TextNodeData>)}
+            nodeId={id}
+            nodeType="text"
+          />
+        </div>
       </div>
     </BaseNode>
   );
-}
+});

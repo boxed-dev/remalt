@@ -1,4 +1,6 @@
 import type { NodeType } from '@/types/workflow';
+import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Type, Lightbulb, FileCode, Globe, MessageSquare, Link, Folder } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 // Node type metadata
 export interface NodeTypeMetadata {
@@ -7,6 +9,7 @@ export interface NodeTypeMetadata {
   description: string;
   category: 'media' | 'content' | 'ai' | 'structure';
   color: string;
+  icon: LucideIcon;
   defaultWidth?: number;
   defaultHeight?: number;
 }
@@ -18,6 +21,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Upload or link documents with searchable parsed content',
     category: 'media',
     color: '#095D40',
+    icon: FileText,
     defaultWidth: 480,
     defaultHeight: 360,
   },
@@ -27,6 +31,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Record or upload audio with automatic transcription',
     category: 'media',
     color: '#D4AF7F',
+    icon: Mic,
     defaultWidth: 480,
     defaultHeight: 300,
   },
@@ -36,8 +41,29 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Extract transcripts from YouTube videos',
     category: 'media',
     color: '#095D40',
+    icon: Youtube,
     defaultWidth: 480,
     defaultHeight: 340,
+  },
+  instagram: {
+    type: 'instagram',
+    label: 'Instagram Reel',
+    description: 'Fetch Instagram reel data and video content',
+    category: 'media',
+    color: '#E4405F',
+    icon: Instagram,
+    defaultWidth: 380,
+    defaultHeight: 280,
+  },
+  linkedin: {
+    type: 'linkedin',
+    label: 'LinkedIn Post',
+    description: 'Fetch LinkedIn post content and engagement data',
+    category: 'media',
+    color: '#0A66C2',
+    icon: Linkedin,
+    defaultWidth: 420,
+    defaultHeight: 320,
   },
   image: {
     type: 'image',
@@ -45,6 +71,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Upload images with AI analysis and OCR',
     category: 'media',
     color: '#D4AF7F',
+    icon: ImageIcon,
     defaultWidth: 480,
     defaultHeight: 420,
   },
@@ -54,6 +81,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Rich text editor for ideas and content',
     category: 'content',
     color: '#095D40',
+    icon: Type,
     defaultWidth: 480,
     defaultHeight: 240,
   },
@@ -63,6 +91,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Concept bubbles for brainstorming and ideation',
     category: 'content',
     color: '#D4AF7F',
+    icon: Lightbulb,
     defaultWidth: 300,
     defaultHeight: 180,
   },
@@ -72,6 +101,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Generate content using AI templates (scripts, ads, captions)',
     category: 'ai',
     color: '#095D40',
+    icon: FileCode,
     defaultWidth: 480,
     defaultHeight: 420,
   },
@@ -81,6 +111,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Scrape and extract content from web pages',
     category: 'media',
     color: '#D4AF7F',
+    icon: Globe,
     defaultWidth: 480,
     defaultHeight: 360,
   },
@@ -90,6 +121,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Conversational AI with context awareness',
     category: 'ai',
     color: '#095D40',
+    icon: MessageSquare,
     defaultWidth: 560,
     defaultHeight: 640,
   },
@@ -99,6 +131,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Define relationships and workflow steps between nodes',
     category: 'structure',
     color: '#333333',
+    icon: Link,
     defaultWidth: 240,
     defaultHeight: 120,
   },
@@ -108,6 +141,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Group nodes together with optional group chat',
     category: 'structure',
     color: '#6b7280',
+    icon: Folder,
     defaultWidth: 720,
     defaultHeight: 480,
   },

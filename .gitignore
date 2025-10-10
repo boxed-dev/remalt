@@ -44,3 +44,7 @@ __pycache__/
 *.so
 .Python
 transcript_test_results.json
+
+# Documentation (exclude all .md except README)
+*.md
+!README.md

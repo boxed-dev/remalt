@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
 
-const USER_AGENT = 'Mozilla/5.0 (compatible; RemaltBot/1.0; +https://remalt.ai)';
-const FETCH_TIMEOUT_MS = 12_000;
-const MAX_CONTENT_LENGTH = 12_000;
+const JINA_API_KEY = process.env.JINA_API_KEY;
+const FETCH_TIMEOUT_MS = 20_000; // Increased for Jina API
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 type AnalysisCacheEntry = {
@@ -63,93 +62,47 @@ async function fetchWithTimeout(input: string, init?: RequestInit) {
   }
 }
 
-function stripHtml(html: string) {
-  const withBreaks = html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
-    .replace(/<(br|\/?p|\/?div|\/?section|\/?article|\/?li|\/?ul|\/?ol|\/?tr|\/?td|\/?th|\/?h[1-6])[^>]*>/gi, '\n');
+async function fetchWithJinaReader(url: string) {
+  console.log('[Webpage analysis] Using Jina AI Reader for:', url);
 
-  return withBreaks
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\r/g, '')
-    .replace(/\t+/g, ' ')
-    .replace(/\u00a0/g, ' ')
-    .replace(/[ ]{2,}/g, ' ')
-    .replace(/ *\n */g, '\n')
-    .replace(/\n{2,}/g, '\n')
-    .trim();
-}
+  // Jina Reader API format: https://r.jina.ai/{target-url}
+  const jinaUrl = `https://r.jina.ai/${url}`;
+  const headers: HeadersInit = {
+    'Accept': 'application/json',
+    'X-Return-Format': 'markdown',
+  };
 
-function extractTitle(html: string): string | null {
-  const match = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-  return match ? match[1].trim() : null;
-}
-
-function extractMeta(html: string, matcher: { attribute: 'property' | 'name'; value: string }): string | null {
-  const { attribute, value } = matcher;
-  const patterns = [
-    new RegExp(`<meta[^>]*${attribute}=["']${value}["'][^>]*content=["']([^"']+)["']`, 'i'),
-    new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*${attribute}=["']${value}["']`, 'i'),
-  ];
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    if (match) {
-      return match[1].trim();
-    }
+  if (JINA_API_KEY) {
+    headers['Authorization'] = `Bearer ${JINA_API_KEY}`;
+    console.log('[Webpage analysis] Using authenticated Jina API (200 RPM limit)');
+  } else {
+    console.log('[Webpage analysis] Using free Jina API (20 RPM limit)');
   }
-  return null;
-}
 
-function buildSummary(content: string) {
-  const normalized = content.replace(/\n+/g, ' ');
-  const sentences = normalized.split(/(?<=[.!?])\s+/).filter((sentence) => sentence.trim().length > 0);
-  if (sentences.length === 0) {
-    return '';
-  }
-  const summarySentences = sentences.slice(0, 3);
-  return summarySentences.join(' ').trim();
-}
-
-function extractKeyPoints(content: string) {
-  const lines = content.split('\n').map((line) => line.trim());
-  return lines
-    .filter((line) => line.length > 0 && line.length <= 140)
-    .filter((line, index) => index === 0 || /^[A-Z0-9]/.test(line))
-    .slice(0, 5);
-}
-
-async function directHtmlAnalysis(url: string, userId: string) {
-  console.log('[Webpage analysis] Using direct HTML fetch for:', url, 'user:', userId);
-
-  const response = await fetchWithTimeout(url, {
-    headers: {
-      'User-Agent': USER_AGENT,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-  });
+  const response = await fetchWithTimeout(jinaUrl, { headers });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+    throw new Error(`Jina Reader failed: ${response.status} ${response.statusText}`);
   }
 
-  const html = await response.text();
+  const data = await response.json();
 
-  const cleanedContent = stripHtml(html).slice(0, MAX_CONTENT_LENGTH);
-  const pageTitle = extractMeta(html, { attribute: 'property', value: 'og:title' })
-    || extractTitle(html)
-    || url;
-  const description = extractMeta(html, { attribute: 'name', value: 'description' })
-    || extractMeta(html, { attribute: 'property', value: 'og:description' })
-    || '';
+  // Jina returns: { code, status, data: { title, description, url, content, usage: {...} } }
+  if (data.code !== 200 || !data.data) {
+    throw new Error(`Jina Reader error: ${data.status || 'Unknown error'}`);
+  }
 
-  const summary = buildSummary(cleanedContent);
-  const keyPoints = extractKeyPoints(cleanedContent);
+  const { title, description, content } = data.data;
+
+  // Extract key points from markdown content (headings and important lines)
+  const keyPoints = extractKeyPointsFromMarkdown(content || '');
+
+  // Generate summary from first few sentences
+  const summary = generateSummary(content || description || '');
 
   return {
-    pageTitle,
-    pageContent: cleanedContent,
+    pageTitle: title || url,
+    pageContent: content || '',
     summary,
     keyPoints,
     metadata: {
@@ -157,6 +110,52 @@ async function directHtmlAnalysis(url: string, userId: string) {
       keywords: keyPoints.length ? keyPoints : undefined,
     },
   };
+}
+
+function extractKeyPointsFromMarkdown(markdown: string): string[] {
+  const lines = markdown.split('\n').map(line => line.trim());
+  const keyPoints: string[] = [];
+
+  for (const line of lines) {
+    // Extract headings (lines starting with #)
+    if (line.startsWith('#')) {
+      const heading = line.replace(/^#+\s*/, '').trim();
+      if (heading.length > 0 && heading.length <= 140) {
+        keyPoints.push(heading);
+      }
+    }
+    // Extract list items
+    else if (line.match(/^[-*+]\s+/) || line.match(/^\d+\.\s+/)) {
+      const listItem = line.replace(/^[-*+\d.]\s+/, '').trim();
+      if (listItem.length > 0 && listItem.length <= 140) {
+        keyPoints.push(listItem);
+      }
+    }
+
+    if (keyPoints.length >= 8) break;
+  }
+
+  return keyPoints.slice(0, 5);
+}
+
+function generateSummary(text: string): string {
+  // Remove markdown formatting for summary
+  const cleanText = text
+    .replace(/^#+\s+/gm, '') // Remove heading markers
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold
+    .replace(/\*([^*]+)\*/g, '$1') // Remove italic
+    .replace(/`([^`]+)`/g, '$1') // Remove code
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links
+    .trim();
+
+  // Get first 3 sentences
+  const sentences = cleanText
+    .split(/(?<=[.!?])\s+/)
+    .filter(s => s.trim().length > 0);
+
+  if (sentences.length === 0) return '';
+
+  return sentences.slice(0, 3).join(' ').trim();
 }
 
 export async function POST(req: NextRequest) {
@@ -178,15 +177,17 @@ export async function POST(req: NextRequest) {
 
     const cachedEntry = ANALYSIS_CACHE.get(normalizedUrl);
     if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
+      console.log('[Webpage analysis] ✅ Cache hit for:', normalizedUrl);
       return NextResponse.json(cachedEntry.response);
     }
 
-    const result = await directHtmlAnalysis(normalizedUrl, user.id);
+    const result = await fetchWithJinaReader(normalizedUrl);
 
-    console.log('[Webpage analysis] ✅ Success', {
+    console.log('[Webpage analysis] ✅ Success via Jina Reader', {
       title: result.pageTitle,
-      length: result.pageContent.length,
+      contentLength: result.pageContent.length,
       keyPoints: result.keyPoints.length,
+      hasApiKey: !!JINA_API_KEY,
     });
 
     const responseBody = {

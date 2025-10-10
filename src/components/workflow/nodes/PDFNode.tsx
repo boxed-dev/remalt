@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { FileText, Upload, Loader2, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp, BookOpen, Download } from 'lucide-react';
 import { useState, useRef, useMemo } from 'react';
 import { BaseNode } from './BaseNode';
@@ -6,7 +7,7 @@ import { AIInstructionsInline } from './AIInstructionsInline';
 import type { NodeProps } from '@xyflow/react';
 import type { PDFNodeData } from '@/types/workflow';
 
-export function PDFNode({ id, data }: NodeProps<PDFNodeData>) {
+export const PDFNode = memo(({ id, data }: NodeProps<PDFNodeData>) => {
   const [mode, setMode] = useState<'choose' | 'url'>('choose');
   const [url, setUrl] = useState(data.url || '');
   const [showDetails, setShowDetails] = useState(false);
@@ -347,4 +348,4 @@ export function PDFNode({ id, data }: NodeProps<PDFNodeData>) {
       </div>
     </BaseNode>
   );
-}
+});
