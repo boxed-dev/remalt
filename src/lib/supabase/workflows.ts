@@ -15,10 +15,10 @@ function rowToWorkflow(row: WorkflowRow): Workflow {
     id: row.id,
     name: row.name,
     description: row.description || undefined,
-    nodes: row.nodes || [],
-    edges: row.edges || [],
-    viewport: row.viewport || { x: 0, y: 0, zoom: 1 },
-    metadata: row.metadata || {
+    nodes: (row.nodes as any) || [],
+    edges: (row.edges as any) || [],
+    viewport: (row.viewport as any) || { x: 0, y: 0, zoom: 1 },
+    metadata: (row.metadata as any) || {
       version: '1.0.0',
       tags: [],
       isPublic: false,
@@ -37,11 +37,54 @@ function workflowToRow(workflow: Workflow, userId: string): Omit<WorkflowRow, 'c
     user_id: userId,
     name: workflow.name,
     description: workflow.description || null,
-    nodes: workflow.nodes,
-    edges: workflow.edges,
-    viewport: workflow.viewport,
-    metadata: workflow.metadata,
+    nodes: workflow.nodes as any,
+    edges: workflow.edges as any,
+    viewport: workflow.viewport as any,
+    metadata: workflow.metadata as any,
   };
+}
+
+/**
+ * Workflow summary type for list views (lightweight)
+ */
+export type WorkflowSummary = {
+  id: string;
+  name: string;
+  description: string | null;
+  nodeCount: number;
+  updatedAt: string;
+  createdAt: string;
+  metadata: Workflow['metadata'];
+};
+
+/**
+ * Fetch workflow summaries for the current user (optimized for list views)
+ * Only fetches essential fields, dramatically reducing data transfer
+ */
+export async function getUserWorkflowsSummary(supabase: SupabaseClient): Promise<WorkflowSummary[]> {
+  const { data, error } = await supabase
+    .from('workflows')
+    .select('id, name, description, nodes, metadata, created_at, updated_at')
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching workflow summaries:', error);
+    throw new Error(error.message);
+  }
+
+  return (data as Pick<WorkflowRow, 'id' | 'name' | 'description' | 'nodes' | 'metadata' | 'created_at' | 'updated_at'>[]).map(row => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    nodeCount: Array.isArray(row.nodes) ? row.nodes.length : 0,
+    updatedAt: row.updated_at,
+    createdAt: row.created_at,
+    metadata: (row.metadata as any) || {
+      version: '1.0.0',
+      tags: [],
+      isPublic: false,
+    },
+  }));
 }
 
 /**

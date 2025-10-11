@@ -9,6 +9,7 @@ function extractYouTubeId(url: string): string | null {
     /(?:youtube\.com\/watch\?v=)([^&\n?#]+)/,
     /(?:youtu\.be\/)([^&\n?#]+)/,
     /(?:youtube\.com\/embed\/)([^&\n?#]+)/,
+    /(?:youtube\.com\/shorts\/)([^&\n?#]+)/, // Support YouTube Shorts
     /^([a-zA-Z0-9_-]{11})$/,
   ];
 

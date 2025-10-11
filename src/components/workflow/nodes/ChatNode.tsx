@@ -199,7 +199,6 @@ export const ChatNode = memo(({ id, data }: ChatNodeProps) => {
         linkedInPosts: [],
         mindMaps: [],
         templates: [],
-        groupChats: [],
       };
 
       // Call the chat API with streaming
@@ -221,7 +220,6 @@ export const ChatNode = memo(({ id, data }: ChatNodeProps) => {
           linkedInPosts: context.linkedInPosts,
           mindMaps: context.mindMaps,
           templates: context.templates,
-          groupChats: context.groupChats,
         }),
       });
 

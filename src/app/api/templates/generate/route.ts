@@ -13,7 +13,6 @@ type TemplateContext = {
   webpages: Array<{ url: string; pageTitle?: string; pageContent?: string; metadata?: { description?: string }; status: string }>;
   mindMaps: Array<{ concept: string; notes?: string; tags?: string[] }>;
   templates: Array<{ templateType: string; generatedContent?: string; status: string }>;
-  groupChats: Array<{ groupedNodesCount: number; messages?: string[] }>;
 };
 
 const TEMPLATE_PROMPTS: Record<TemplateType, string> = {
@@ -119,14 +118,6 @@ function buildContextSection(context: TemplateContext): string {
     });
   }
 
-  if (context.groupChats.length > 0) {
-    contextString += '\n\n=== Group Discussions ===\n';
-    context.groupChats.forEach((group, index) => {
-      if (group.messages?.length) {
-        contextString += `\n[Group ${index + 1} - ${group.groupedNodesCount} nodes]\n${group.messages.join('\n')}\n`;
-      }
-    });
-  }
 
   return contextString;
 }

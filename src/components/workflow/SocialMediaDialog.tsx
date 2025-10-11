@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Instagram, Linkedin, Youtube, Globe } from 'lucide-react'
+import { InstagramLogo, LinkedinLogo, YoutubeLogo, Globe } from '@phosphor-icons/react'
 
 interface SocialMediaDialogProps {
   open: boolean
@@ -37,21 +37,21 @@ const detectPlatform = (url: string): 'instagram' | 'linkedin' | 'youtube' | 'we
 const platformConfig = {
   instagram: {
     name: 'Instagram',
-    icon: Instagram,
+    icon: InstagramLogo,
     color: 'text-pink-600',
     bgColor: 'bg-pink-50 hover:bg-pink-100',
     placeholder: 'https://www.instagram.com/p/...',
   },
   linkedin: {
     name: 'LinkedIn',
-    icon: Linkedin,
+    icon: LinkedinLogo,
     color: 'text-blue-600',
     bgColor: 'bg-blue-50 hover:bg-blue-100',
     placeholder: 'https://www.linkedin.com/posts/...',
   },
   youtube: {
     name: 'YouTube',
-    icon: Youtube,
+    icon: YoutubeLogo,
     color: 'text-red-600',
     bgColor: 'bg-red-50 hover:bg-red-100',
     placeholder: 'https://www.youtube.com/watch?v=...',
@@ -84,6 +84,13 @@ export function SocialMediaDialog({ open, onOpenChange, onAddNode }: SocialMedia
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddNode()
+    }
+  }
+
   const handlePlatformSelect = (platform: 'instagram' | 'linkedin' | 'youtube' | 'webpage') => {
     setDetectedPlatform(platform)
     setUrl('')
@@ -91,73 +98,83 @@ export function SocialMediaDialog({ open, onOpenChange, onAddNode }: SocialMedia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add Social Media</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold">Add Content</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Platform selection buttons */}
-          <div className="grid grid-cols-4 gap-2">
-            {(Object.keys(platformConfig) as Array<keyof typeof platformConfig>).map((platform) => {
-              const config = platformConfig[platform]
-              const Icon = config.icon
-              return (
-                <button
-                  key={platform}
-                  onClick={() => handlePlatformSelect(platform)}
-                  className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
-                    detectedPlatform === platform
-                      ? `${config.bgColor} border-current ${config.color}`
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon className={`h-6 w-6 ${detectedPlatform === platform ? config.color : 'text-gray-400'}`} />
-                  <span className="text-xs mt-1 font-medium">{config.name}</span>
-                </button>
-              )
-            })}
+        <div className="space-y-6 py-2">
+          {/* Platform icons - single row, larger and more spaced */}
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={() => handlePlatformSelect('youtube')}
+              className={`p-3 rounded-xl transition-all ${
+                detectedPlatform === 'youtube'
+                  ? 'bg-red-50 text-red-600 ring-2 ring-red-200'
+                  : 'text-gray-400 hover:text-red-500 hover:bg-gray-50'
+              }`}
+              title="YouTube"
+            >
+              <YoutubeLogo size={32} weight="fill" />
+            </button>
+            <button
+              onClick={() => handlePlatformSelect('instagram')}
+              className={`p-3 rounded-xl transition-all ${
+                detectedPlatform === 'instagram'
+                  ? 'bg-pink-50 text-pink-600 ring-2 ring-pink-200'
+                  : 'text-gray-400 hover:text-pink-500 hover:bg-gray-50'
+              }`}
+              title="Instagram"
+            >
+              <InstagramLogo size={32} weight="fill" />
+            </button>
+            <button
+              onClick={() => handlePlatformSelect('linkedin')}
+              className={`p-3 rounded-xl transition-all ${
+                detectedPlatform === 'linkedin'
+                  ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-200'
+                  : 'text-gray-400 hover:text-blue-500 hover:bg-gray-50'
+              }`}
+              title="LinkedIn"
+            >
+              <LinkedinLogo size={32} weight="fill" />
+            </button>
+            <button
+              onClick={() => handlePlatformSelect('webpage')}
+              className={`p-3 rounded-xl transition-all ${
+                detectedPlatform === 'webpage'
+                  ? 'bg-gray-100 text-gray-700 ring-2 ring-gray-300'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+              }`}
+              title="Webpage"
+            >
+              <Globe size={32} weight="fill" />
+            </button>
           </div>
 
-          {/* URL input */}
-          <div className="space-y-2">
+          {/* URL input - cleaner design */}
+          <div className="space-y-3">
             <Input
-              placeholder={detectedPlatform ? platformConfig[detectedPlatform].placeholder : 'Paste a URL...'}
+              placeholder="Paste link here..."
               value={url}
               onChange={(e) => handleUrlChange(e.target.value)}
-              className="w-full"
+              onKeyDown={handleKeyDown}
+              className="w-full h-12 text-base border-gray-200 focus:border-indigo-400 focus:ring-indigo-400"
               autoFocus
             />
-            {detectedPlatform && (
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                {(() => {
-                  const Icon = platformConfig[detectedPlatform].icon
-                  return <Icon className={`h-4 w-4 ${platformConfig[detectedPlatform].color}`} />
-                })()}
-                Detected: {platformConfig[detectedPlatform].name}
-              </p>
-            )}
+            <p className="text-xs text-gray-500 text-center">
+              Paste Cmd/Ctrl + V
+            </p>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setUrl('')
-                setDetectedPlatform(null)
-                onOpenChange(false)
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddNode}
-              disabled={!detectedPlatform || !url}
-            >
-              Add Node
-            </Button>
-          </div>
+          {/* Single action button */}
+          <Button
+            onClick={handleAddNode}
+            disabled={!detectedPlatform || !url}
+            className="w-full h-12 text-base bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400"
+          >
+            Add to Board
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -70,9 +70,10 @@ def extract_video_id(url):
         r'(?:youtube\.com\/watch\?v=)([^&\n?#]+)',
         r'(?:youtu\.be\/)([^&\n?#]+)',
         r'(?:youtube\.com\/embed\/)([^&\n?#]+)',
+        r'(?:youtube\.com\/shorts\/)([^&\n?#]+)',  # Support YouTube Shorts
         r'^([a-zA-Z0-9_-]{11})$',
     ]
-    
+
     for pattern in patterns:
         match = re.search(pattern, url)
         if match:

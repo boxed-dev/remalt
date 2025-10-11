@@ -144,7 +144,6 @@ export default function WorkflowEditorPage() {
     'w': () => addNode('webpage', { x: 100, y: 100 }),
     'm': () => addNode('mindmap', { x: 100, y: 100 }),
     'd': () => addNode('pdf', { x: 100, y: 100 }),
-    'g': () => addNode('group', { x: 100, y: 100 }),
     // Zoom shortcuts
     '=': () => {
       // Will be handled by ReactFlow controls

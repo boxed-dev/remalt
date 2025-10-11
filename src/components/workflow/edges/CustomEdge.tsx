@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -24,14 +24,17 @@ export function CustomEdge({
 }: EdgeProps) {
   const deleteEdge = useWorkflowStore((state) => state.deleteEdge);
 
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
+  // Memoize path calculation for performance and consistency
+  const [edgePath, labelX, labelY] = useMemo(() => {
+    return getSmoothStepPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+    });
+  }, [sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition]);
 
   const handleDelete = useCallback(
     (event: React.MouseEvent) => {
@@ -41,20 +44,76 @@ export function CustomEdge({
     [deleteEdge, id]
   );
 
+  // Generate unique ID for animation
+  const animationId = `edge-flow-${id}`;
+
   return (
     <>
+      {/* Define the animated gradient in SVG defs */}
+      <defs>
+        <linearGradient id={animationId} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#10B981" stopOpacity="0.3" />
+          <stop offset="25%" stopColor="#059669" stopOpacity="0.8" />
+          <stop offset="50%" stopColor="#10B981" stopOpacity="0.3" />
+          <stop offset="75%" stopColor="#059669" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#10B981" stopOpacity="0.3" />
+          <animate
+            attributeName="x1"
+            values="0%;100%;200%"
+            dur="3s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="x2"
+            values="100%;200%;300%"
+            dur="3s"
+            repeatCount="indefinite"
+          />
+        </linearGradient>
+      </defs>
+
+      {/* Light green dotted background layer */}
+      <BaseEdge
+        path={edgePath}
+        style={{
+          ...style,
+          strokeWidth: selected ? 3.5 : 2.5,
+          stroke: '#D1FAE5',
+          strokeDasharray: '8 6',
+          strokeLinecap: 'round',
+          opacity: 0.6,
+        }}
+      />
+
+      {/* Animated dark green dotted layer */}
       <BaseEdge
         path={edgePath}
         markerEnd={markerEnd}
         style={{
           ...style,
-          strokeWidth: selected ? 3.5 : 3,
-          stroke: selected ? '#095D40' : '#9CA3AF',
-          strokeDasharray: selected ? '10 5' : 'none',
+          strokeWidth: selected ? 3.5 : 2.5,
+          stroke: selected ? '#047857' : `url(#${animationId})`,
+          strokeDasharray: '8 6',
           strokeLinecap: 'round',
-          transition: 'all 0.2s ease',
+          strokeDashoffset: 0,
+          animation: 'dash-flow 2s linear infinite',
         }}
       />
+
+      {/* CSS Animation for dash movement */}
+      <style>
+        {`
+          @keyframes dash-flow {
+            from {
+              stroke-dashoffset: 0;
+            }
+            to {
+              stroke-dashoffset: -28;
+            }
+          }
+        `}
+      </style>
+
       {selected && (
         <EdgeLabelRenderer>
           <div

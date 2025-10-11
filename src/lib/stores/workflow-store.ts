@@ -19,18 +19,6 @@ function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function removeNodeIdsFromGroups(nodes: WorkflowNode[], ids: string[]) {
-  nodes.forEach((node) => {
-    if (node.type === 'group' && 'groupedNodes' in node.data) {
-      const grouped = node.data.groupedNodes || [];
-      const filtered = grouped.filter((nodeId) => !ids.includes(nodeId));
-      if (filtered.length !== grouped.length) {
-        node.data.groupedNodes = filtered;
-      }
-    }
-  });
-}
-
 interface WorkflowStore {
   // State
   workflow: Workflow | null;
@@ -88,12 +76,6 @@ interface WorkflowStore {
 
   // Viewport Actions
   updateViewport: (viewport: Partial<Viewport>) => void;
-
-  // Group Actions
-  createGroup: (nodeIds: string[], position: Position) => void;
-  addNodesToGroup: (groupId: string, nodeIds: string[]) => void;
-  removeNodesFromGroup: (groupId: string, nodeIds: string[]) => void;
-  toggleGroupCollapse: (groupId: string) => void;
 
   // Utility
   getNode: (id: string) => WorkflowNode | undefined;
@@ -210,11 +192,7 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
     case 'group':
       return {
         ...baseData,
-        label: 'Group',
-        groupedNodes: [],
-        collapsed: false,
-        groupChatEnabled: false,
-        groupChatMessages: [],
+        title: undefined,
       } as NodeData;
     default:
       return { type } as NodeData;
@@ -323,6 +301,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
         type,
         position,
         data: { ...createDefaultNodeData(type), ...data },
+        // sensible defaults for group sizing so it's visible and usable immediately
+        style: type === 'group' ? { width: 640, height: 420, backgroundColor: '#F7F7F7' } : undefined,
+        zIndex: type === 'group' ? 1 : 2,
       };
 
       set((state) => {
@@ -374,6 +355,22 @@ export const useWorkflowStore = create<WorkflowStore>()(
     deleteNode: (id) => {
       set((state) => {
         if (state.workflow) {
+          // If deleting a group, detach its children to top-level
+          const nodeToDelete = state.workflow.nodes.find(n => n.id === id);
+          if (nodeToDelete?.type === 'group') {
+            state.workflow.nodes.forEach((n) => {
+              if (n.parentId === id) {
+                n.parentId = null;
+                // convert relative child position to absolute
+                n.position = {
+                  x: (nodeToDelete.position?.x || 0) + (n.position?.x || 0),
+                  y: (nodeToDelete.position?.y || 0) + (n.position?.y || 0),
+                };
+                n.zIndex = 2;
+              }
+            });
+          }
+
           state.workflow.nodes = state.workflow.nodes.filter((n) => n.id !== id);
           state.workflow.edges = state.workflow.edges.filter(
             (e) => e.source !== id && e.target !== id
@@ -391,6 +388,26 @@ export const useWorkflowStore = create<WorkflowStore>()(
 
       set((state) => {
         if (state.workflow) {
+          // For any groups being deleted, detach their children
+          const groupsBeingDeleted = new Set(
+            state.workflow.nodes.filter(n => ids.includes(n.id) && n.type === 'group').map(n => n.id)
+          );
+          if (groupsBeingDeleted.size > 0) {
+            state.workflow.nodes.forEach((n) => {
+              if (n.parentId && groupsBeingDeleted.has(n.parentId)) {
+                const parent = state.workflow!.nodes.find(p => p.id === n.parentId);
+                if (parent) {
+                  n.parentId = null;
+                  n.position = {
+                    x: (parent.position?.x || 0) + (n.position?.x || 0),
+                    y: (parent.position?.y || 0) + (n.position?.y || 0),
+                  };
+                  n.zIndex = 2;
+                }
+              }
+            });
+          }
+
           state.workflow.nodes = state.workflow.nodes.filter((n) => !ids.includes(n.id));
           state.workflow.edges = state.workflow.edges.filter(
             (e) => !ids.includes(e.source) && !ids.includes(e.target)
@@ -413,9 +430,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
               x: original.position.x + 50,
               y: original.position.y + 50,
             };
-            if (duplicate.type === 'group' && 'groupedNodes' in duplicate.data) {
-              duplicate.data.groupedNodes = [];
-            }
             state.workflow.nodes.push(duplicate);
             state.workflow.updatedAt = new Date().toISOString();
           }
@@ -431,7 +445,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
         target,
         sourceHandle,
         targetHandle,
-        type: 'default',
+        type: 'smoothstep',
       };
 
       set((state) => {
@@ -536,9 +550,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
               x: node.position.x + offset.x,
               y: node.position.y + offset.y,
             };
-            if (clone.type === 'group' && 'groupedNodes' in clone.data) {
-              clone.data.groupedNodes = [];
-            }
             return clone;
           });
           state.workflow.nodes.push(...newNodes);
@@ -552,93 +563,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
       set((state) => {
         if (state.workflow) {
           Object.assign(state.workflow.viewport, viewport);
-        }
-      });
-    },
-
-    // Group Actions
-    createGroup: (nodeIds, position) => {
-      set((state) => {
-        if (state.workflow) {
-          const existingIds = new Set(state.workflow.nodes.map((n) => n.id));
-          const uniqueIds = Array.from(new Set(nodeIds)).filter((nodeId) => existingIds.has(nodeId) && nodeId);
-
-          // Auto-increment group naming
-          const existingGroupNodes = state.workflow.nodes.filter(n => n.type === 'group');
-          const groupNumbers = existingGroupNodes
-            .map(n => {
-              const label = (n.data as any).label;
-              if (label && typeof label === 'string') {
-                const match = label.match(/^Group (\d+)$/);
-                return match ? parseInt(match[1], 10) : 0;
-              }
-              return 0;
-            })
-            .filter(num => num > 0);
-
-          const nextGroupNumber = groupNumbers.length > 0 ? Math.max(...groupNumbers) + 1 : 1;
-          const groupLabel = `Group ${nextGroupNumber}`;
-
-          const groupNode: WorkflowNode = {
-            id: crypto.randomUUID(),
-            type: 'group',
-            position,
-            data: {
-              label: groupLabel,
-              groupedNodes: uniqueIds,
-              collapsed: false,
-              groupChatEnabled: false,
-              groupChatMessages: [],
-            } as NodeData,
-          };
-          state.workflow.nodes.push(groupNode);
-          state.workflow.updatedAt = new Date().toISOString();
-          state.selectedNodes = [groupNode.id];
-          state.selectedEdges = [];
-        }
-      });
-    },
-
-    addNodesToGroup: (groupId, nodeIds) => {
-      set((state) => {
-        if (state.workflow) {
-          const groupNode = state.workflow.nodes.find((n) => n.id === groupId && n.type === 'group');
-          if (groupNode && 'groupedNodes' in groupNode.data) {
-            const existingNodes = new Set(groupNode.data.groupedNodes || []);
-            nodeIds.forEach((nodeId) => {
-              if (nodeId && nodeId !== groupId) {
-                existingNodes.add(nodeId);
-              }
-            });
-            groupNode.data.groupedNodes = Array.from(existingNodes);
-            state.workflow.updatedAt = new Date().toISOString();
-          }
-        }
-      });
-    },
-
-    removeNodesFromGroup: (groupId, nodeIds) => {
-      set((state) => {
-        if (state.workflow) {
-          const groupNode = state.workflow.nodes.find((n) => n.id === groupId && n.type === 'group');
-          if (groupNode && 'groupedNodes' in groupNode.data) {
-            groupNode.data.groupedNodes = (groupNode.data.groupedNodes || []).filter(
-              (id) => !nodeIds.includes(id)
-            );
-            state.workflow.updatedAt = new Date().toISOString();
-          }
-        }
-      });
-    },
-
-    toggleGroupCollapse: (groupId) => {
-      set((state) => {
-        if (state.workflow) {
-          const groupNode = state.workflow.nodes.find((n) => n.id === groupId && n.type === 'group');
-          if (groupNode && 'collapsed' in groupNode.data) {
-            groupNode.data.collapsed = !groupNode.data.collapsed;
-            state.workflow.updatedAt = new Date().toISOString();
-          }
         }
       });
     },
@@ -835,3 +759,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
     },
   }))
 );
+
+// Helper - currently a no-op since grouping handled via parentId; kept for compatibility
+function removeNodeIdsFromGroups(_nodes: WorkflowNode[], _ids: string[]) {
+  // Intentionally left blank. If groups track explicit child lists in future,
+  // this function can update them accordingly.
+}

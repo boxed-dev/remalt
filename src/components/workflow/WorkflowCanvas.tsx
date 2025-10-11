@@ -9,6 +9,13 @@ import {
   useEdgesState,
   type Node,
   type Edge,
+  type OnNodesChange,
+  type OnEdgesChange,
+  type Connection,
+  type OnMove,
+  type OnMoveEnd,
+  type Viewport,
+  ConnectionLineType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
@@ -136,7 +143,8 @@ function WorkflowCanvasInner() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [socialMediaDialogOpen, setSocialMediaDialogOpen] = useState(false);
   const [socialMediaDialogPosition, setSocialMediaDialogPosition] = useState<{ x: number; y: number } | null>(null);
-  const { screenToFlowPosition, getViewport, setViewport } = useReactFlow();
+  const reactFlowInstance = useReactFlow();
+  const { screenToFlowPosition, getViewport, setViewport } = reactFlowInstance;
 
   // Use individual selectors to avoid infinite loops
   const workflow = useWorkflowStore((state) => state.workflow);
@@ -161,13 +169,8 @@ function WorkflowCanvasInner() {
   const pasteNodes = useWorkflowStore((state) => state.pasteNodes);
   const copyNodes = useWorkflowStore((state) => state.copyNodes);
   const duplicateNode = useWorkflowStore((state) => state.duplicateNode);
-  const addNodesToGroup = useWorkflowStore((state) => state.addNodesToGroup);
   const alignNodes = useWorkflowStore((state) => state.alignNodes);
   const distributeNodes = useWorkflowStore((state) => state.distributeNodes);
-  const createGroup = useWorkflowStore((state) => state.createGroup);
-
-  // Track dragged node for group drop
-  const draggedNodeIdRef = useRef<string | null>(null);
 
   // Convert workflow nodes/edges to React Flow format
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -185,36 +188,52 @@ function WorkflowCanvasInner() {
     };
   }, [workflowViewport]);
 
-  // Sync workflow state to React Flow
+  // Sync workflow nodes to React Flow (memoized for immediate rendering)
+  const mappedNodes = useMemo(() => {
+    return (workflowNodes as WorkflowNode[]).map((node: WorkflowNode) => ({
+      id: node.id,
+      type: node.type,
+      position: node.parentId
+        ? { x: node.position.x, y: node.position.y }
+        : node.position,
+      data: node.data as Record<string, unknown>,
+      style: node.style,
+      parentId: node.parentId || undefined,
+      extent: node.parentId ? ('parent' as const) : undefined,
+      zIndex: typeof node.zIndex === 'number' ? node.zIndex : (node.type === 'group' ? 1 : 2),
+      // Allow group to be draggable from any empty area of its container.
+      // Child nodes are separate DOM elements and won't trigger group drag.
+      dragHandle: node.type === 'group' ? undefined : undefined,
+      draggable: node.type === 'group' ? true : undefined,
+      connectable: node.type === 'group' ? true : undefined,
+      selectable: node.type === 'group' ? true : undefined,
+    }));
+  }, [workflowNodes]);
+
+  // Sync workflow edges to React Flow (memoized for immediate rendering)
+  const mappedEdges = useMemo(() => {
+    return (workflowEdges as WorkflowEdge[]).map((edge: WorkflowEdge) => ({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      sourceHandle: edge.sourceHandle,
+      targetHandle: edge.targetHandle,
+      type: edge.type || 'smoothstep',
+      animated: edge.animated,
+      style: edge.style,
+      label: edge.label,
+      data: edge.data as Record<string, unknown>,
+    }));
+  }, [workflowEdges]);
+
+  // Apply mapped data to React Flow state
   useEffect(() => {
-    setNodes(
-      (workflowNodes as WorkflowNode[]).map((node: WorkflowNode) => ({
-        id: node.id,
-        type: node.type,
-        position: node.position,
-        data: node.data as Record<string, unknown>,
-        style: node.style,
-        className: draggedNodeIdRef.current === node.id ? 'dragging-node' : undefined,
-      }))
-    );
-  }, [workflowNodes, setNodes]);
+    setNodes(mappedNodes);
+  }, [mappedNodes, setNodes]);
 
   useEffect(() => {
-    setEdges(
-      (workflowEdges as WorkflowEdge[]).map((edge: WorkflowEdge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle,
-        targetHandle: edge.targetHandle,
-        type: edge.type,
-        animated: edge.animated,
-        style: edge.style,
-        label: edge.label,
-        data: edge.data as Record<string, unknown>,
-      }))
-    );
-  }, [workflowEdges, setEdges]);
+    setEdges(mappedEdges);
+  }, [mappedEdges, setEdges]);
 
   const scheduleViewportPersist = useCallback(
     (viewport: Viewport) => {
@@ -377,27 +396,6 @@ function WorkflowCanvasInner() {
     [deleteEdges]
   );
 
-  // Handle node drag start
-  const onNodeDragStart = useCallback((_event: React.MouseEvent, node: Node) => {
-    draggedNodeIdRef.current = node.id;
-  }, []);
-
-  // Handle node drag stop
-  const onNodeDragStop = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
-      const draggedId = draggedNodeIdRef.current;
-      const targetGroupId = (window as any).__targetGroupId;
-
-      draggedNodeIdRef.current = null;
-      (window as any).__targetGroupId = null;
-
-      // If we have a target group, add the node to it
-      if (draggedId && targetGroupId && draggedId !== targetGroupId) {
-        addNodesToGroup(targetGroupId, [draggedId]);
-      }
-    },
-    [addNodesToGroup]
-  );
 
   const onDragOver = useCallback((event: ReactDragEvent) => {
     event.preventDefault();
@@ -418,10 +416,134 @@ function WorkflowCanvasInner() {
         y: event.clientY,
       });
 
-      addNode(type, position);
+      // If dropping while hovering a group, set as child
+      const intersectingGroups = reactFlowInstance
+        .getNodes()
+        .filter((n) => n.type === 'group')
+        .filter((g) => reactFlowInstance.isNodeIntersecting({ id: g.id }, { x: position.x, y: position.y, width: 1, height: 1 }, true));
+
+      if (intersectingGroups.length > 0 && type !== 'group') {
+        // take top-most by zIndex
+        const target = intersectingGroups.sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))[0];
+        const targetNode = workflowNodes.find((n) => n.id === target.id);
+        const relX = position.x - (targetNode?.position.x || 0);
+        const relY = position.y - (targetNode?.position.y || 0);
+        const child = addNode(type, { x: relX, y: relY });
+        // update parent linkage and zIndex
+        useWorkflowStore.getState().updateNode(child.id, { parentId: target.id, zIndex: 2 });
+      } else {
+        addNode(type, position);
+      }
     },
-    [addNode, screenToFlowPosition]
+    [addNode, screenToFlowPosition, workflowNodes, reactFlowInstance]
   );
+
+  // Highlight group under dragged node
+  const onNodeDrag = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      const center = {
+        x: node.position.x + (node.width || 0) / 2,
+        y: node.position.y + (node.height || 0) / 2,
+      };
+      const groups = reactFlowInstance
+        .getNodes()
+        .filter((n) => n.type === 'group')
+        .map((g) => ({
+          g,
+          hit: reactFlowInstance.isNodeIntersecting({ id: g.id }, { x: center.x, y: center.y, width: 1, height: 1 }, true),
+        }));
+      setNodes((prev) =>
+        prev.map((n) =>
+          n.type === 'group'
+            ? {
+                ...n,
+                data: {
+                  ...(n.data as Record<string, unknown>),
+                  isDragOver: !!groups.find((x) => x.g.id === n.id && x.hit),
+                },
+              }
+            : n
+        )
+      );
+    },
+    [reactFlowInstance, setNodes]
+  );
+
+  const onNodeDragStart = useCallback((_: React.MouseEvent, node: Node) => {
+    useWorkflowStore.getState().updateNode(node.id, { zIndex: 1000 });
+  }, []);
+
+  const onNodeDragStop = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      // clear highlights
+      setNodes((prev) =>
+        prev.map((n) =>
+          n.type === 'group'
+            ? { ...n, data: { ...(n.data as Record<string, unknown>), isDragOver: false } }
+            : n
+        )
+      );
+
+      // Reparent if over a group
+      const center = {
+        x: node.position.x + (node.width || 0) / 2,
+        y: node.position.y + (node.height || 0) / 2,
+      };
+      const hitGroups = reactFlowInstance
+        .getNodes()
+        .filter((n) => n.type === 'group')
+        .filter((g) => reactFlowInstance.isNodeIntersecting({ id: g.id }, { x: center.x, y: center.y, width: 1, height: 1 }, true));
+      if (hitGroups.length > 0) {
+        const target = hitGroups.sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))[0];
+        const parent = useWorkflowStore.getState().getNode(target.id);
+        if (parent) {
+          const relX = node.position.x - parent.position.x;
+          const relY = node.position.y - parent.position.y;
+          useWorkflowStore.getState().updateNode(node.id, { parentId: parent.id, zIndex: 2 });
+          useWorkflowStore.getState().updateNodePosition(node.id, { x: relX, y: relY });
+        }
+      } else {
+        // If dragged out from a group, convert back to absolute
+        const current = useWorkflowStore.getState().getNode(node.id);
+        if (current?.parentId) {
+          const parent = useWorkflowStore.getState().getNode(current.parentId);
+          if (parent) {
+            useWorkflowStore.getState().updateNode(node.id, { parentId: null });
+            useWorkflowStore.getState().updateNodePosition(node.id, {
+              x: parent.position.x + node.position.x,
+              y: parent.position.y + node.position.y,
+            });
+          }
+        }
+      }
+      // reset elevated z-index for dragged node
+      useWorkflowStore.getState().updateNode(node.id, { zIndex: node.parentId ? 2 : 2 });
+    },
+    [reactFlowInstance, setNodes]
+  );
+
+  const onSelectionChange = useCallback(({ nodes: selected }: { nodes: Node[]; edges: Edge[] }) => {
+    const store = useWorkflowStore.getState();
+    const selectedGroup = selected.find((n) => n.type === 'group');
+    if (selectedGroup) {
+      // raise group and its children
+      store.updateNode(selectedGroup.id, { zIndex: 50 });
+      const all = store.workflow?.nodes || [];
+      all
+        .filter((n) => n.parentId === selectedGroup.id)
+        .forEach((child) => store.updateNode(child.id, { zIndex: 51 }));
+    } else {
+      // reset all group and children z-indices to defaults
+      const all = store.workflow?.nodes || [];
+      all.forEach((n) => {
+        if (n.type === 'group') {
+          store.updateNode(n.id, { zIndex: 1 });
+        } else if (n.parentId) {
+          store.updateNode(n.id, { zIndex: 2 });
+        }
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
@@ -568,15 +690,17 @@ function WorkflowCanvasInner() {
         onConnect={onConnect}
         onMove={onMove}
         onMoveEnd={onMoveEnd}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
         onPaneClick={onPaneClick}
         onPaneContextMenu={onPaneContextMenu}
         onNodeContextMenu={onNodeContextMenu}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
-        onNodeDragStart={onNodeDragStart}
-        onNodeDragStop={onNodeDragStop}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onSelectionChange={onSelectionChange}
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
         maxZoom={4}
@@ -589,6 +713,7 @@ function WorkflowCanvasInner() {
         selectionOnDrag={controlMode === 'pointer' && !spacePressed}
         panActivationKeyCode={null}
         proOptions={{ hideAttribution: true }}
+        connectionLineType={ConnectionLineType.SmoothStep}
         defaultEdgeOptions={{
           type: 'smoothstep',
           animated: false,
@@ -669,20 +794,8 @@ function WorkflowCanvasInner() {
         onDelete={(nodeId) => {
           deleteNode(nodeId);
         }}
-        onAddToGroup={(nodeId) => {
-          // Find all group nodes
-          const groups = workflowNodes.filter((n) => n.type === 'group');
-          if (groups.length > 0) {
-            // Add to first group for now
-            // Future: Show group selector dialog
-            addNodesToGroup(groups[0].id, [nodeId]);
-          } else {
-            // Create new group with this node
-            const node = workflowNodes.find((n) => n.id === nodeId);
-            if (node) {
-              createGroup([nodeId], { x: node.position.x - 50, y: node.position.y - 50 });
-            }
-          }
+        onAddToGroup={() => {
+          // Group functionality removed
         }}
         onAddNote={() => {
           const node = workflowNodes.find((n) => n.id === nodeContextMenu?.nodeId);
@@ -704,13 +817,7 @@ function WorkflowCanvasInner() {
           copyNodes(selectedNodes);
         }}
         onGroup={() => {
-          // Calculate center position of selected nodes
-          const selectedNodeObjects = workflowNodes.filter((n) => selectedNodes.includes(n.id));
-          if (selectedNodeObjects.length > 0) {
-            const avgX = selectedNodeObjects.reduce((sum, n) => sum + n.position.x, 0) / selectedNodeObjects.length;
-            const avgY = selectedNodeObjects.reduce((sum, n) => sum + n.position.y, 0) / selectedNodeObjects.length;
-            createGroup(selectedNodes, { x: avgX - 150, y: avgY - 150 });
-          }
+          // Group functionality removed
         }}
         onAlign={(direction) => {
           alignNodes(selectedNodes, direction);
@@ -738,13 +845,7 @@ function WorkflowCanvasInner() {
           distributeNodes(selectedNodes, direction);
         }}
         onGroup={() => {
-          // Calculate center position of selected nodes
-          const selectedNodeObjects = workflowNodes.filter((n) => selectedNodes.includes(n.id));
-          if (selectedNodeObjects.length > 0) {
-            const avgX = selectedNodeObjects.reduce((sum, n) => sum + n.position.x, 0) / selected_mod_0.length;
-            const avgY = selectedNodeObjects.reduce((sum, n) => sum + n.position.y, 0) / selected_mod_0.length;
-            createGroup(selectedNodes, { x: avgX - 150, y: avgY - 150 });
-          }
+          // Group functionality removed
         }}
       />
 

@@ -1,5 +1,6 @@
 import type { NodeType } from '@/types/workflow';
-import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Type, Lightbulb, FileCode, Globe, MessageSquare, Link, Folder } from 'lucide-react';
+import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Type, Lightbulb, FileCode, Globe, MessageSquare, Link } from 'lucide-react';
+import { Folder } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // Node type metadata
@@ -138,12 +139,12 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
   group: {
     type: 'group',
     label: 'Group',
-    description: 'Group nodes together with optional group chat',
+    description: 'Container to organize nodes on the canvas',
     category: 'structure',
-    color: '#6b7280',
+    color: '#5B7FE8',
     icon: Folder,
-    defaultWidth: 720,
-    defaultHeight: 480,
+    defaultWidth: 640,
+    defaultHeight: 420,
   },
 };
 

@@ -52,6 +52,8 @@ export interface WorkflowNode {
   data: NodeData;
   style?: NodeStyle;
   metadata?: NodeMetadata;
+  parentId?: string | null;
+  zIndex?: number;
 }
 
 export interface Position {
@@ -105,7 +107,6 @@ export interface PDFNodeData extends BaseNodeData {
   parseStatus?: 'idle' | 'parsing' | 'success' | 'error';
   parseError?: string;
 }
-
 // Voice Note Node
 export interface VoiceNodeData extends BaseNodeData {
   audioUrl?: string;
@@ -314,13 +315,9 @@ export interface ConnectorNodeData extends BaseNodeData {
   metadata?: Record<string, unknown>;
 }
 
-// Group Node (for grouping and batch operations)
+// Group / Container Node
 export interface GroupNodeData extends BaseNodeData {
-  groupedNodes: string[]; // IDs of nodes in this group
-  groupColor?: string;
-  collapsed?: boolean;
-  groupChatEnabled?: boolean;
-  groupChatMessages?: ChatMessage[];
+  title?: string;
 }
 
 // Union type for all node data

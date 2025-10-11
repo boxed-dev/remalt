@@ -11,8 +11,7 @@ import type {
   WebpageNodeData,
   MindMapNodeData,
   TemplateNodeData,
-  ChatNodeData,
-  GroupNodeData
+  ChatNodeData
 } from '@/types/workflow';
 
 export interface ChatContext {
@@ -117,11 +116,6 @@ export interface ChatContext {
     status: 'idle' | 'generating' | 'success' | 'error';
     aiInstructions?: string;
   }>;
-  groupChats: Array<{
-    groupedNodesCount: number;
-    messages?: string[];
-    aiInstructions?: string;
-  }>;
 }
 
 /**
@@ -182,7 +176,6 @@ export function buildChatContext(
     linkedInPosts: [],
     mindMaps: [],
     templates: [],
-    groupChats: [],
   };
 
   if (!workflow) return context;
@@ -194,12 +187,37 @@ export function buildChatContext(
 
   // Get the source nodes
   const sourceNodeIds = incomingEdges.map((edge) => edge.source);
-  const sourceNodes = workflow.nodes.filter((node) =>
-    sourceNodeIds.includes(node.id)
-  );
+  
+  // Collect all nodes to process: direct sources + their children if they're groups
+  const nodesToProcess: WorkflowNode[] = [];
+  const processedIds = new Set<string>();
+  
+  sourceNodeIds.forEach((sourceId) => {
+    const sourceNode = workflow.nodes.find((n) => n.id === sourceId);
+    if (!sourceNode || processedIds.has(sourceId)) return;
+    
+    nodesToProcess.push(sourceNode);
+    processedIds.add(sourceId);
+    
+    // If it's a group, also include all its children
+    if (sourceNode.type === 'group') {
+      const children = workflow.nodes.filter((n) => n.parentId === sourceId);
+      children.forEach((child) => {
+        if (!processedIds.has(child.id)) {
+          nodesToProcess.push(child);
+          processedIds.add(child.id);
+        }
+      });
+    }
+  });
 
   // Extract context from each source node
-  sourceNodes.forEach((node) => {
+  nodesToProcess.forEach((node) => {
+    // Skip group nodes themselves (they don't have content)
+    if (node.type === 'group') {
+      return;
+    }
+    
     switch (node.type) {
       case 'text': {
         const textData = node.data as TextNodeData;
@@ -389,36 +407,6 @@ export function buildChatContext(
             .map(msg => `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.content}`)
             .join('\n');
           context.textContext.push(`Previous conversation:\n${chatHistory}`);
-        }
-        break;
-      }
-
-      case 'group': {
-        const groupData = node.data as GroupNodeData;
-        if (groupData.groupChatEnabled && groupData.groupChatMessages) {
-          const groupMessages = groupData.groupChatMessages
-            .map(msg => msg.content)
-            .filter(Boolean);
-          context.groupChats.push({
-            groupedNodesCount: groupData.groupedNodes?.length || 0,
-            messages: groupMessages,
-            aiInstructions: safeGetInstructions(groupData),
-          });
-        }
-
-        // Also collect context from all grouped nodes
-        if (groupData.groupedNodes && groupData.groupedNodes.length > 0) {
-          const groupedNodes = workflow.nodes.filter(n =>
-            groupData.groupedNodes.includes(n.id)
-          );
-
-          // Recursively process grouped nodes
-          groupedNodes.forEach(groupedNode => {
-            const nodeContext = extractNodeContext(groupedNode);
-            if (nodeContext) {
-              context.textContext.push(nodeContext);
-            }
-          });
         }
         break;
       }

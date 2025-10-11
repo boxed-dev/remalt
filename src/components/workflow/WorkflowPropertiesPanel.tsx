@@ -9,7 +9,6 @@ import type {
   TextNodeData,
   YouTubeNodeData,
   ChatNodeData,
-  GroupNodeData,
 } from '@/types/workflow';
 
 export function WorkflowPropertiesPanel() {
@@ -85,13 +84,6 @@ export function WorkflowPropertiesPanel() {
         )}
         {selectedNode.type === 'chat' && (
           <ChatNodeProperties nodeId={selectedNode.id} data={selectedNode.data as ChatNodeData} />
-        )}
-        {selectedNode.type === 'group' && (
-          <GroupNodeProperties
-            nodeId={selectedNode.id}
-            data={selectedNode.data as GroupNodeData}
-            workflowNodes={workflow?.nodes || []}
-          />
         )}
         {/* Add more node types as needed */}
       </div>
@@ -243,99 +235,6 @@ function ChatNodeProperties({ nodeId, data }: { nodeId: string; data: ChatNodeDa
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// Group Node Properties
-function GroupNodeProperties({
-  nodeId,
-  data,
-  workflowNodes,
-}: {
-  nodeId: string;
-  data: GroupNodeData;
-  workflowNodes: WorkflowNode[];
-}) {
-  const addNodesToGroup = useWorkflowStore((state) => state.addNodesToGroup);
-  const removeNodesFromGroup = useWorkflowStore((state) => state.removeNodesFromGroup);
-
-  const groupedNodes = data.groupedNodes || [];
-  const availableNodes = workflowNodes.filter((node) =>
-    node.id !== nodeId && node.type !== 'group' && !groupedNodes.includes(node.id)
-  );
-
-  const handleAddNode = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = event.target.value;
-    if (!value) return;
-    addNodesToGroup(nodeId, [value]);
-    event.target.value = '';
-  };
-
-  const handleRemoveNode = (id: string) => {
-    removeNodesFromGroup(nodeId, [id]);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-[13px] font-medium text-[#1A1D21] mb-2">Group Members</label>
-        {groupedNodes.length === 0 ? (
-          <div className="text-[12px] text-[#6B7280] bg-[#F5F5F7] px-3 py-2 rounded-lg">
-            No nodes added yet. Connect nodes to this group to share their context.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {groupedNodes.map((memberId) => {
-              const member = workflowNodes.find((node) => node.id === memberId);
-              return (
-                <div
-                  key={memberId}
-                  className="flex items-center justify-between px-3 py-2 border border-[#E8ECEF] rounded-lg bg-[#F9FAFB]"
-                >
-                  <div>
-                    <div className="text-[12px] font-medium text-[#1A1D21]">
-                      {member?.type || 'Node'}
-                    </div>
-                    <div className="text-[11px] text-[#6B7280] font-mono">{memberId.slice(0, 8)}</div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveNode(memberId)}
-                    className="h-7 px-2 text-[#B91C1C] hover:text-[#991B1B]"
-                  >
-                    <span className="text-[11px] font-medium">Remove</span>
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-[13px] font-medium text-[#1A1D21] mb-2">Add Nodes</label>
-        <select
-          defaultValue=""
-          onChange={handleAddNode}
-          className="w-full px-3 py-2 text-[13px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] bg-white"
-        >
-          <option value="" disabled>
-            Select a node to add
-          </option>
-          {availableNodes.length === 0 && (
-            <option value="" disabled>
-              No eligible nodes available
-            </option>
-          )}
-          {availableNodes.map((node) => (
-            <option key={node.id} value={node.id}>
-              {node.type} — {node.id.slice(0, 8)}
-            </option>
-          ))}
-        </select>
-      </div>
     </div>
   );
 }

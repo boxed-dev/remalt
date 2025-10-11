@@ -37,7 +37,6 @@ const addBlockShortcuts: ShortcutItem[] = [
   { label: "Website", keys: ["W"] },
   { label: "Mindmap", keys: ["M"] },
   { label: "Document", keys: ["D"] },
-  { label: "Group", keys: ["G"] },
 ]
 
 function ShortcutRow({ label, keys }: ShortcutItem) {

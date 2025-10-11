@@ -21,8 +21,7 @@ export async function POST(req: NextRequest) {
       instagramReels,
       linkedInPosts,
       mindMaps,
-      templates,
-      groupChats
+      templates
     } = await req.json();
 
     // Validate API key
@@ -390,25 +389,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Add group chats
-    if (groupChats && groupChats.length > 0) {
-      systemContext += '\n\n=== Group Conversations ===\n';
-      groupChats.forEach((group: { groupedNodesCount: number; messages?: string[]; aiInstructions?: string }, index: number) => {
-        try {
-          systemContext += `\n[Group ${index + 1} - ${group.groupedNodesCount} nodes]:\n`;
-          if (group.aiInstructions) {
-            systemContext += `📝 AI Processing Instructions: ${group.aiInstructions}\n\n`;
-          }
-          if (group.messages && group.messages.length > 0) {
-            group.messages.forEach((msg: string) => {
-              systemContext += `${msg}\n`;
-            });
-          }
-        } catch (error) {
-          console.error(`[Context] Error processing group chat item ${index}:`, error);
-        }
-      });
-    }
 
     // Get the latest user message
     const latestMessage = messages[messages.length - 1];
@@ -469,7 +449,6 @@ User: ${latestMessage.content}`;
     console.log('LinkedIn posts:', linkedInPosts?.length || 0);
     console.log('Mind maps:', mindMaps?.length || 0);
     console.log('Templates:', templates?.length || 0);
-    console.log('Group chats:', groupChats?.length || 0);
     console.log('===================\n');
 
     // Use streaming for faster perceived performance
