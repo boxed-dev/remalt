@@ -135,7 +135,12 @@ export default function RootLayout({
           name="google-site-verification"
           content="your-verification-code"
         />
-        <script src="https://getlaunchlist.com/js/widget.js" defer></script>
+<script
+          dangerouslySetInnerHTML={{
+            __html: `prefinery=window.prefinery||function(){(window.prefinery.q=window.prefinery.q||[]).push(arguments)};`
+          }}
+        />
+        <script src="https://widget.prefinery.com/widget/v2/qjkmmqh8.js" defer />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         {/* <AuthHeader /> */}

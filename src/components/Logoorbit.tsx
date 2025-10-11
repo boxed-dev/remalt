@@ -48,7 +48,7 @@ function MobileOrbitingCircles() {
         reverse
       >
         <Image
-          src="/logos/facebook1.png"
+          src="/logos/fb.png"
           alt="Facebook"
           width={35}
           height={35}
@@ -94,7 +94,7 @@ function MobileOrbitingCircles() {
         delay={0}
       >
         <Image
-          src="/logos/linkedin1.png"
+          src="/logos/linkedIn1.png"
           alt="LinkedIn"
           width={35}
           height={35}
@@ -108,7 +108,7 @@ function MobileOrbitingCircles() {
         delay={5.5}
       >
         <Image
-          src="/logos/insta1.svg"
+          src="/logos/instal.png"
           alt="Instagram"
           width={35}
           height={35}
@@ -136,7 +136,7 @@ function MobileOrbitingCircles() {
         delay={16.5}
       >
         <Image
-          src="/logos/tiktok1.png"
+          src="/logos/tt.png"
           alt="TikTok"
           width={35}
           height={35}
@@ -256,7 +256,7 @@ function DesktopOrbitingCircles() {
         reverse
       >
         <Image
-          src="/logos/facebook1.png"
+          src="/logos/fb.png"
           alt="Facebook"
           width={50}
           height={50}
@@ -302,7 +302,7 @@ function DesktopOrbitingCircles() {
         delay={0}
       >
         <Image
-          src="/logos/linkedin1.png"
+          src="/logos/linkedIn1.png"
           alt="LinkedIn"
           width={50}
           height={50}
@@ -316,7 +316,7 @@ function DesktopOrbitingCircles() {
         delay={5.5}
       >
         <Image
-          src="/logos/insta1.svg"
+          src="/logos/instal.png"
           alt="Instagram"
           width={50}
           height={50}
@@ -344,7 +344,7 @@ function DesktopOrbitingCircles() {
         delay={16.5}
       >
         <Image
-          src="/logos/tiktok1.png"
+          src="/logos/tt.png"
           alt="TikTok"
           width={50}
           height={50}

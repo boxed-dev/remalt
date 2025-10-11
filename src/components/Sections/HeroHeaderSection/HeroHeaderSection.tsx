@@ -13,7 +13,7 @@ export default function HeroHeaderSection() {
   };
 
   return (
-  <section className="w-full min-h-[100dvh] flex items-center justify-center bg-white py-4 sm:py-6 lg:py-8 relative overflow-hidden">
+    <section className="w-full min-h-[100dvh] flex items-center justify-center bg-white py-4 sm:py-6 lg:py-8 relative overflow-hidden">
       <div className="absolute inset-0 w-full h-full">
         <Silk
           speed={10}
@@ -43,22 +43,25 @@ export default function HeroHeaderSection() {
           </div>
 
           <p className="font-inter font-medium text-white text-base sm:text-lg md:text-xl lg:text-2xl text-center tracking-[-0.01em] leading-[1.6] max-w-3xl mt-2 sm:mt-4 px-4 [text-shadow:_0_1px_10px_rgb(0_0_0_/_40%)]">
-           The AI Canvas that helps founders, creators, and marketers turn content into sales.
+            The AI Canvas that helps founders, creators, and marketers turn
+            content into sales.
           </p>
         </header>
 
         <div className="flex flex-col items-center gap-4 w-full mt-2 sm:mt-4">
           <div className="relative w-full flex justify-center px-4">
             <GetStartedButton
-              onClick={handleGetStarted}
-              className="h-12 sm:h-14 px-8 sm:px-10 bg-white hover:opacity-90 font-inter font-semibold text-black text-base sm:text-lg text-center tracking-[-0.01em] rounded-xl shadow-2xl border border-gray-200 transition-all duration-200 w-full sm:w-auto max-w-xs"
+            
+              // onClick={handleGetStarted}
+              className="prefinery-form-cta h-12 sm:h-14 px-8 sm:px-10 bg-white hover:opacity-90 font-inter font-semibold text-black text-base sm:text-lg text-center tracking-[-0.01em] rounded-xl shadow-2xl border border-gray-200 transition-all duration-200 w-full sm:w-auto max-w-xs"
             >
               Get Early Access
             </GetStartedButton>
+            {/* <button className="prefinery-form-cta">Join!</button> */}
+
+             <div ></div>
           </div>
-          
         </div>
-        
       </motion.div>
     </section>
   );
