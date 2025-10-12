@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import type { DragEvent as ReactDragEvent } from 'react';
 import {
   ReactFlow,
@@ -157,6 +158,7 @@ function WorkflowCanvasInner() {
   const clipboard = useWorkflowStore((state) => state.clipboard);
 
   const addNode = useWorkflowStore((state) => state.addNode);
+  const updateNode = useWorkflowStore((state) => state.updateNode);
   const updateNodePosition = useWorkflowStore((state) => state.updateNodePosition);
   const deleteNode = useWorkflowStore((state) => state.deleteNode);
   const deleteNodes = useWorkflowStore((state) => state.deleteNodes);
@@ -201,12 +203,10 @@ function WorkflowCanvasInner() {
       parentId: node.parentId || undefined,
       extent: node.parentId ? ('parent' as const) : undefined,
       zIndex: typeof node.zIndex === 'number' ? node.zIndex : (node.type === 'group' ? 1 : 2),
-      // Allow group to be draggable from any empty area of its container.
-      // Child nodes are separate DOM elements and won't trigger group drag.
-      dragHandle: node.type === 'group' ? undefined : undefined,
-      draggable: node.type === 'group' ? true : undefined,
-      connectable: node.type === 'group' ? true : undefined,
-      selectable: node.type === 'group' ? true : undefined,
+      // Make groups fully draggable by removing the custom drag handle
+      draggable: true,
+      connectable: true,
+      selectable: true,
     }));
   }, [workflowNodes]);
 
@@ -284,6 +284,17 @@ function WorkflowCanvasInner() {
       changes.forEach((change) => {
         if (change.type === 'position' && change.position && !change.dragging) {
           updateNodePosition(change.id, change.position);
+        } else if (change.type === 'dimensions' && (change as any).dimensions) {
+          // Handle dimension changes from NodeResizer
+          const dimChange = change as any;
+          if (dimChange.resizing === false && dimChange.dimensions) {
+            updateNode(change.id, {
+              style: {
+                width: dimChange.dimensions.width,
+                height: dimChange.dimensions.height,
+              }
+            });
+          }
         } else if (change.type === 'remove') {
           deleteNode(change.id);
         } else if (change.type === 'select') {
@@ -293,7 +304,7 @@ function WorkflowCanvasInner() {
         }
       });
     },
-    [onNodesChange, updateNodePosition, deleteNode, selectNode]
+    [onNodesChange, updateNodePosition, deleteNode, selectNode, updateNode]
   );
 
   // Handle edge changes
@@ -438,40 +449,73 @@ function WorkflowCanvasInner() {
     [addNode, screenToFlowPosition, workflowNodes, reactFlowInstance]
   );
 
-  // Highlight group under dragged node
+  // Highlight group under dragged node with improved detection (throttled with rAF)
+  const dragRafRef = useRef<number | null>(null);
+  const lastDragPayloadRef = useRef<{ nodeId: string; bounds: { x: number; y: number; width: number; height: number } } | null>(null);
+
+  const processDragHighlight = useCallback((nodeId: string, bounds: { x: number; y: number; width: number; height: number }) => {
+    const groups = reactFlowInstance
+      .getNodes()
+      .filter((n) => n.type === 'group' && n.id !== nodeId)
+      .map((g) => ({
+        g,
+        hit: reactFlowInstance.isNodeIntersecting(
+          { id: g.id },
+          {
+            x: bounds.x + bounds.width * 0.25,
+            y: bounds.y + bounds.height * 0.25,
+            width: bounds.width * 0.5,
+            height: bounds.height * 0.5,
+          },
+          true
+        ),
+      }));
+
+    // Only update nodes whose isDragOver actually changed to minimize renders
+    setNodes((prev) =>
+      prev.map((n) => {
+        if (n.type !== 'group') return n;
+        const hit = !!groups.find((x) => x.g.id === n.id && x.hit);
+        const prevFlag = Boolean((n.data as any)?.isDragOver);
+        if (hit === prevFlag) return n;
+        return {
+          ...n,
+          data: {
+            ...(n.data as Record<string, unknown>),
+            isDragOver: hit,
+          },
+        };
+      })
+    );
+  }, [reactFlowInstance, setNodes]);
+
   const onNodeDrag = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      const center = {
-        x: node.position.x + (node.width || 0) / 2,
-        y: node.position.y + (node.height || 0) / 2,
+      const bounds = {
+        x: node.position.x,
+        y: node.position.y,
+        width: node.width || 0,
+        height: node.height || 0,
       };
-      const groups = reactFlowInstance
-        .getNodes()
-        .filter((n) => n.type === 'group')
-        .map((g) => ({
-          g,
-          hit: reactFlowInstance.isNodeIntersecting({ id: g.id }, { x: center.x, y: center.y, width: 1, height: 1 }, true),
-        }));
-      setNodes((prev) =>
-        prev.map((n) =>
-          n.type === 'group'
-            ? {
-                ...n,
-                data: {
-                  ...(n.data as Record<string, unknown>),
-                  isDragOver: !!groups.find((x) => x.g.id === n.id && x.hit),
-                },
-              }
-            : n
-        )
-      );
+
+      lastDragPayloadRef.current = { nodeId: node.id, bounds };
+      if (dragRafRef.current !== null) return;
+      dragRafRef.current = requestAnimationFrame(() => {
+        dragRafRef.current = null;
+        const payload = lastDragPayloadRef.current;
+        if (!payload) return;
+        processDragHighlight(payload.nodeId, payload.bounds);
+      });
     },
-    [reactFlowInstance, setNodes]
+    [processDragHighlight]
   );
 
   const onNodeDragStart = useCallback((_: React.MouseEvent, node: Node) => {
-    useWorkflowStore.getState().updateNode(node.id, { zIndex: 1000 });
-  }, []);
+    // Avoid heavy store writes during drag; lift z-index locally via setNodes
+    setNodes((prev) =>
+      prev.map((n) => (n.id === node.id ? { ...n, zIndex: 1000 } : n))
+    );
+  }, [setNodes]);
 
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -489,18 +533,62 @@ function WorkflowCanvasInner() {
         x: node.position.x + (node.width || 0) / 2,
         y: node.position.y + (node.height || 0) / 2,
       };
+      const store = useWorkflowStore.getState();
+      const isAncestor = (ancestorId: string, nodeId: string): boolean => {
+        let current = store.getNode(nodeId);
+        while (current?.parentId) {
+          if (current.parentId === ancestorId) {
+            return true;
+          }
+          current = store.getNode(current.parentId);
+        }
+        return false;
+      };
+
+      // Improved parenting logic with better intersection detection
+      const nodeBounds = {
+        x: node.position.x,
+        y: node.position.y,
+        width: node.width || 0,
+        height: node.height || 0,
+      };
+
       const hitGroups = reactFlowInstance
         .getNodes()
-        .filter((n) => n.type === 'group')
-        .filter((g) => reactFlowInstance.isNodeIntersecting({ id: g.id }, { x: center.x, y: center.y, width: 1, height: 1 }, true));
+        .filter((n) => n.type === 'group' && n.id !== node.id)
+        .filter((g) => !isAncestor(node.id, g.id))
+        .filter((g) => {
+          // Use 50% overlap detection for more reliable parenting
+          return reactFlowInstance.isNodeIntersecting(
+            { id: g.id },
+            {
+              x: nodeBounds.x + nodeBounds.width * 0.25,
+              y: nodeBounds.y + nodeBounds.height * 0.25,
+              width: nodeBounds.width * 0.5,
+              height: nodeBounds.height * 0.5
+            },
+            true
+          );
+        });
+
       if (hitGroups.length > 0) {
-        const target = hitGroups.sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))[0];
-        const parent = useWorkflowStore.getState().getNode(target.id);
+        // Sort by z-index and then by intersection area for better targeting
+        const target = hitGroups.sort((a, b) => {
+          const zDiff = (b.zIndex || 0) - (a.zIndex || 0);
+          if (zDiff !== 0) return zDiff;
+          // If same z-index, prefer the one with larger intersection
+          return (b.width || 0) * (b.height || 0) - (a.width || 0) * (a.height || 0);
+        })[0];
+
+        const parent = store.getNode(target.id);
         if (parent) {
           const relX = node.position.x - parent.position.x;
           const relY = node.position.y - parent.position.y;
           useWorkflowStore.getState().updateNode(node.id, { parentId: parent.id, zIndex: 2 });
           useWorkflowStore.getState().updateNodePosition(node.id, { x: relX, y: relY });
+
+          // Provide user feedback through console (can be replaced with toast notifications)
+          console.log(`Node "${node.id}" moved into group "${(parent.data as any)?.title || 'Unnamed'}"`);
         }
       } else {
         // If dragged out from a group, convert back to absolute
@@ -516,34 +604,30 @@ function WorkflowCanvasInner() {
           }
         }
       }
-      // reset elevated z-index for dragged node
-      useWorkflowStore.getState().updateNode(node.id, { zIndex: node.parentId ? 2 : 2 });
+      // reset elevated z-index locally
+      setNodes((prev) => prev.map((n) => (n.id === node.id ? { ...n, zIndex: 2 } : n)));
     },
     [reactFlowInstance, setNodes]
   );
 
+
   const onSelectionChange = useCallback(({ nodes: selected }: { nodes: Node[]; edges: Edge[] }) => {
-    const store = useWorkflowStore.getState();
+    // Use local node state for z-index highlighting to avoid store churn
     const selectedGroup = selected.find((n) => n.type === 'group');
     if (selectedGroup) {
-      // raise group and its children
-      store.updateNode(selectedGroup.id, { zIndex: 50 });
-      const all = store.workflow?.nodes || [];
-      all
-        .filter((n) => n.parentId === selectedGroup.id)
-        .forEach((child) => store.updateNode(child.id, { zIndex: 51 }));
+      setNodes((prev) => prev.map((n) => {
+        if (n.id === selectedGroup.id) return { ...n, zIndex: 50 };
+        if ((n as any).parentId === selectedGroup.id) return { ...n, zIndex: 51 };
+        return n;
+      }));
     } else {
-      // reset all group and children z-indices to defaults
-      const all = store.workflow?.nodes || [];
-      all.forEach((n) => {
-        if (n.type === 'group') {
-          store.updateNode(n.id, { zIndex: 1 });
-        } else if (n.parentId) {
-          store.updateNode(n.id, { zIndex: 2 });
-        }
-      });
+      setNodes((prev) => prev.map((n) => {
+        if (n.type === 'group') return { ...n, zIndex: 1 };
+        if ((n as any).parentId) return { ...n, zIndex: 2 };
+        return n;
+      }));
     }
-  }, []);
+  }, [setNodes]);
 
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
@@ -669,6 +753,89 @@ function WorkflowCanvasInner() {
       </div>
     );
   }
+
+  // Group keyboard shortcuts
+  const selectGroupChildren = useCallback(() => {
+    const store = useWorkflowStore.getState();
+    const selectedNodes = store.selectedNodes;
+
+    if (selectedNodes.length === 1) {
+      const node = store.getNode(selectedNodes[0]);
+      if (node?.type === 'group') {
+        // Select all children of the group
+        const children = store.workflow?.nodes.filter(n => n.parentId === node.id) || [];
+        const childIds = children.map(c => c.id);
+        store.selectNode(selectedNodes[0], true); // Keep group selected
+        childIds.forEach(id => store.selectNode(id, true));
+      }
+    }
+  }, []);
+
+  const ungroupSelectedNodes = useCallback(() => {
+    const store = useWorkflowStore.getState();
+    const selectedNodes = store.selectedNodes;
+
+    // Find selected groups
+    const selectedGroups = selectedNodes
+      .map(id => store.getNode(id))
+      .filter(node => node?.type === 'group');
+
+    if (selectedGroups.length > 0) {
+      // Ungroup the selected groups (detach their children)
+      selectedGroups.forEach(group => {
+        if (group) {
+          store.deleteNode(group.id); // This will handle detaching children
+        }
+      });
+    }
+  }, []);
+
+  const createGroupFromSelection = useCallback(() => {
+    const store = useWorkflowStore.getState();
+    const selectedNodes = store.selectedNodes;
+
+    if (selectedNodes.length < 2) return;
+
+    // Calculate bounding box of selected nodes
+    const nodes = selectedNodes.map(id => store.getNode(id)).filter(Boolean) as WorkflowNode[];
+    if (nodes.length < 2) return;
+
+    const minX = Math.min(...nodes.map(n => n.position.x));
+    const minY = Math.min(...nodes.map(n => n.position.y));
+    const maxX = Math.max(...nodes.map(n => n.position.x + ((n as any).width || 200)));
+    const maxY = Math.max(...nodes.map(n => n.position.y + ((n as any).height || 100)));
+
+    // Create group with some padding
+    const groupWidth = Math.max(maxX - minX + 80, 360);
+    const groupHeight = Math.max(maxY - minY + 80, 220);
+
+    const groupNode = store.addNode('group', { x: minX - 40, y: minY - 40 }, {
+      title: 'New Group'
+    });
+
+    // Set the style on the node after creation
+    store.updateNode(groupNode.id, {
+      style: { width: groupWidth, height: groupHeight, backgroundColor: '#F7F7F7' }
+    });
+
+    // Move selected nodes into the group
+    nodes.forEach(node => {
+      const relX = node.position.x - groupNode.position.x;
+      const relY = node.position.y - groupNode.position.y;
+      store.updateNode(node.id, { parentId: groupNode.id, zIndex: 2 });
+      store.updateNodePosition(node.id, { x: relX, y: relY });
+    });
+
+    // Select the new group
+    store.selectNode(groupNode.id);
+  }, []);
+
+  // Set up keyboard shortcuts
+  useKeyboardShortcuts({
+    'mod+g': createGroupFromSelection, // Ctrl+G / Cmd+G to group selected nodes
+    'mod+shift+g': ungroupSelectedNodes, // Ctrl+Shift+G / Cmd+Shift+G to ungroup
+    'mod+shift+c': selectGroupChildren, // Ctrl+Shift+C / Cmd+Shift+C to select group children
+  });
 
   return (
     <div

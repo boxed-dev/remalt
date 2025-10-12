@@ -543,15 +543,43 @@ export const useWorkflowStore = create<WorkflowStore>()(
       set((state) => {
         if (state.workflow && state.clipboard.length > 0) {
           const offset = position ? position : { x: 50, y: 50 };
+          const idMap = new Map<string, string>();
+
+          state.clipboard.forEach((node) => {
+            idMap.set(node.id, crypto.randomUUID());
+          });
+
           const newNodes = state.clipboard.map((node) => {
             const clone = deepClone(node);
-            clone.id = crypto.randomUUID();
-            clone.position = {
-              x: node.position.x + offset.x,
-              y: node.position.y + offset.y,
-            };
+            const originalParentId = node.parentId ?? null;
+            const newId = idMap.get(node.id);
+
+            if (!newId) {
+              return clone;
+            }
+
+            clone.id = newId;
+
+            if (originalParentId && idMap.has(originalParentId)) {
+              clone.parentId = idMap.get(originalParentId) ?? null;
+            } else {
+              clone.parentId = originalParentId;
+            }
+
+            const shouldOffset = !originalParentId || !idMap.has(originalParentId);
+
+            if (shouldOffset) {
+              clone.position = {
+                x: node.position.x + offset.x,
+                y: node.position.y + offset.y,
+              };
+            } else {
+              clone.position = deepClone(node.position);
+            }
+
             return clone;
           });
+
           state.workflow.nodes.push(...newNodes);
           state.workflow.updatedAt = new Date().toISOString();
         }
