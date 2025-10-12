@@ -245,7 +245,7 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
         <div
           className={cn(
             'relative flex items-center gap-3 px-4 py-3 rounded-[28px] transition-all duration-300',
-            'bg-white border-2 border-[#D4AF7F]/40',
+            'bg-white border-2 border-[#E8ECEF]',
             'shadow-sm hover:shadow-md',
             isRecording && 'border-[#095D40]/50 shadow-[0_0_0_3px_rgba(9,93,64,0.12)]',
             disabled && 'opacity-50 cursor-not-allowed',
@@ -258,10 +258,10 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
               type="button"
               onClick={onAddClick}
               disabled={disabled}
-              className="flex-shrink-0 p-1.5 rounded-full hover:bg-[#D4AF7F]/10 transition-all duration-200 disabled:cursor-not-allowed group"
+              className="flex-shrink-0 p-1.5 rounded-full hover:bg-gray-100 transition-all duration-200 disabled:cursor-not-allowed group"
               title="Add attachment"
             >
-              <Plus className="h-4 w-4 text-[#D4AF7F] group-hover:text-[#095D40] transition-colors" strokeWidth={2.5} />
+              <Plus className="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors" strokeWidth={2.5} />
             </button>
           )}
 
@@ -277,7 +277,7 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
               placeholder={placeholder}
               className={cn(
                 'w-full bg-transparent border-none outline-none',
-                'text-[14px] text-[#333333] placeholder:text-[#D4AF7F]/60',
+                'text-[14px] text-[#1A1D21] placeholder:text-[#9CA3AF]',
                 'transition-all duration-300',
                 isRecording && 'opacity-40',
                 disabled && 'cursor-not-allowed'
@@ -300,8 +300,8 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
             disabled={!isRecording || recordingState === 'processing'}
             className={cn(
               'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
-              'bg-[#D4AF7F] hover:bg-[#c9a06d]',
-              'shadow-[0_0_8px_rgba(212,175,127,0.4)]',
+              'bg-[#095D40] hover:bg-[#074A32]',
+              'shadow-[0_0_8px_rgba(9,93,64,0.4)]',
               'transition-all duration-200',
               isRecording ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
             )}
@@ -324,7 +324,7 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
             className={cn(
               'flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center',
               'transition-all duration-200',
-              !isRecording && !value.trim() && 'hover:bg-[#095D40]/5 border border-[#D4AF7F]/50',
+              !isRecording && !value.trim() && 'hover:bg-[#095D40]/5 border border-[#E8ECEF]',
               !isRecording && value.trim() && [
                 'bg-[#095D40] border-[#095D40]',
                 'hover:bg-[#074A32]',
