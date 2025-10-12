@@ -25,39 +25,37 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
   const isDragOver = (data as any)?.isDragOver;
   const borderClass = useMemo(() => {
     if (isDragOver) return 'border-4 border-[#10B981] border-dashed bg-[#10B981]/5 shadow-[0_0_0_3px_rgba(16,185,129,0.3)]';
-    if (selected) return 'border-2 border-[#2563EB] shadow-[0_0_0_2px_rgba(37,99,235,0.2)]';
+    if (selected) return 'border-0';
     return 'border border-[#E0E0E0] hover:border-[#CBD5E1]';
   }, [isDragOver, selected]);
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative !outline-none">
       <NodeResizer
         minWidth={360}
         minHeight={220}
         maxWidth={2000}
         maxHeight={1500}
-        color="#2563EB"
-        handleClassName="!w-4 !h-4 !bg-white !border-2 !border-[#2563EB] hover:!bg-[#2563EB] hover:!border-white !shadow-lg !rounded-sm !cursor-nw-resize"
-        lineClassName="!border-[#2563EB] !border-dashed !border-2"
+        color="transparent"
+        handleClassName="!w-6 !h-6 !bg-transparent !border-0 !cursor-nwse-resize"
+        lineClassName="!hidden"
         isVisible={selected}
         keepAspectRatio={false}
         handleStyle={{
-          width: 16,
-          height: 16,
-          borderRadius: 2,
+          width: 24,
+          height: 24,
+          background: 'transparent',
+          border: 'none',
         }}
         onResizeStart={() => {
-          // Provide feedback when resize starts
           console.log('Starting group resize');
         }}
         onResizeEnd={() => {
-          // Could add resize completion feedback here
           console.log('Group resize completed');
         }}
       />
-
       <div
-        className={`w-full h-full rounded-xl bg-[#F7F7F7]/80 shadow-[0_4px_12px_rgba(0,0,0,0.08)] ${borderClass} transition-all`}
+        className={`w-full h-full rounded-xl bg-[#F7F7F7]/80 ${borderClass} transition-all relative`}
         role="group"
         aria-label={`Group container: ${data.title || 'Unnamed'}`}
         aria-describedby={`group-description-${id}`}
@@ -147,6 +145,27 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
           className="relative w-full h-[calc(100%-48px)] rounded-b-xl bg-white"
           aria-label="Group content area - drag nodes here to add them to this group"
         />
+
+        {/* Custom curved bracket resize handle */}
+        {selected && (
+          <div className="absolute bottom-1 right-1 w-5 h-5 pointer-events-none z-10">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M 20 12 Q 20 20 12 20"
+                stroke="#1F2937"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </svg>
+          </div>
+        )}
 
         {/* Hidden description for screen readers */}
         <div

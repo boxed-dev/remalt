@@ -22,6 +22,52 @@
   animation: selection-ring 2s ease-in-out infinite;
 }
 
+/* Remove ALL borders and outlines from group nodes - both selected and unselected */
+.react-flow__node-group,
+.react-flow__node-group.selected,
+.react-flow__node[data-type="group"],
+.react-flow__node[data-type="group"].selected,
+.react-flow__node[class*="group"],
+.react-flow__node[class*="group"].selected {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+/* Ensure group nodes never gain hover/drag shadows from generic node rules */
+.react-flow__node-group:hover,
+.react-flow__node[data-type="group"]:hover,
+.react-flow__node[class*="group"]:hover,
+.react-flow__node-group.dragging,
+.react-flow__node[data-type="group"].dragging,
+.react-flow__node[class*="group"].dragging,
+.react-flow__node-group.dragging-node,
+.react-flow__node[data-type="group"].dragging-node,
+.react-flow__node[class*="group"].dragging-node {
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove pseudo-elements that might add borders */
+.react-flow__node-group.selected::before,
+.react-flow__node-group.selected::after,
+.react-flow__node[data-type="group"].selected::before,
+.react-flow__node[data-type="group"].selected::after,
+.react-flow__node[class*="group"].selected::before,
+.react-flow__node[class*="group"].selected::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Override any default ReactFlow selection styling */
+.react-flow__node-group.selected > *,
+.react-flow__node[data-type="group"].selected > *,
+.react-flow__node[class*="group"].selected > * {
+  outline: none !important;
+  border: none !important;
+}
+
 @keyframes selection-ring {
   0%, 100% {
     box-shadow: 0 0 0 3px #095D40, 0 6px 20px rgba(9, 93, 64, 0.25), 0 0 40px rgba(9, 93, 64, 0.15);

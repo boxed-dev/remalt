@@ -203,6 +203,7 @@ function WorkflowCanvasInner() {
       parentId: node.parentId || undefined,
       extent: node.parentId ? ('parent' as const) : undefined,
       zIndex: typeof node.zIndex === 'number' ? node.zIndex : (node.type === 'group' ? 1 : 2),
+      className: node.type === 'group' ? 'react-flow__node-group' : undefined,
       // Make groups fully draggable by removing the custom drag handle
       draggable: true,
       connectable: true,
