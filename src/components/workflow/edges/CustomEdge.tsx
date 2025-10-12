@@ -121,6 +121,7 @@ export function CustomEdge({
               position: 'absolute',
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: 'all',
+              zIndex: 1000,
             }}
             className="nodrag nopan"
           >
