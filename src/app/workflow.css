@@ -47,6 +47,7 @@
 .react-flow__node[class*="group"].dragging-node {
   filter: none !important;
   box-shadow: none !important;
+
 }
 
 /* Remove pseudo-elements that might add borders */
