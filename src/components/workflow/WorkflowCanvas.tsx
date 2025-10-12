@@ -199,7 +199,20 @@ function WorkflowCanvasInner() {
         ? { x: node.position.x, y: node.position.y }
         : node.position,
       data: node.data as Record<string, unknown>,
-      style: node.style,
+      // Inline style overrides for group nodes to ensure no outer border/box-shadow from React Flow
+      style: (
+        node.type === 'group'
+          ? {
+              ...(node.style || {}),
+              boxShadow: 'none',
+              border: 'none',
+              outline: 'none',
+              backgroundColor: 'transparent',
+              padding: 0,
+              margin: 0,
+            }
+          : node.style
+      ),
       parentId: node.parentId || undefined,
       extent: node.parentId ? ('parent' as const) : undefined,
       zIndex: typeof node.zIndex === 'number' ? node.zIndex : (node.type === 'group' ? 1 : 2),
@@ -349,6 +362,9 @@ function WorkflowCanvasInner() {
     [scheduleViewportPersist]
   );
 
+  // Always allow connections (including to/from group nodes)
+  const isValidConnection = useCallback(() => true, []);
+
   // Handle pane click (deselect all and close context menus)
   const onPaneClick = useCallback(() => {
     clearSelection();
@@ -450,29 +466,21 @@ function WorkflowCanvasInner() {
     [addNode, screenToFlowPosition, workflowNodes, reactFlowInstance]
   );
 
-  // Highlight group under dragged node with improved detection (throttled with rAF)
+  // Highlight group under pointer while dragging (more reliable than node bounds)
   const dragRafRef = useRef<number | null>(null);
-  const lastDragPayloadRef = useRef<{ nodeId: string; bounds: { x: number; y: number; width: number; height: number } } | null>(null);
+  const lastDragPayloadRef = useRef<{ nodeId: string; point: { x: number; y: number } } | null>(null);
 
-  const processDragHighlight = useCallback((nodeId: string, bounds: { x: number; y: number; width: number; height: number }) => {
+  const processDragHighlight = useCallback((nodeId: string, point: { x: number; y: number }) => {
+    const pointerRect = { x: point.x, y: point.y, width: 1, height: 1 };
+
     const groups = reactFlowInstance
       .getNodes()
       .filter((n) => n.type === 'group' && n.id !== nodeId)
       .map((g) => ({
         g,
-        hit: reactFlowInstance.isNodeIntersecting(
-          { id: g.id },
-          {
-            x: bounds.x + bounds.width * 0.25,
-            y: bounds.y + bounds.height * 0.25,
-            width: bounds.width * 0.5,
-            height: bounds.height * 0.5,
-          },
-          true
-        ),
+        hit: reactFlowInstance.isNodeIntersecting({ id: g.id }, pointerRect, true),
       }));
 
-    // Only update nodes whose isDragOver actually changed to minimize renders
     setNodes((prev) =>
       prev.map((n) => {
         if (n.type !== 'group') return n;
@@ -491,24 +499,18 @@ function WorkflowCanvasInner() {
   }, [reactFlowInstance, setNodes]);
 
   const onNodeDrag = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
-      const bounds = {
-        x: node.position.x,
-        y: node.position.y,
-        width: node.width || 0,
-        height: node.height || 0,
-      };
-
-      lastDragPayloadRef.current = { nodeId: node.id, bounds };
+    (event: React.MouseEvent, node: Node) => {
+      const pointer = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      lastDragPayloadRef.current = { nodeId: node.id, point: pointer };
       if (dragRafRef.current !== null) return;
       dragRafRef.current = requestAnimationFrame(() => {
         dragRafRef.current = null;
         const payload = lastDragPayloadRef.current;
         if (!payload) return;
-        processDragHighlight(payload.nodeId, payload.bounds);
+        processDragHighlight(payload.nodeId, payload.point);
       });
     },
-    [processDragHighlight]
+    [processDragHighlight, screenToFlowPosition]
   );
 
   const onNodeDragStart = useCallback((_: React.MouseEvent, node: Node) => {
@@ -519,7 +521,7 @@ function WorkflowCanvasInner() {
   }, [setNodes]);
 
   const onNodeDragStop = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
+    (event: React.MouseEvent, node: Node) => {
       // clear highlights
       setNodes((prev) =>
         prev.map((n) =>
@@ -529,11 +531,8 @@ function WorkflowCanvasInner() {
         )
       );
 
-      // Reparent if over a group
-      const center = {
-        x: node.position.x + (node.width || 0) / 2,
-        y: node.position.y + (node.height || 0) / 2,
-      };
+      // Reparent only if the pointer is inside a group at drop time
+      const pointer = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const store = useWorkflowStore.getState();
       const isAncestor = (ancestorId: string, nodeId: string): boolean => {
         let current = store.getNode(nodeId);
@@ -546,31 +545,14 @@ function WorkflowCanvasInner() {
         return false;
       };
 
-      // Improved parenting logic with better intersection detection
-      const nodeBounds = {
-        x: node.position.x,
-        y: node.position.y,
-        width: node.width || 0,
-        height: node.height || 0,
-      };
+      // Use a 1x1 pointer rect for reliable hit-testing
+      const pointerRect = { x: pointer.x, y: pointer.y, width: 1, height: 1 };
 
       const hitGroups = reactFlowInstance
         .getNodes()
         .filter((n) => n.type === 'group' && n.id !== node.id)
         .filter((g) => !isAncestor(node.id, g.id))
-        .filter((g) => {
-          // Use 50% overlap detection for more reliable parenting
-          return reactFlowInstance.isNodeIntersecting(
-            { id: g.id },
-            {
-              x: nodeBounds.x + nodeBounds.width * 0.25,
-              y: nodeBounds.y + nodeBounds.height * 0.25,
-              width: nodeBounds.width * 0.5,
-              height: nodeBounds.height * 0.5
-            },
-            true
-          );
-        });
+        .filter((g) => reactFlowInstance.isNodeIntersecting({ id: g.id }, pointerRect, true));
 
       if (hitGroups.length > 0) {
         // Sort by z-index and then by intersection area for better targeting
@@ -605,8 +587,9 @@ function WorkflowCanvasInner() {
           }
         }
       }
-      // reset elevated z-index locally
+      // reset elevated z-index locally and ensure no stray highlights
       setNodes((prev) => prev.map((n) => (n.id === node.id ? { ...n, zIndex: 2 } : n)));
+      lastDragPayloadRef.current = null;
     },
     [reactFlowInstance, setNodes]
   );
@@ -853,6 +836,8 @@ function WorkflowCanvasInner() {
         defaultViewport={defaultViewport}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
+        nodesConnectable={true}
+        isValidConnection={isValidConnection}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}

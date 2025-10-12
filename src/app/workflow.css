@@ -8,6 +8,17 @@
   transition: filter 200ms ease, box-shadow 250ms ease, transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* FORCE remove ALL borders/outlines from React Flow node wrappers for groups */
+.react-flow__node.react-flow__node-group,
+div[class*="react-flow__node"].react-flow__node-group {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
 .react-flow__edge-path {
   transform: translateZ(0);
 }
@@ -16,57 +27,37 @@
   will-change: transform;
 }
 
-/* Selected nodes - Enhanced with ring and glow */
-.react-flow__node.selected {
+/* Selected nodes - Enhanced with ring and glow (except groups which handle their own styling) */
+.react-flow__node.selected:not(.react-flow__node-group) {
   box-shadow: 0 0 0 3px #095D40, 0 6px 20px rgba(9, 93, 64, 0.25), 0 0 40px rgba(9, 93, 64, 0.15);
   animation: selection-ring 2s ease-in-out infinite;
 }
 
-/* Remove ALL borders and outlines from group nodes - both selected and unselected */
+/* Group nodes - Clean unibody design with internal styling */
 .react-flow__node-group,
 .react-flow__node-group.selected,
-.react-flow__node[data-type="group"],
-.react-flow__node[data-type="group"].selected,
-.react-flow__node[class*="group"],
-.react-flow__node[class*="group"].selected {
-  outline: none !important;
+.react-flow__node-group.selectable,
+.react-flow__node.react-flow__node-group {
+  /* All styling is handled in the GroupNode component */
+  /* Override XYFlow default node styles via CSS variables */
+  --xy-node-border: 0 solid transparent !important;
+  --xy-node-boxshadow-selected: none !important;
+  --xy-node-boxshadow-hover: none !important;
+  --xy-node-background-color: transparent !important;
+  --xy-node-group-background-color: transparent !important;
+  background: transparent !important;
   border: none !important;
+  outline: none !important;
   box-shadow: none !important;
   animation: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
-/* Ensure group nodes never gain hover/drag shadows from generic node rules */
-.react-flow__node-group:hover,
-.react-flow__node[data-type="group"]:hover,
-.react-flow__node[class*="group"]:hover,
-.react-flow__node-group.dragging,
-.react-flow__node[data-type="group"].dragging,
-.react-flow__node[class*="group"].dragging,
-.react-flow__node-group.dragging-node,
-.react-flow__node[data-type="group"].dragging-node,
-.react-flow__node[class*="group"].dragging-node {
-  filter: none !important;
-  box-shadow: none !important;
-
-}
-
-/* Remove pseudo-elements that might add borders */
-.react-flow__node-group.selected::before,
-.react-flow__node-group.selected::after,
-.react-flow__node[data-type="group"].selected::before,
-.react-flow__node[data-type="group"].selected::after,
-.react-flow__node[class*="group"].selected::before,
-.react-flow__node[class*="group"].selected::after {
-  display: none !important;
-  content: none !important;
-}
-
-/* Override any default ReactFlow selection styling */
-.react-flow__node-group.selected > *,
-.react-flow__node[data-type="group"].selected > *,
-.react-flow__node[class*="group"].selected > * {
+/* Also remove any potential borders/outlines from wrapper elements */
+.react-flow__node-group > *:first-child {
+  /* Ensure the inner content has no unexpected borders */
   outline: none !important;
-  border: none !important;
 }
 
 @keyframes selection-ring {
@@ -219,9 +210,9 @@
   filter: drop-shadow(0 2px 6px rgba(9, 93, 64, 0.35));
 }
 
-/* Node dragging - GPU optimized */
-.react-flow__node.dragging,
-.react-flow__node.dragging-node {
+/* Node dragging - GPU optimized (groups handle their own styling) */
+.react-flow__node.dragging:not(.react-flow__node-group),
+.react-flow__node.dragging-node:not(.react-flow__node-group) {
   cursor: grabbing;
   opacity: 0.85;
   transform: translateZ(0) scale(1.02);
@@ -230,8 +221,8 @@
   z-index: 1000;
 }
 
-/* Node hover */
-.react-flow__node:hover {
+/* Node hover (groups handle their own hover state) */
+.react-flow__node:hover:not(.react-flow__node-group) {
   filter: brightness(0.98);
   box-shadow:
     0 8px 16px rgba(0, 0, 0, 0.08),
@@ -291,6 +282,12 @@
 
 .react-flow__node:hover .react-flow__handle {
   opacity: 1;
+}
+
+/* Ensure group node handles remain interactive and visible */
+.react-flow__node-group .react-flow__handle {
+  opacity: 1 !important;
+  pointer-events: all !important;
 }
 
 /* Valid connection target - glow effect */

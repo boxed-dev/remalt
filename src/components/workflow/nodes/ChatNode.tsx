@@ -1,7 +1,7 @@
 import { memo } from 'react';
-import { MessageSquare, Send, Loader2, Copy, Check, Maximize2, X, User } from 'lucide-react';
+import { MessageSquare, Copy, Check, Maximize2, X, User } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { SyntheticEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { SyntheticEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -13,7 +13,7 @@ import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { buildChatContext, getLinkedNodeIds } from '@/lib/workflow/context-builder';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import type { ChatNodeData, ChatMessage } from '@/types/workflow';
-import { VoiceInput } from '../VoiceInput';
+import { VoiceInputBar } from '../VoiceInputBar';
 import 'katex/dist/katex.min.css';
 
 interface ChatNodeProps {
@@ -293,13 +293,6 @@ export const ChatNode = memo(({ id, data }: ChatNodeProps) => {
     }
   };
 
-  const handleKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
   return (
     <>
       <BaseNode id={id} allowOverflow={true}>
@@ -456,34 +449,20 @@ export const ChatNode = memo(({ id, data }: ChatNodeProps) => {
           </div>
         )}
 
-        <div className="flex gap-2">
-          <VoiceInput
-            type="text"
+        <div
+          onMouseDown={(event) => stopReactFlowPropagation(event)}
+          onWheel={(event) => stopReactFlowPropagation(event)}
+          onWheelCapture={(event) => stopReactFlowPropagation(event)}
+        >
+          <VoiceInputBar
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onMouseDown={(event) => stopReactFlowPropagation(event)}
-            onWheel={(event) => stopReactFlowPropagation(event)}
-            onWheelCapture={(event) => stopReactFlowPropagation(event)}
-            placeholder="Type or speak..."
+            onChange={setInput}
+            onSend={handleSend}
+            placeholder="Ask anything..."
             disabled={isLoading}
             voiceMode="replace"
-            className="flex-1 px-4 py-2.5 text-[13px] border border-[#E8ECEF] rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#155EEF] focus:border-transparent disabled:bg-[#F5F5F7] disabled:cursor-not-allowed transition-all"
+            showAddButton={false}
           />
-          <button
-            onClick={handleSend}
-            onMouseDown={(event) => stopReactFlowPropagation(event)}
-            onWheel={(event) => stopReactFlowPropagation(event)}
-            onWheelCapture={(event) => stopReactFlowPropagation(event)}
-            disabled={!input.trim() || isLoading}
-            className="px-3 py-2.5 bg-[#155EEF] text-white rounded-xl hover:bg-[#1249CC] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all shadow-sm hover:shadow-md"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </button>
         </div>
       </div>
     </BaseNode>
@@ -636,40 +615,22 @@ export const ChatNode = memo(({ id, data }: ChatNodeProps) => {
           </div>
 
           {/* Modal Input */}
-          <div className="px-6 py-5 border-t border-[#E8ECEF] bg-white">
-            <div className="flex gap-3">
-              <VoiceInput
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Type or speak your message..."
-                disabled={isLoading}
-                voiceMode="replace"
-                className="flex-1 px-5 py-3.5 text-[14px] border border-[#E8ECEF] rounded-2xl bg-white focus:outline-none focus:ring-2 focus:ring-[#155EEF] focus:border-transparent disabled:bg-[#F5F5F7] disabled:cursor-not-allowed transition-all"
-                autoFocus
-                onMouseDown={(event) => stopReactFlowPropagation(event)}
-                onWheel={(event) => stopReactFlowPropagation(event)}
-                onWheelCapture={(event) => stopReactFlowPropagation(event)}
-              />
-              <button
-                onClick={handleSend}
-                onMouseDown={(event) => stopReactFlowPropagation(event)}
-                onWheel={(event) => stopReactFlowPropagation(event)}
-                onWheelCapture={(event) => stopReactFlowPropagation(event)}
-                disabled={!input.trim() || isLoading}
-                className="px-6 py-3.5 bg-[#155EEF] text-white rounded-2xl hover:bg-[#1249CC] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-lg"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    <Send className="h-5 w-5" />
-                    <span className="font-medium">Send</span>
-                  </>
-                )}
-              </button>
-            </div>
+          <div
+            className="px-6 py-5 border-t border-[#E8ECEF] bg-[#fafafa]"
+            onMouseDown={(event) => stopReactFlowPropagation(event)}
+            onWheel={(event) => stopReactFlowPropagation(event)}
+            onWheelCapture={(event) => stopReactFlowPropagation(event)}
+          >
+            <VoiceInputBar
+              value={input}
+              onChange={setInput}
+              onSend={handleSend}
+              placeholder="Ask anything..."
+              disabled={isLoading}
+              voiceMode="replace"
+              showAddButton={false}
+              autoFocus
+            />
           </div>
         </div>
       </div>
