@@ -35,11 +35,12 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
     const [error, setError] = useState<string | null>(null);
     const [isActiveRecorder, setIsActiveRecorder] = useState(false);
 
-    // Audio visualization
-    const [audioLevel, setAudioLevel] = useState(0);
+    // Audio visualization - store real frequency data for each bar
+    const [frequencyData, setFrequencyData] = useState<Uint8Array>(new Uint8Array(32));
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyzerRef = useRef<AnalyserNode | null>(null);
     const animationFrameRef = useRef<number | null>(null);
+    const mediaStreamRef = useRef<MediaStream | null>(null);
 
     // Track accumulated transcripts (don't show until confirmed)
     const accumulatedTranscriptRef = useRef<string[]>([]);
@@ -116,28 +117,32 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
     // Audio visualization setup
     const startAudioVisualization = async (stream: MediaStream) => {
       try {
+        mediaStreamRef.current = stream;
         audioContextRef.current = new AudioContext();
         const source = audioContextRef.current.createMediaStreamSource(stream);
         analyzerRef.current = audioContextRef.current.createAnalyser();
-        analyzerRef.current.fftSize = 256;
-        analyzerRef.current.smoothingTimeConstant = 0.8;
+        analyzerRef.current.fftSize = 128; // 128 FFT = 64 frequency bins
+        analyzerRef.current.smoothingTimeConstant = 0.7;
         source.connect(analyzerRef.current);
 
-        const updateAudioLevel = () => {
+        const updateFrequencyData = () => {
           if (!analyzerRef.current) return;
 
+          // Get 64 frequency bins from the analyzer
           const dataArray = new Uint8Array(analyzerRef.current.frequencyBinCount);
           analyzerRef.current.getByteFrequencyData(dataArray);
 
-          // Calculate average audio level
-          const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          const normalized = Math.min(average / 128, 1); // Normalize to 0-1
-          setAudioLevel(normalized);
+          // Take first 32 bins for visualization (covers most voice frequencies)
+          const displayData = new Uint8Array(32);
+          for (let i = 0; i < 32; i++) {
+            displayData[i] = dataArray[i];
+          }
 
-          animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
+          setFrequencyData(displayData);
+          animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
         };
 
-        updateAudioLevel();
+        updateFrequencyData();
       } catch (error) {
         console.error('Failed to setup audio visualization:', error);
       }
@@ -152,8 +157,12 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
         audioContextRef.current.close();
         audioContextRef.current = null;
       }
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+      }
       analyzerRef.current = null;
-      setAudioLevel(0);
+      setFrequencyData(new Uint8Array(32)); // Reset to zeros
     };
 
     // Start recording
@@ -177,11 +186,9 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
 
         await recordingManager.startRecording();
 
-        // Get the media stream for visualization
-        const session = recordingManager.getSession();
-        if (session) {
-          // Access the stream from the recording manager
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Get the media stream from recording manager for visualization
+        const stream = recordingManager.getMediaStream();
+        if (stream) {
           startAudioVisualization(stream);
         }
       } catch (error) {
@@ -288,7 +295,7 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
             {/* Waveform visualization */}
             {isRecording && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <Waveform audioLevel={audioLevel} />
+                <Waveform frequencyData={frequencyData} />
               </div>
             )}
           </div>
@@ -380,30 +387,20 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
 VoiceInputBar.displayName = 'VoiceInputBar';
 
 /**
- * Animated waveform visualization
+ * Real-time waveform visualization synced with actual voice input
  */
-function Waveform({ audioLevel }: { audioLevel: number }) {
-  const barCount = 32; // More bars for smoother animation
-  const bars = Array.from({ length: barCount });
-
+function Waveform({ frequencyData }: { frequencyData: Uint8Array }) {
   return (
     <div className="flex items-center justify-center gap-1.5 h-full px-4">
-      {bars.map((_, i) => {
-        // Create multiple wave patterns for more dynamic movement
-        const phase1 = (i / barCount) * Math.PI * 4;
-        const phase2 = (i / barCount) * Math.PI * 2;
-        const time = Date.now() / 300; // Faster animation
+      {Array.from(frequencyData).map((value, i) => {
+        // Use ACTUAL frequency value from microphone (0-255)
+        // Apply amplification and minimum height for better visibility
+        const normalizedValue = value / 255; // 0-1 range
+        const amplified = Math.min(normalizedValue * 2.5, 1); // 2.5x amplification
+        const heightPercent = Math.max(30, amplified * 100);
 
-        // Combine multiple wave patterns for complex movement
-        const wave1 = Math.sin(phase1 + time) * 0.5;
-        const wave2 = Math.sin(phase2 - time * 0.7) * 0.3;
-        const wave3 = Math.cos(phase1 * 0.5 + time * 1.2) * 0.2;
-
-        // Base height with minimum movement
-        const baseHeight = 0.4;
-        const audioBoost = Math.max(0.3, audioLevel); // Minimum 30% audio level for visibility
-        const waveHeight = baseHeight + (wave1 + wave2 + wave3) * audioBoost;
-        const heightPercent = Math.max(25, Math.min(100, waveHeight * 100));
+        // Opacity based on actual audio level
+        const opacity = 0.6 + (amplified * 0.4);
 
         return (
           <div
@@ -411,10 +408,8 @@ function Waveform({ audioLevel }: { audioLevel: number }) {
             className="w-1 bg-[#095D40] rounded-full shadow-sm"
             style={{
               height: `${heightPercent}%`,
-              opacity: 0.7 + (audioBoost * 0.3),
-              transform: `scaleY(${0.8 + audioBoost * 0.2})`,
-              transition: 'all 100ms ease-out',
-              animationDelay: `${i * 30}ms`,
+              opacity: opacity,
+              transition: 'height 50ms ease-out, opacity 50ms ease-out',
             }}
           />
         );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -23,6 +23,7 @@ export function CustomEdge({
   selected,
 }: EdgeProps) {
   const deleteEdge = useWorkflowStore((state) => state.deleteEdge);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Memoize path calculation for performance and consistency
   const [edgePath, labelX, labelY] = useMemo(() => {
@@ -60,13 +61,13 @@ export function CustomEdge({
           <animate
             attributeName="x1"
             values="0%;100%;200%"
-            dur="3s"
+            dur="2.0s"
             repeatCount="indefinite"
           />
           <animate
             attributeName="x2"
             values="100%;200%;300%"
-            dur="3s"
+            dur="2.0s"
             repeatCount="indefinite"
           />
         </linearGradient>
@@ -78,11 +79,13 @@ export function CustomEdge({
         style={{
           ...style,
           strokeWidth: selected ? 3.5 : 2.5,
-          stroke: '#D1FAE5',
-          strokeDasharray: '8 6',
+          stroke: '#86EFAC',
+          strokeDasharray: '2 6',
           strokeLinecap: 'round',
-          opacity: 0.6,
+          opacity: 0.7,
         }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       />
 
       {/* Animated dark green dotted layer */}
@@ -93,11 +96,13 @@ export function CustomEdge({
           ...style,
           strokeWidth: selected ? 3.5 : 2.5,
           stroke: selected ? '#047857' : `url(#${animationId})`,
-          strokeDasharray: '8 6',
+          strokeDasharray: '2 6',
           strokeLinecap: 'round',
           strokeDashoffset: 0,
-          animation: 'dash-flow 2s linear infinite',
+          animation: 'dash-flow 1.5s linear infinite',
         }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       />
 
       {/* CSS Animation for dash movement */}
@@ -108,13 +113,13 @@ export function CustomEdge({
               stroke-dashoffset: 0;
             }
             to {
-              stroke-dashoffset: -28;
+              stroke-dashoffset: -8;
             }
           }
         `}
       </style>
 
-      {selected && (
+      {(selected || isHovered) && (
         <EdgeLabelRenderer>
           <div
             style={{

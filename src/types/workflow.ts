@@ -202,6 +202,10 @@ export interface InstagramNodeData extends BaseNodeData {
   views?: number;
   comments?: number;
   duration?: number;
+  // Story-specific metadata
+  isStory?: boolean;
+  takenAt?: string; // ISO timestamp when story was taken
+  expiresAt?: string; // ISO timestamp when story expires
   fetchStatus?: 'idle' | 'loading' | 'success' | 'error';
   fetchError?: string;
   isVideo?: boolean;

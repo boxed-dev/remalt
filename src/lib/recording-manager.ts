@@ -87,6 +87,13 @@ class RecordingManager {
   }
 
   /**
+   * Get current media stream (for visualization)
+   */
+  getMediaStream(): MediaStream | null {
+    return this.mediaStream;
+  }
+
+  /**
    * Check if currently recording
    */
   isRecording(): boolean {
