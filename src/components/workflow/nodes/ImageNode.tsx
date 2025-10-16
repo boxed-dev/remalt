@@ -9,7 +9,7 @@ import type { NodeProps } from '@xyflow/react';
 import type { ImageNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
 
-export const ImageNode = memo(({ id, data }: NodeProps<ImageNodeData>) => {
+export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>) => {
   const [mode, setMode] = useState<'idle' | 'url' | 'upload'>('idle');
   const [url, setUrl] = useState(data.imageUrl || '');
   const [imageError, setImageError] = useState(false);
@@ -246,7 +246,7 @@ export const ImageNode = memo(({ id, data }: NodeProps<ImageNodeData>) => {
   };
 
   return (
-    <BaseNode id={id}>
+    <BaseNode id={id} parentId={parentId}>
       <div className="w-[280px] space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">

@@ -7,7 +7,7 @@ import type { NodeProps } from '@xyflow/react';
 import type { ConnectorNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
 
-export const ConnectorNode = memo(({ id, data }: NodeProps<ConnectorNodeData>) => {
+export const ConnectorNode = memo(({ id, data, parentId }: NodeProps<ConnectorNodeData>) => {
   const [isSelecting, setIsSelecting] = useState(false);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
@@ -31,7 +31,7 @@ export const ConnectorNode = memo(({ id, data }: NodeProps<ConnectorNodeData>) =
   };
 
   return (
-    <BaseNode id={id}>
+    <BaseNode id={id} parentId={parentId}>
       <div className="space-y-2 w-[200px]">
         <div className="flex items-center gap-2">
           <Link2 className="h-4 w-4 text-[#6366F1]" />

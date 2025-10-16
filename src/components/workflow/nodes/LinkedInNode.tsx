@@ -4,12 +4,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import type { SyntheticEvent } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
+import type { NodeProps } from '@xyflow/react';
 import type { LinkedInNodeData } from '@/types/workflow';
-
-interface LinkedInNodeProps {
-  id: string;
-  data: LinkedInNodeData;
-}
 
 function extractPostId(url: string): string | null {
   // LinkedIn post URL patterns:
@@ -35,7 +31,7 @@ function formatNumber(num: number): string {
   return `${num}`;
 }
 
-export const LinkedInNode = memo(({ id, data }: LinkedInNodeProps) => {
+export const LinkedInNode = memo(({ id, data, parentId }: NodeProps<LinkedInNodeData>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [isContentExpanded, setIsContentExpanded] = useState(false);
@@ -163,6 +159,7 @@ export const LinkedInNode = memo(({ id, data }: LinkedInNodeProps) => {
       type="linkedin"
       icon={<Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />}
       iconBg="bg-[#0A66C2]/10"
+      parentId={parentId}
     >
       <div className="w-[420px] space-y-3">
         {/* Header */}

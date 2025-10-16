@@ -10,7 +10,7 @@ import type { PDFNodeData } from '@/types/workflow';
 // Maximum file size: 50MB
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
-export const PDFNode = memo(({ id, data }: NodeProps<PDFNodeData>) => {
+export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => {
   const [mode, setMode] = useState<'choose' | 'url'>('choose');
   const [url, setUrl] = useState(data.url || '');
   const [showDetails, setShowDetails] = useState(false);
@@ -286,7 +286,7 @@ export const PDFNode = memo(({ id, data }: NodeProps<PDFNodeData>) => {
   };
 
   return (
-    <BaseNode id={id} showTargetHandle={false}>
+    <BaseNode id={id} showTargetHandle={false} parentId={parentId}>
       <div className="w-[280px] space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">

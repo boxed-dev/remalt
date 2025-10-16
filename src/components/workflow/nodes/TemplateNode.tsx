@@ -24,7 +24,7 @@ const templateOptions: Array<TemplateNodeData['templateType']> = [
   'custom',
 ];
 
-export const TemplateNode = memo(({ id, data }: NodeProps<TemplateNodeData>) => {
+export const TemplateNode = memo(({ id, data, parentId }: NodeProps<TemplateNodeData>) => {
   const [isSelecting, setIsSelecting] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
@@ -96,7 +96,7 @@ export const TemplateNode = memo(({ id, data }: NodeProps<TemplateNodeData>) => 
   };
 
   return (
-    <BaseNode id={id}>
+    <BaseNode id={id} parentId={parentId}>
       <div className="space-y-3 w-[280px]">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-[#10B981]" />

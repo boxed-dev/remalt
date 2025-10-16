@@ -1,13 +1,9 @@
 import { Play } from 'lucide-react';
 import { BaseNode } from './BaseNode';
+import type { NodeProps } from '@xyflow/react';
 import type { TriggerNodeData } from '@/types/workflow';
 
-interface TriggerNodeProps {
-  id: string;
-  data: TriggerNodeData;
-}
-
-export function TriggerNode({ id, data }: TriggerNodeProps) {
+export function TriggerNode({ id, data, parentId }: NodeProps<TriggerNodeData>) {
   return (
     <BaseNode
       id={id}
@@ -15,6 +11,7 @@ export function TriggerNode({ id, data }: TriggerNodeProps) {
       icon={<Play className="h-3.5 w-3.5 text-purple-600" />}
       iconBg="bg-purple-100"
       showTargetHandle={false}
+      parentId={parentId}
     >
       <div className="w-[240px] space-y-3">
         <div className="text-[14px] font-semibold text-[#1A1D21] capitalize">{data.triggerType}</div>

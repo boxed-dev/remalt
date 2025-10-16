@@ -8,7 +8,7 @@ import type { MindMapNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
 import { VoiceInput, VoiceTextarea } from '../VoiceInput';
 
-export const MindMapNode = memo(({ id, data }: NodeProps<MindMapNodeData>) => {
+export const MindMapNode = memo(({ id, data, parentId }: NodeProps<MindMapNodeData>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [concept, setConcept] = useState(data.concept || '');
   const [notes, setNotes] = useState(data.notes || '');
@@ -38,7 +38,7 @@ export const MindMapNode = memo(({ id, data }: NodeProps<MindMapNodeData>) => {
   }, [data.concept, data.notes, isEditing]);
 
   return (
-    <BaseNode id={id}>
+    <BaseNode id={id} parentId={parentId}>
       <div className="space-y-2 w-[240px]">
         <div className="flex items-center gap-2">
           <Lightbulb className="h-4 w-4 text-[#EC4899]" />

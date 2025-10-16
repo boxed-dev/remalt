@@ -4,14 +4,10 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { SyntheticEvent } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
+import type { NodeProps } from '@xyflow/react';
 import type { YouTubeNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
 import { extractChannelId } from '@/lib/api/youtube';
-
-interface YouTubeNodeProps {
-  id: string;
-  data: YouTubeNodeData;
-}
 
 function extractYouTubeId(url: string): string | null {
   const patterns = [
@@ -54,7 +50,7 @@ function formatDuration(isoDuration: string): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-export const YouTubeNode = memo(({ id, data }: YouTubeNodeProps) => {
+export const YouTubeNode = memo(({ id, data, parentId }: NodeProps<YouTubeNodeData>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [expandedVideos, setExpandedVideos] = useState(false);
@@ -724,6 +720,7 @@ export const YouTubeNode = memo(({ id, data }: YouTubeNodeProps) => {
       iconBg="bg-red-100"
       showTargetHandle={false}
       allowOverflow={isChannel}
+      parentId={parentId}
     >
       {isChannel ? renderChannelView() : renderVideoView()}
       <AIInstructionsInline

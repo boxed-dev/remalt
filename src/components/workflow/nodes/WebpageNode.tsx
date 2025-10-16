@@ -63,7 +63,7 @@ function setCachedEntry<T>(cache: Map<string, CacheRecord<T>>, key: string, data
   cache.set(key, { data, fetchedAt: Date.now() });
 }
 
-export const WebpageNode = memo(({ id, data }: NodeProps<WebpageNodeData>) => {
+export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeData>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [showSummary, setShowSummary] = useState(false);
@@ -376,7 +376,7 @@ export const WebpageNode = memo(({ id, data }: NodeProps<WebpageNodeData>) => {
   }, [data.url, fetchPreview, id, triggerScrape, updateNodeData, url]);
 
   return (
-    <BaseNode id={id} showTargetHandle={false}>
+    <BaseNode id={id} showTargetHandle={false} parentId={parentId}>
       <div className="w-[280px] space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">

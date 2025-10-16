@@ -4,14 +4,10 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { AIInstructionsInline } from './AIInstructionsInline';
 import { BlockNoteEditor } from '../BlockNoteEditor';
+import type { NodeProps } from '@xyflow/react';
 import type { TextNodeData } from '@/types/workflow';
 
-interface TextNodeProps {
-  id: string;
-  data: TextNodeData;
-}
-
-export const TextNode = memo(({ id, data }: TextNodeProps) => {
+export const TextNode = memo(({ id, data, parentId }: NodeProps<TextNodeData>) => {
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
   const handleContentChange = (content: string) => {
@@ -19,7 +15,7 @@ export const TextNode = memo(({ id, data }: TextNodeProps) => {
   };
 
   return (
-    <BaseNode id={id}>
+    <BaseNode id={id} parentId={parentId}>
       <div className="w-[520px] rounded-xl overflow-hidden">
         {/* Blue Header - exactly like the image */}
         <div className="bg-[#5B7FE8] px-4 py-2.5 flex items-center gap-2.5 rounded-t-xl">

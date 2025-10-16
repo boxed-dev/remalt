@@ -23,6 +23,8 @@ interface BaseNodeProps {
   // NEW: Multiple handles support
   sourceHandles?: HandleConfig[];
   targetHandles?: HandleConfig[];
+  // NEW: Parent group detection for hiding handles
+  parentId?: string | null;
 }
 
 export function BaseNode({
@@ -38,7 +40,13 @@ export function BaseNode({
   targetHandlePosition = Position.Left,
   sourceHandles,
   targetHandles,
+  parentId,
 }: BaseNodeProps) {
+
+  // Hide handles when node is inside a group
+  const isChildOfGroup = !!parentId;
+  const shouldShowSourceHandle = showSourceHandle && !isChildOfGroup;
+  const shouldShowTargetHandle = showTargetHandle && !isChildOfGroup;
   return (
     <div
       className={`min-w-[280px] rounded-2xl bg-white border-2 border-[#E8ECEF] hover:border-[#D1D5DB] shadow-md hover:shadow-xl transition-all duration-200 ${
@@ -49,7 +57,7 @@ export function BaseNode({
       <div className="p-5">{children}</div>
 
       {/* Primary Target Handle - Default LEFT for side connections */}
-      {showTargetHandle && (
+      {shouldShowTargetHandle && (
         <Handle
           type="target"
           position={targetHandlePosition}
@@ -62,7 +70,7 @@ export function BaseNode({
       )}
 
       {/* Primary Source Handle - Default RIGHT for side connections */}
-      {showSourceHandle && (
+      {shouldShowSourceHandle && (
         <Handle
           type="source"
           position={sourceHandlePosition}
@@ -74,8 +82,8 @@ export function BaseNode({
         />
       )}
 
-      {/* Additional target handles */}
-      {targetHandles?.map((handle) => (
+      {/* Additional target handles - also hidden when in group */}
+      {shouldShowTargetHandle && targetHandles?.map((handle) => (
         <Handle
           key={handle.id}
           id={handle.id}
@@ -86,8 +94,8 @@ export function BaseNode({
         />
       ))}
 
-      {/* Additional source handles */}
-      {sourceHandles?.map((handle) => (
+      {/* Additional source handles - also hidden when in group */}
+      {shouldShowSourceHandle && sourceHandles?.map((handle) => (
         <Handle
           key={handle.id}
           id={handle.id}

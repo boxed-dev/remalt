@@ -1,19 +1,16 @@
 import { GitBranch } from 'lucide-react';
 import { BaseNode } from './BaseNode';
+import type { NodeProps } from '@xyflow/react';
 import type { ConditionNodeData } from '@/types/workflow';
 
-interface ConditionNodeProps {
-  id: string;
-  data: ConditionNodeData;
-}
-
-export function ConditionNode({ id, data }: ConditionNodeProps) {
+export function ConditionNode({ id, data, parentId }: NodeProps<ConditionNodeData>) {
   return (
     <BaseNode
       id={id}
       type="Condition"
       icon={<GitBranch className="h-3.5 w-3.5 text-pink-600" />}
       iconBg="bg-pink-100"
+      parentId={parentId}
     >
       <div className="w-[260px] space-y-3">
         <div className="inline-block px-2 py-1 rounded-md bg-[#F5F5F7] text-[11px] font-mono font-semibold text-[#6B7280] capitalize">

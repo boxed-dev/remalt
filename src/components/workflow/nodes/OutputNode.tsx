@@ -1,13 +1,9 @@
 import { FileOutput } from 'lucide-react';
 import { BaseNode } from './BaseNode';
+import type { NodeProps } from '@xyflow/react';
 import type { OutputNodeData } from '@/types/workflow';
 
-interface OutputNodeProps {
-  id: string;
-  data: OutputNodeData;
-}
-
-export function OutputNode({ id, data }: OutputNodeProps) {
+export function OutputNode({ id, data, parentId }: NodeProps<OutputNodeData>) {
   return (
     <BaseNode
       id={id}
@@ -15,6 +11,7 @@ export function OutputNode({ id, data }: OutputNodeProps) {
       icon={<FileOutput className="h-3.5 w-3.5 text-gray-600" />}
       iconBg="bg-gray-100"
       showSourceHandle={false}
+      parentId={parentId}
     >
       <div className="w-[240px] space-y-3">
         <div className="text-[14px] font-semibold text-[#1A1D21] capitalize">{data.outputType}</div>

@@ -10,7 +10,7 @@ import { recordingManager, type RecordingState } from '@/lib/recording-manager';
 // Global state to track which node is currently recording
 let currentRecordingNodeId: string | null = null;
 
-export const VoiceNode = memo(({ id, data }: NodeProps<VoiceNodeData>) => {
+export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>) => {
   const [showTranscript, setShowTranscript] = useState(false);
   const [isRecordingThisNode, setIsRecordingThisNode] = useState(false);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
@@ -239,7 +239,7 @@ export const VoiceNode = memo(({ id, data }: NodeProps<VoiceNodeData>) => {
   const showRecordingUI = isRecordingThisNode && recordingState !== 'idle';
 
   return (
-    <BaseNode id={id} showTargetHandle={false}>
+    <BaseNode id={id} showTargetHandle={false} parentId={parentId}>
       <div className="w-[320px] space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">

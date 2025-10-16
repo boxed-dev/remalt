@@ -4,13 +4,9 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import type { SyntheticEvent } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
+import type { NodeProps } from '@xyflow/react';
 import type { InstagramNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
-
-interface InstagramNodeProps {
-  id: string;
-  data: InstagramNodeData;
-}
 
 function extractPostCode(url: string): string | null {
   // If it's already just a code (alphanumeric, ~11 chars)
@@ -41,7 +37,7 @@ function formatNumber(num: number): string {
   return `${num}`;
 }
 
-export const InstagramNode = memo(({ id, data }: InstagramNodeProps) => {
+export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNodeData>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -355,6 +351,7 @@ export const InstagramNode = memo(({ id, data }: InstagramNodeProps) => {
       type="instagram"
       icon={<Instagram className="h-3.5 w-3.5 text-[#E4405F]" />}
       iconBg="bg-[#E4405F]/10"
+      parentId={parentId}
     >
       <div className="w-[320px] space-y-3">
         {/* Header */}

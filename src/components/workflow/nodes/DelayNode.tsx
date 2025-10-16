@@ -1,19 +1,16 @@
 import { Clock } from 'lucide-react';
 import { BaseNode } from './BaseNode';
+import type { NodeProps } from '@xyflow/react';
 import type { DelayNodeData } from '@/types/workflow';
 
-interface DelayNodeProps {
-  id: string;
-  data: DelayNodeData;
-}
-
-export function DelayNode({ id, data }: DelayNodeProps) {
+export function DelayNode({ id, data, parentId }: NodeProps<DelayNodeData>) {
   return (
     <BaseNode
       id={id}
       type="Delay"
       icon={<Clock className="h-3.5 w-3.5 text-yellow-600" />}
       iconBg="bg-yellow-100"
+      parentId={parentId}
     >
       <div className="w-[220px] space-y-3">
         <div className="text-[14px] font-semibold text-[#1A1D21] capitalize">{data.delayType}</div>

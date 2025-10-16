@@ -13,13 +13,11 @@ import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { buildChatContext, getLinkedNodeIds } from '@/lib/workflow/context-builder';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import type { ChatNodeData, ChatMessage } from '@/types/workflow';
+import type { NodeProps } from '@xyflow/react';
 import { VoiceInputBar } from '../VoiceInputBar';
 import 'katex/dist/katex.min.css';
 
-interface ChatNodeProps {
-  id: string;
-  data: ChatNodeData;
-}
+type ChatNodeProps = NodeProps<ChatNodeData>;
 
 // Code block component with syntax highlighting and copy button
 function CodeBlock({ inline, className, children, isUserMessage }: any) {
@@ -83,7 +81,7 @@ function CodeBlock({ inline, className, children, isUserMessage }: any) {
   );
 }
 
-export const ChatNode = memo(({ id, data }: ChatNodeProps) => {
+export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -295,7 +293,7 @@ export const ChatNode = memo(({ id, data }: ChatNodeProps) => {
 
   return (
     <>
-      <BaseNode id={id} allowOverflow={true} showSourceHandle={false} showTargetHandle={true}>
+      <BaseNode id={id} allowOverflow={true} showSourceHandle={false} showTargetHandle={true} parentId={parentId}>
         <div
           className="flex w-[480px] flex-col space-y-2"
           onWheel={(event) => stopReactFlowPropagation(event)}

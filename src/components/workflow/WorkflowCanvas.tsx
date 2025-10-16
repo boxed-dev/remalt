@@ -260,7 +260,10 @@ function WorkflowCanvasInner() {
             }
           : node.style,
       parentId: node.parentId || undefined,
-      extent: node.parentId ? ("parent" as const) : undefined,
+      // CRITICAL FIX: Don't set extent="parent" to allow free dragging
+      // Parent-child relationships are managed in onNodeDragStop based on final position
+      // This allows seamless dragging in/out of groups without hitting boundaries
+      extent: undefined,
       zIndex:
         typeof node.zIndex === "number"
           ? node.zIndex
@@ -701,6 +704,7 @@ function WorkflowCanvasInner() {
       const nodeHeight = node.height || node.measured?.height || 200;
 
       // Create a rectangle representing the node's bounds (not just pointer position)
+      // React Flow provides the correct position during drag regardless of extent setting
       const nodeRect = {
         x: node.position.x,
         y: node.position.y,
@@ -774,7 +778,8 @@ function WorkflowCanvasInner() {
             .getState()
             .updateNodePosition(node.id, { x: relX, y: relY });
 
-          // Force React Flow to update by setting nodes with the new parent relationship
+          // Force React Flow to update with new parent relationship
+          // Keep extent undefined to allow free dragging
           setNodes((prev) =>
             prev.map((n) =>
               n.id === node.id
@@ -782,7 +787,7 @@ function WorkflowCanvasInner() {
                     ...n,
                     position: { x: relX, y: relY },
                     parentId: parent.id,
-                    extent: "parent" as const,
+                    extent: undefined,
                     zIndex: 2,
                   }
                 : n
