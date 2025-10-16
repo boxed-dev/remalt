@@ -571,6 +571,26 @@ function WorkflowCanvasInner() {
       const draggedNode = reactFlowInstance.getNode(nodeId);
       if (!draggedNode) return;
 
+      // BUG FIX: Prevent groups from being dropped into other groups
+      if (draggedNode.type === "group") {
+        // Clear any existing drag-over highlights when dragging a group
+        setNodes((prev) =>
+          prev.map((n) => {
+            if (n.type !== "group") return n;
+            const prevFlag = Boolean((n.data as any)?.isDragOver);
+            if (!prevFlag) return n;
+            return {
+              ...n,
+              data: {
+                ...(n.data as Record<string, unknown>),
+                isDragOver: false,
+              },
+            };
+          })
+        );
+        return;
+      }
+
       // Get node dimensions for proper intersection testing
       const nodeWidth = draggedNode.width || draggedNode.measured?.width || 300;
       const nodeHeight =
@@ -686,6 +706,27 @@ function WorkflowCanvasInner() {
             : n
         )
       );
+
+      // BUG FIX: Prevent groups from being children of other groups
+      if (node.type === "group") {
+        // Ensure group nodes are never assigned a parent
+        const current = useWorkflowStore.getState().getNode(node.id);
+        if (current?.parentId) {
+          // If somehow a group has a parent, remove it
+          useWorkflowStore.getState().updateNode(node.id, { parentId: null });
+        }
+        
+        // Reset z-index locally and ensure no stray highlights
+        setNodes((prev) =>
+          prev.map((n) =>
+            n.id === node.id
+              ? { ...n, zIndex: 1, parentId: undefined }
+              : n
+          )
+        );
+        lastDragPayloadRef.current = null;
+        return;
+      }
 
       const store = useWorkflowStore.getState();
       const isAncestor = (ancestorId: string, nodeId: string): boolean => {
