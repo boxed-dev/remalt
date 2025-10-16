@@ -295,7 +295,7 @@ export const ChatNode = memo(({ id, data }: ChatNodeProps) => {
 
   return (
     <>
-      <BaseNode id={id} allowOverflow={true}>
+      <BaseNode id={id} allowOverflow={true} showSourceHandle={false} showTargetHandle={true}>
         <div
           className="flex w-[480px] flex-col space-y-2"
           onWheel={(event) => stopReactFlowPropagation(event)}

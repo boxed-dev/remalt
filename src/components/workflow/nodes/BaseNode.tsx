@@ -32,7 +32,7 @@ export function BaseNode({
   iconBg = 'bg-gray-100',
   children,
   showSourceHandle = true,
-  showTargetHandle = true,
+  showTargetHandle = false, // Changed default to false - most nodes only need source handle
   allowOverflow = false,
   sourceHandlePosition = Position.Right,
   targetHandlePosition = Position.Left,

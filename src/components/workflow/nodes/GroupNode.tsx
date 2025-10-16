@@ -171,14 +171,6 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
 
       {/* Connection handles - positioned relative to the main container */}
       <Handle
-        id="in"
-        type="target"
-        position={Position.Left}
-        isConnectable={true}
-        className="!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#155EEF] hover:!scale-125 !transition-all !duration-150 !opacity-100 pointer-events-auto"
-        style={{ left: '-7px', zIndex: 50 }}
-      />
-      <Handle
         id="out"
         type="source"
         position={Position.Right}
