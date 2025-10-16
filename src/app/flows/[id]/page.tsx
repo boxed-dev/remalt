@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { WorkflowCanvas } from '@/components/workflow/WorkflowCanvas';
-import { DifyWorkflowHeader } from '@/components/workflow/DifyWorkflowHeader';
-import { DifyWorkflowSidebar } from '@/components/workflow/DifyWorkflowSidebar';
-import { StickyNoteOverlay } from '@/components/workflow/StickyNoteOverlay';
-import { useWorkflowStore } from '@/lib/stores/workflow-store';
-import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
-import { useCurrentUser } from '@/hooks/use-current-user';
-import { useWorkflowPersistence } from '@/hooks/use-workflow-persistence';
-import { createClient } from '@/lib/supabase/client';
-import { getWorkflow } from '@/lib/supabase/workflows';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { WorkflowCanvas } from "@/components/workflow/WorkflowCanvas";
+import { DifyWorkflowHeader } from "@/components/workflow/DifyWorkflowHeader";
+import { DifyWorkflowSidebar } from "@/components/workflow/DifyWorkflowSidebar";
+import { StickyNoteOverlay } from "@/components/workflow/StickyNoteOverlay";
+import { useWorkflowStore } from "@/lib/stores/workflow-store";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useWorkflowPersistence } from "@/hooks/use-workflow-persistence";
+import { createClient } from "@/lib/supabase/client";
+import { getWorkflow } from "@/lib/supabase/workflows";
+import { Loader2 } from "lucide-react";
 
 export default function WorkflowEditorPage() {
   const params = useParams();
@@ -37,10 +37,10 @@ export default function WorkflowEditorPage() {
 
   // Debug user state
   useEffect(() => {
-    console.log('🔐 User state:', {
+    console.log("🔐 User state:", {
       user: user?.id,
       email: user?.email,
-      loading: userLoading
+      loading: userLoading,
     });
   }, [user, userLoading]);
 
@@ -59,12 +59,12 @@ export default function WorkflowEditorPage() {
     // 3. We haven't already redirected
     // 4. The workflow has been saved (has nodes or edges)
     if (
-      workflowId === 'new' &&
+      workflowId === "new" &&
       workflow?.id &&
       !hasRedirected &&
       (workflow.nodes.length > 0 || workflow.edges.length > 0)
     ) {
-      console.log('🔄 Redirecting from /flows/new to /flows/' + workflow.id);
+      console.log("🔄 Redirecting from /flows/new to /flows/" + workflow.id);
       setHasRedirected(true);
       router.replace(`/flows/${workflow.id}`);
     }
@@ -73,7 +73,7 @@ export default function WorkflowEditorPage() {
   // Handle visibility changes (tab switching)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         // Force re-render when tab becomes visible
         const state = useWorkflowStore.getState();
         if (state.workflow) {
@@ -83,9 +83,9 @@ export default function WorkflowEditorPage() {
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
@@ -95,8 +95,8 @@ export default function WorkflowEditorPage() {
       if (userLoading || !user) return;
 
       // Check if this is a "new" workflow request
-      if (workflowId === 'new') {
-        createWorkflow('Untitled Workflow', 'A new workflow');
+      if (workflowId === "new") {
+        createWorkflow("Untitled Workflow", "A new workflow");
         setLoadingWorkflow(false);
         return;
       }
@@ -111,11 +111,13 @@ export default function WorkflowEditorPage() {
         if (workflowData) {
           loadWorkflow(workflowData);
         } else {
-          setLoadError('Workflow not found');
+          setLoadError("Workflow not found");
         }
       } catch (error) {
-        console.error('Failed to load workflow:', error);
-        setLoadError(error instanceof Error ? error.message : 'Failed to load workflow');
+        console.error("Failed to load workflow:", error);
+        setLoadError(
+          error instanceof Error ? error.message : "Failed to load workflow"
+        );
       } finally {
         setLoadingWorkflow(false);
       }
@@ -126,58 +128,58 @@ export default function WorkflowEditorPage() {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    'mod+s': () => {
+    "mod+s": () => {
       // Manual save
       saveWorkflow();
     },
-    'mod+z': () => {
+    "mod+z": () => {
       // Undo
       undo();
     },
-    'mod+shift+z': () => {
+    "mod+shift+z": () => {
       // Redo
       redo();
     },
-    'mod+d': () => {
+    "mod+d": () => {
       // Duplicate selected node
       if (selectedNodes.length === 1) {
         duplicateNode(selectedNodes[0]);
       }
     },
-    'mod+c': () => {
+    "mod+c": () => {
       // Copy selected nodes
       if (selectedNodes.length > 0) {
         copyNodes(selectedNodes);
       }
     },
-    'escape': () => {
+    escape: () => {
       // Clear selection
       if (selectedNodes.length > 0) {
         useWorkflowStore.getState().clearSelection();
       }
     },
     // Add node shortcuts
-    'c': () => addNode('chat', { x: 100, y: 100 }),
-    's': () => addNode('template', { x: 100, y: 100 }),
-    'r': () => addNode('voice', { x: 100, y: 100 }),
-    'i': () => addNode('image', { x: 100, y: 100 }),
-    't': () => addNode('text', { x: 100, y: 100 }),
-    'a': () => addNode('connector', { x: 100, y: 100 }),
-    'w': () => addNode('webpage', { x: 100, y: 100 }),
-    'd': () => addNode('pdf', { x: 100, y: 100 }),
+    c: () => addNode("chat", { x: 100, y: 100 }),
+    s: () => addNode("template", { x: 100, y: 100 }),
+    r: () => addNode("voice", { x: 100, y: 100 }),
+    i: () => addNode("image", { x: 100, y: 100 }),
+    t: () => addNode("text", { x: 100, y: 100 }),
+    a: () => addNode("connector", { x: 100, y: 100 }),
+    w: () => addNode("webpage", { x: 100, y: 100 }),
+    d: () => addNode("pdf", { x: 100, y: 100 }),
     // Zoom shortcuts
-    '=': () => {
+    "=": () => {
       // Will be handled by ReactFlow controls
     },
-    '-': () => {
+    "-": () => {
       // Will be handled by ReactFlow controls
     },
-    '1': () => {
+    "1": () => {
       // Will be handled by ReactFlow controls
     },
     // Control mode shortcuts
-    'v': () => setControlMode('pointer'),
-    'h': () => setControlMode('hand'),
+    v: () => setControlMode("pointer"),
+    h: () => setControlMode("hand"),
   });
 
   // Loading states
@@ -198,14 +200,26 @@ export default function WorkflowEditorPage() {
       <div className="h-screen flex items-center justify-center bg-[#FAFBFC]">
         <div className="text-center max-w-md">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-8 w-8 text-red-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </div>
-          <h2 className="text-[20px] font-semibold text-[#1A1D21] mb-2">Failed to load workflow</h2>
+          <h2 className="text-[20px] font-semibold text-[#1A1D21] mb-2">
+            Failed to load workflow
+          </h2>
           <p className="text-[14px] text-[#6B7280] mb-6">{loadError}</p>
           <button
-            onClick={() => router.push('/flows')}
+            onClick={() => router.push("/flows")}
             className="px-6 py-2.5 bg-[#007AFF] text-white rounded-lg font-medium text-[14px] hover:bg-[#0051D5] transition-all"
           >
             Back to Flows
