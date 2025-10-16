@@ -94,6 +94,10 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
 
     setShowSummary(false);
     setPreviewState({ url: null, status: 'idle', data: null });
+
+    // Sync local state with the submitted URL to prevent inconsistencies
+    setUrl(normalized);
+
     updateNodeData(id, {
       url: normalized,
     } as Partial<WebpageNodeData>);
@@ -316,10 +320,11 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
   }, []);
 
   useEffect(() => {
-    if (data.url && data.url !== url) {
+    // Only sync local URL with store data when not editing to prevent overwriting user input
+    if (data.url && data.url !== url && !isEditing) {
       setUrl(data.url);
     }
-  }, [data.url, url]);
+  }, [data.url, url, isEditing]);
 
   useEffect(() => {
     if (!data.url) {

@@ -90,10 +90,11 @@ export const YouTubeNode = memo(({ id, data, parentId }: NodeProps<YouTubeNodeDa
   }, [isEditing]);
 
   useEffect(() => {
-    if (data.url && data.url !== url) {
+    // Only sync local URL with store data when not editing to prevent overwriting user input
+    if (data.url && data.url !== url && !isEditing) {
       setUrl(data.url);
     }
-  }, [data.url, url]);
+  }, [data.url, url, isEditing]);
 
   const fetchTranscript = useCallback(async (videoUrl: string) => {
     try {
@@ -222,12 +223,10 @@ export const YouTubeNode = memo(({ id, data, parentId }: NodeProps<YouTubeNodeDa
     } as Partial<YouTubeNodeData>);
 
     if (shouldFetchTitle) {
-      void (async () => {
-        const title = await fetchVideoTitle(safeUrl);
-        if (title) {
-          updateNodeData(id, { title } as Partial<YouTubeNodeData>);
-        }
-      })();
+      const title = await fetchVideoTitle(safeUrl);
+      if (title) {
+        updateNodeData(id, { title } as Partial<YouTubeNodeData>);
+      }
     }
 
     if (hasTranscript) {
@@ -284,12 +283,22 @@ export const YouTubeNode = memo(({ id, data, parentId }: NodeProps<YouTubeNodeDa
   }, [data.url, id, processUrl]);
 
   const handleSave = async () => {
-    await processUrl(url);
+    // Prevent multiple simultaneous saves
+    if (!isEditing) return;
+
+    // Immediately exit edit mode to prevent UI issues
     setIsEditing(false);
+
+    if (url.trim()) {
+      await processUrl(url.trim());
+      // Sync local state with the processed URL to prevent inconsistencies
+      setUrl(url.trim());
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
+      e.preventDefault(); // Prevent blur event from firing
       handleSave();
     } else if (e.key === 'Escape') {
       setUrl(data.url || '');
@@ -639,7 +648,6 @@ export const YouTubeNode = memo(({ id, data, parentId }: NodeProps<YouTubeNodeDa
           type="text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          onBlur={handleSave}
           onKeyDown={handleKeyDown}
           placeholder="Paste YouTube URL or channel..."
           className="w-full px-4 py-2.5 text-[14px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] transition-all"

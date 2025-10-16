@@ -112,10 +112,11 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
   }, [isEditing]);
 
   useEffect(() => {
-    if (data.url && data.url !== url) {
+    // Only sync local URL with store data when not editing to prevent overwriting user input
+    if (data.url && data.url !== url && !isEditing) {
       setUrl(data.url);
     }
-  }, [data.url, url]);
+  }, [data.url, url, isEditing]);
 
   useEffect(() => {
     const nextThumbnail = getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || '';
@@ -286,9 +287,11 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
     }
   }, [id, updateNodeData]);
 
-  const handleUrlSubmit = useCallback(() => {
+  const handleUrlSubmit = useCallback(async () => {
     if (url.trim()) {
-      fetchReelData(url.trim());
+      await fetchReelData(url.trim());
+      // Sync local state with the submitted URL to prevent inconsistencies
+      setUrl(url.trim());
     }
     setIsEditing(false);
   }, [url, fetchReelData]);

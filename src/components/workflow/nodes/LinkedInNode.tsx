@@ -61,10 +61,11 @@ export const LinkedInNode = memo(({ id, data, parentId }: NodeProps<LinkedInNode
   }, [isEditing]);
 
   useEffect(() => {
-    if (data.url && data.url !== url) {
+    // Only sync local URL with store data when not editing to prevent overwriting user input
+    if (data.url && data.url !== url && !isEditing) {
       setUrl(data.url);
     }
-  }, [data.url, url]);
+  }, [data.url, url, isEditing]);
 
   const fetchPostData = useCallback(async (postUrl: string) => {
     const postId = extractPostId(postUrl);
@@ -126,9 +127,11 @@ export const LinkedInNode = memo(({ id, data, parentId }: NodeProps<LinkedInNode
     }
   }, [id, updateNodeData]);
 
-  const handleUrlSubmit = useCallback(() => {
+  const handleUrlSubmit = useCallback(async () => {
     if (url.trim()) {
-      fetchPostData(url.trim());
+      await fetchPostData(url.trim());
+      // Sync local state with the submitted URL to prevent inconsistencies
+      setUrl(url.trim());
     }
     setIsEditing(false);
   }, [url, fetchPostData]);
