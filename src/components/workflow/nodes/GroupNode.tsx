@@ -12,6 +12,7 @@ interface GroupNodeProps {
 
 export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
   const updateNodeData = useWorkflowStore((s) => s.updateNodeData);
+  const updateNode = useWorkflowStore((s) => s.updateNode);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
@@ -20,6 +21,18 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
     updateNodeData(id, { title: trimmed || 'Group' } as Partial<GroupNodeData>);
     setIsEditingTitle(false);
   }, [id, updateNodeData]);
+
+  // Handle resize to properly update node dimensions and position
+  const handleResize = useCallback((event: any, params: any) => {
+    // Update the node's style to reflect new dimensions
+    // This ensures the node maintains its visual consistency during resize
+    updateNode(id, {
+      style: {
+        width: params.width,
+        height: params.height,
+      },
+    });
+  }, [id, updateNode]);
 
   const isDragOver = (data as any)?.isDragOver;
   
@@ -74,6 +87,7 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
         lineClassName="!hidden"
         isVisible={true}
         keepAspectRatio={false}
+        onResize={handleResize}
       />
 
       {/* Header - Dark bar with title */}

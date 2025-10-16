@@ -8,6 +8,11 @@
   transition: filter 200ms ease, box-shadow 250ms ease, transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Disable transform transition during resize to prevent visual jumping */
+.react-flow__node.resizing {
+  transition: filter 200ms ease, box-shadow 250ms ease !important;
+}
+
 /* FORCE remove ALL borders/outlines from React Flow node wrappers for groups */
 .react-flow__node.react-flow__node-group,
 div[class*="react-flow__node"].react-flow__node-group {
@@ -52,6 +57,17 @@ div[class*="react-flow__node"].react-flow__node-group {
   animation: none !important;
   padding: 0 !important;
   margin: 0 !important;
+}
+
+/* Fix visual jumping during group resize from top/left edges */
+.react-flow__node-group.resizing,
+.react-flow__node-group .react-flow__resize-control.line {
+  transition: none !important;
+}
+
+/* Smooth resize for group nodes - disable transform transition during resize */
+.react-flow__node-group {
+  transition: filter 200ms ease, box-shadow 250ms ease !important;
 }
 
 /* Also remove any potential borders/outlines from wrapper elements */
