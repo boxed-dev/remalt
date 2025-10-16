@@ -33,7 +33,6 @@ export function useWorkflowPersistence({
   const [debouncedWorkflow] = useDebounce(workflow, autoSaveDelay);
   const isInitialMount = useRef(true);
   const lastSavedWorkflow = useRef<Workflow | null>(null);
-  const supabase = createClient();
 
   // Manual save function
   const saveWorkflow = useCallback(async (retries = 3) => {
@@ -47,6 +46,9 @@ export function useWorkflowPersistence({
 
     console.log('🔄 Starting save for workflow:', workflow.name, 'userId:', userId);
     setSaveStatus(true, null, null);
+
+    // Create client inside callback to ensure it has current auth session
+    const supabase = createClient();
 
     try {
       // First, validate the workflow structure
@@ -133,7 +135,7 @@ export function useWorkflowPersistence({
         }
       }
     }
-  }, [workflow, userId, supabase, setSaveStatus]);
+  }, [workflow, userId, setSaveStatus]);
 
   // Auto-save effect
   useEffect(() => {

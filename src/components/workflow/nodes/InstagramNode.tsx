@@ -46,6 +46,25 @@ export const InstagramNode = memo(({ id, data }: InstagramNodeProps) => {
   const [url, setUrl] = useState(data.url || '');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  function formatDateShort(iso?: string): string | undefined {
+    if (!iso) return undefined;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return undefined;
+    return d.toLocaleString();
+  }
+
+  function formatTimeLeft(expiresAt?: string): string | undefined {
+    if (!expiresAt) return undefined;
+    const now = Date.now();
+    const exp = new Date(expiresAt).getTime();
+    if (isNaN(exp)) return undefined;
+    const diffMs = exp - now;
+    if (diffMs <= 0) return 'expired';
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  }
+
   // Determine if this is a carousel post
   const isCarousel = data.postType === 'Sidecar' && data.images && data.images.length > 1;
 
@@ -174,6 +193,9 @@ export const InstagramNode = memo(({ id, data }: InstagramNodeProps) => {
         duration: result.duration,
         isVideo: result.isVideo,
         postType: result.postType,
+        isStory: result.isStory,
+        takenAt: result.takenAt,
+        expiresAt: result.expiresAt,
       } as Partial<InstagramNodeData>);
 
       console.log('[InstagramNode] After updateNodeData - data.images:', data.images);
@@ -342,7 +364,7 @@ export const InstagramNode = memo(({ id, data }: InstagramNodeProps) => {
               <Instagram className="w-4 h-4 text-[#E4405F]" />
             </div>
             <span className="text-[14px] font-medium text-gray-800">
-              {data.url?.includes('/stories/') ? 'Instagram Story' : 'Instagram Post'}
+              {data.isStory ? 'Instagram Story' : 'Instagram Post'}
             </span>
           </div>
           {hasReelData && (
@@ -532,10 +554,16 @@ export const InstagramNode = memo(({ id, data }: InstagramNodeProps) => {
                           )}
                   </div>
 
-              {/* Story Expiration Warning */}
-              {data.url?.includes('/stories/') && (
-                <div className="p-2 text-center text-amber-700 bg-amber-50 rounded-lg border border-amber-200">
-                  <p className="text-[10px] font-medium">⚠️ Stories expire after 24 hours</p>
+              {/* Story Expiration Info */}
+              {data.isStory && (
+                <div className="p-2 text-[11px] text-amber-800 bg-amber-50 rounded-lg border border-amber-200 space-y-0.5">
+                  <p className="font-medium">⚠️ Story expires after 24 hours</p>
+                  {data.takenAt && (
+                    <p className="text-[10px]">Taken: {formatDateShort(data.takenAt)}</p>
+                  )}
+                  {data.expiresAt && (
+                    <p className="text-[10px]">Expires: {formatDateShort(data.expiresAt)} {formatTimeLeft(data.expiresAt) && `(${formatTimeLeft(data.expiresAt)} left)`}</p>
+                  )}
                 </div>
               )}
 

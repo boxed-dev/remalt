@@ -4,19 +4,13 @@ import { useState } from 'react';
 import {
   FileText,
   Microphone,
-  VideoCamera,
   YoutubeLogo,
   Image,
   InstagramLogo,
   LinkedinLogo,
   TextT,
-  Lightbulb,
   Globe,
   ChatCircle,
-  UsersThree,
-  CaretLeft,
-  CaretRight,
-  Plus,
   Folder,
 } from '@phosphor-icons/react';
 import type { NodeType } from '@/types/workflow';
@@ -45,7 +39,6 @@ const NODES: NodeItem[] = [
 
   // Content
   { id: 'text', icon: <TextT size={24} weight="regular" />, label: 'Text / Note', category: 'content', shortcut: 'T' },
-  { id: 'mindmap', icon: <Lightbulb size={24} weight="regular" />, label: 'Mind Map / Idea', category: 'content', shortcut: 'B' },
 
   // AI
   { id: 'chat', icon: <ChatCircle size={24} weight="duotone" />, label: 'Chat / Assistant', category: 'ai', shortcut: 'C' },
@@ -53,33 +46,12 @@ const NODES: NodeItem[] = [
   { id: 'group', icon: <Folder size={24} weight="duotone" />, label: 'Group', category: 'structure', shortcut: 'G' },
 ];
 
-const CATEGORIES = [
-  { id: 'media', label: 'Media' },
-  { id: 'content', label: 'Content' },
-  { id: 'ai', label: 'AI' },
-  { id: 'structure', label: 'Structure' },
-] as const;
-
 export function DifyWorkflowSidebar() {
   const addNode = useWorkflowStore((state) => state.addNode);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const workflow = useWorkflowStore((state) => state.workflow);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(['media', 'content', 'ai', 'structure'])
-  );
   const [draggedNode, setDraggedNode] = useState<NodeType | null>(null);
   const [socialMediaDialogOpen, setSocialMediaDialogOpen] = useState(false);
-
-  const toggleCategory = (categoryId: string) => {
-    const newExpanded = new Set(expandedCategories);
-    if (newExpanded.has(categoryId)) {
-      newExpanded.delete(categoryId);
-    } else {
-      newExpanded.add(categoryId);
-    }
-    setExpandedCategories(newExpanded);
-  };
 
   const handleDragStart = (e: React.DragEvent, nodeType: NodeType) => {
     console.log('🎯 Drag started for:', nodeType);
@@ -153,39 +125,61 @@ export function DifyWorkflowSidebar() {
 
   return (
     <>
-      <aside className={`absolute left-4 top-4 z-10 bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden pointer-events-auto transition-all ${isCollapsed ? 'w-14' : 'w-64'}`}>
-        {/* Header with collapse button */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-          {!isCollapsed && <span className="text-[13px] font-semibold text-gray-700">Add Nodes</span>}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 hover:bg-gray-100 rounded transition-colors ml-auto"
-            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {isCollapsed ? (
-              <CaretRight size={16} weight="bold" className="text-gray-600" />
-            ) : (
-              <CaretLeft size={16} weight="bold" className="text-gray-600" />
+      <aside className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-xl shadow-lg border border-gray-200/80 flex flex-col overflow-hidden pointer-events-auto w-12">
+      <div className="flex-1 overflow-y-auto py-1 max-h-[calc(100vh-120px)]">
+        {/* Collapsed view - only icons */}
+          <div className="flex flex-col">
+            {/* Social Media Compact 2x2 Grid in Collapsed View - At the top */}
+            {NODES.some(node => node.subcategory === 'social') && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSocialMediaDialogOpen(true);
+                }}
+                className="relative flex items-stretch w-12 h-12 justify-center p-1 group"
+                title="Social Media"
+              >
+                <div className="rounded-lg p-[2px] flex-1 flex items-center justify-center flex-col gap-[2px] group-hover:border-[#D4E5DF] group-hover:bg-[#D4E5DF] transition-colors border border-gray-200">
+                  <div className="flex flex-row gap-[2px]">
+                    <div className="p-[3px] bg-gray-100 rounded-full group-hover:bg-[#B8D5C9] transition-colors">
+                      <YoutubeLogo size={10} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                    </div>
+                    <div className="p-[3px] bg-gray-100 rounded-full group-hover:bg-[#B8D5C9] transition-colors">
+                      <InstagramLogo size={10} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                    </div>
+                  </div>
+                  <div className="flex flex-row gap-[2px]">
+                    <div className="p-[3px] bg-gray-100 rounded-full group-hover:bg-[#B8D5C9] transition-colors">
+                      <LinkedinLogo size={10} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                    </div>
+                    <div className="p-[3px] bg-gray-100 rounded-full group-hover:bg-[#B8D5C9] transition-colors">
+                      <Globe size={10} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                    </div>
+                  </div>
+                </div>
+                {/* Tooltip */}
+                <div className="absolute left-full ml-2 px-3 py-2 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-900">Socials</span>
+                  <span className="text-xs font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200">
+                    S
+                  </span>
+                </div>
+              </button>
             )}
-          </button>
-        </div>
 
-      <div className="flex-1 overflow-y-auto py-3 px-2 max-h-[calc(100vh-120px)]">
-        {isCollapsed ? (
-          // Collapsed view - only icons
-          <div className="space-y-2">
             {NODES.filter(node => node.subcategory !== 'social').map((node) => (
-              <div
+              <button
                 key={node.id}
                 draggable
                 onDragStart={(e) => handleDragStart(e, node.id)}
                 onDragEnd={handleDragEnd}
                 onClick={(e) => handleNodeClick(e, node.id)}
-                className="relative flex items-center justify-center p-2 rounded-lg cursor-pointer transition-colors select-none hover:bg-emerald-50 group"
+                className="relative flex items-stretch w-12 h-12 justify-center p-1 group"
                 title={node.label}
               >
-                <div className={`w-8 h-8 flex items-center justify-center flex-shrink-0 bg-gray-50 rounded-lg`}>
-                  <div className="text-gray-700">
+                <div className="rounded-lg p-[2px] flex-1 flex items-center justify-center flex-col gap-[2px] group-hover:border-[#D4E5DF] group-hover:bg-[#D4E5DF] transition-colors">
+                  <div className="text-gray-600 group-hover:text-[#095D40] transition-colors">
                     {node.icon}
                   </div>
                 </div>
@@ -198,151 +192,9 @@ export function DifyWorkflowSidebar() {
                     </span>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
-
-            {/* Social Media Compact 2x2 Grid in Collapsed View */}
-            {NODES.some(node => node.subcategory === 'social') && (
-              <div className="relative flex items-center justify-center p-2 rounded-lg cursor-pointer transition-colors select-none hover:bg-emerald-50 group">
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setSocialMediaDialogOpen(true);
-                  }}
-                  className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-lg"
-                  title="Social Media"
-                >
-                  <div className="grid grid-cols-2 gap-1">
-                    <div className="w-3.5 h-3.5 flex items-center justify-center bg-white rounded-sm">
-                      <YoutubeLogo size={10} weight="fill" className="text-gray-600" />
-                    </div>
-                    <div className="w-3.5 h-3.5 flex items-center justify-center bg-white rounded-sm">
-                      <InstagramLogo size={10} weight="fill" className="text-gray-600" />
-                    </div>
-                    <div className="w-3.5 h-3.5 flex items-center justify-center bg-white rounded-sm">
-                      <LinkedinLogo size={10} weight="fill" className="text-gray-600" />
-                    </div>
-                    <div className="w-3.5 h-3.5 flex items-center justify-center bg-white rounded-sm">
-                      <Globe size={10} weight="fill" className="text-gray-600" />
-                    </div>
-                  </div>
-                </button>
-                {/* Tooltip */}
-                <div className="absolute left-full ml-2 px-3 py-2 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900">Socials</span>
-                  <span className="text-xs font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200">
-                    S
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
-        ) : (
-          // Expanded view - categories with labels
-          CATEGORIES.map((category) => {
-            const categoryNodes = NODES.filter((node) => node.category === category.id);
-            const isExpanded = expandedCategories.has(category.id);
-
-            return (
-              <div key={category.id} className="mb-2">
-                {/* Category Header */}
-                <button
-                  onClick={() => toggleCategory(category.id)}
-                  className="w-full flex items-center justify-between px-2 py-1 hover:bg-gray-50 transition-colors text-left rounded"
-                >
-                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                    {category.label}
-                  </span>
-                  <svg
-                    className={`w-3 h-3 text-gray-400 transition-transform ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {/* Category Nodes */}
-                {isExpanded && (
-                  <div className="mt-1 space-y-1">
-                    {(() => {
-                      const socialNodes = categoryNodes.filter(node => node.subcategory === 'social');
-                      const regularNodes = categoryNodes.filter(node => node.subcategory !== 'social');
-                      const hasSocialNodes = socialNodes.length > 0;
-
-                      return (
-                        <>
-                          {/* Render regular nodes first */}
-                          {regularNodes.map((node) => (
-                            <div
-                              key={node.id}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, node.id)}
-                              onDragEnd={handleDragEnd}
-                              onClick={(e) => handleNodeClick(e, node.id)}
-                              className="flex items-center gap-3 px-2 py-1.5 rounded-lg cursor-pointer transition-colors select-none hover:bg-emerald-50"
-                            >
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${node.iconBgColor || 'bg-gray-50'}`}>
-                                <div className="text-gray-700">
-                                  {node.icon}
-                                </div>
-                              </div>
-                              <span className="text-[13px] font-medium text-gray-700">
-                                {node.label}
-                              </span>
-                            </div>
-                          ))}
-
-                          {/* Render social media compact 2x2 grid if category has social nodes */}
-                          {hasSocialNodes && (
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setSocialMediaDialogOpen(true);
-                              }}
-                              className="flex items-center gap-3 px-2 py-1.5 rounded-lg cursor-pointer transition-colors select-none hover:bg-emerald-50 w-full"
-                            >
-                              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-gray-50">
-                                <div className="rounded-lg p-[3px] border border-gray-200 group-hover:border-indigo-100 transition-colors">
-                                  <div className="flex flex-col gap-[2px]">
-                                    {/* Top row: YouTube, Instagram */}
-                                    <div className="flex gap-[2px] justify-center">
-                                      <div className="p-[2px] bg-white rounded-full group-hover:bg-indigo-100 transition-colors">
-                                        <YoutubeLogo size={6} weight="fill" className="text-gray-600 group-hover:text-red-600 transition-colors" />
-                                      </div>
-                                      <div className="p-[2px] bg-white rounded-full group-hover:bg-indigo-100 transition-colors">
-                                        <InstagramLogo size={6} weight="fill" className="text-gray-600 group-hover:text-pink-600 transition-colors" />
-                                      </div>
-                                    </div>
-                                    {/* Bottom row: LinkedIn, Webpage */}
-                                    <div className="flex gap-[2px] justify-center">
-                                      <div className="p-[2px] bg-white rounded-full group-hover:bg-indigo-100 transition-colors">
-                                        <LinkedinLogo size={6} weight="fill" className="text-gray-600 group-hover:text-blue-600 transition-colors" />
-                                      </div>
-                                      <div className="p-[2px] bg-white rounded-full group-hover:bg-indigo-100 transition-colors">
-                                        <Globe size={6} weight="fill" className="text-gray-600 group-hover:text-gray-700 transition-colors" />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                              <span className="text-[13px] font-medium text-gray-700">
-                                Socials
-                              </span>
-                            </button>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
       </div>
     </aside>
 

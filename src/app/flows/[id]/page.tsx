@@ -31,6 +31,7 @@ export default function WorkflowEditorPage() {
   const addNode = useWorkflowStore((state) => state.addNode);
   const undo = useWorkflowStore((state) => state.undo);
   const redo = useWorkflowStore((state) => state.redo);
+  const setControlMode = useWorkflowStore((state) => state.setControlMode);
 
   // Debug user state
   useEffect(() => {
@@ -142,7 +143,6 @@ export default function WorkflowEditorPage() {
     't': () => addNode('text', { x: 100, y: 100 }),
     'a': () => addNode('connector', { x: 100, y: 100 }),
     'w': () => addNode('webpage', { x: 100, y: 100 }),
-    'm': () => addNode('mindmap', { x: 100, y: 100 }),
     'd': () => addNode('pdf', { x: 100, y: 100 }),
     // Zoom shortcuts
     '=': () => {
@@ -154,6 +154,9 @@ export default function WorkflowEditorPage() {
     '1': () => {
       // Will be handled by ReactFlow controls
     },
+    // Control mode shortcuts
+    'v': () => setControlMode('pointer'),
+    'h': () => setControlMode('hand'),
   });
 
   // Loading states

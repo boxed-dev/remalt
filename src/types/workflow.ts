@@ -96,6 +96,8 @@ export interface PDFNodeData extends BaseNodeData {
   file?: File;
   fileName?: string;
   fileSize?: number;
+  storagePath?: string; // Path in Supabase storage
+  pageCount?: number; // Total number of pages
   parsedText?: string;
   headings?: string[];
   segments?: {
@@ -104,7 +106,7 @@ export interface PDFNodeData extends BaseNodeData {
     page?: number;
     heading?: string;
   }[];
-  parseStatus?: 'idle' | 'parsing' | 'success' | 'error';
+  parseStatus?: 'idle' | 'uploading' | 'parsing' | 'success' | 'error';
   parseError?: string;
 }
 // Voice Note Node

@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Add Instagram posts/reels
+    // Add Instagram posts/reels/stories
     if (instagramReels && instagramReels.length > 0) {
       systemContext += '\n\n=== Instagram Content ===\n';
       instagramReels.forEach((post: {
@@ -190,12 +190,15 @@ export async function POST(req: NextRequest) {
         comments?: number;
         isVideo?: boolean;
         postType?: string;
+        isStory?: boolean;
+        takenAt?: string;
+        expiresAt?: string;
         status: string;
         aiInstructions?: string
       }, index: number) => {
         try {
           if (post.status === 'success') {
-            const postLabel = post.isVideo ? 'Reel' : 'Post';
+            const postLabel = post.isStory ? 'Story' : (post.isVideo ? 'Reel' : 'Post');
             const author = post.author?.username ? `@${post.author.username}` : 'Unknown';
             systemContext += `\n[Instagram ${postLabel} ${index + 1} by ${author}]:\n`;
 
@@ -206,6 +209,12 @@ export async function POST(req: NextRequest) {
             // Add URL
             if (post.url) {
               systemContext += `URL: ${post.url}\n`;
+            }
+
+            // Story timing
+            if (post.isStory) {
+              if (post.takenAt) systemContext += `Taken at: ${post.takenAt}\n`;
+              if (post.expiresAt) systemContext += `Expires at: ${post.expiresAt}\n`;
             }
 
             // Add caption

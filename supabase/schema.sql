@@ -166,6 +166,24 @@ BEGIN
 END;
 $$;
 
+-- ============================================
+-- STORAGE: WORKFLOW PDFs
+-- ============================================
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'workflow-pdfs') THEN
+    INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) 
+    VALUES (
+      'workflow-pdfs', 
+      'workflow-pdfs', 
+      false, 
+      52428800, -- 50MB limit
+      ARRAY['application/pdf']::text[]
+    );
+  END IF;
+END;
+$$;
+
 DROP POLICY IF EXISTS "Users can read workflow recordings" ON storage.objects;
 CREATE POLICY "Users can read workflow recordings"
   ON storage.objects
@@ -203,6 +221,49 @@ CREATE POLICY "Users can delete workflow recordings"
   FOR DELETE
   USING (
     bucket_id = 'workflow-audio'
+    AND split_part(name, '/', 1) = auth.uid()::text
+  );
+
+-- ============================================
+-- STORAGE POLICIES: WORKFLOW PDFs
+-- ============================================
+DROP POLICY IF EXISTS "Users can read workflow PDFs" ON storage.objects;
+CREATE POLICY "Users can read workflow PDFs"
+  ON storage.objects
+  FOR SELECT
+  USING (
+    bucket_id = 'workflow-pdfs'
+    AND split_part(name, '/', 1) = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS "Users can upload workflow PDFs" ON storage.objects;
+CREATE POLICY "Users can upload workflow PDFs"
+  ON storage.objects
+  FOR INSERT
+  WITH CHECK (
+    bucket_id = 'workflow-pdfs'
+    AND split_part(name, '/', 1) = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS "Users can update workflow PDFs" ON storage.objects;
+CREATE POLICY "Users can update workflow PDFs"
+  ON storage.objects
+  FOR UPDATE
+  USING (
+    bucket_id = 'workflow-pdfs'
+    AND split_part(name, '/', 1) = auth.uid()::text
+  )
+  WITH CHECK (
+    bucket_id = 'workflow-pdfs'
+    AND split_part(name, '/', 1) = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS "Users can delete workflow PDFs" ON storage.objects;
+CREATE POLICY "Users can delete workflow PDFs"
+  ON storage.objects
+  FOR DELETE
+  USING (
+    bucket_id = 'workflow-pdfs'
     AND split_part(name, '/', 1) = auth.uid()::text
   );
 

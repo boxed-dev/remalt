@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { NodeResizer, Handle, Position } from '@xyflow/react';
-import { Folder, Pencil, Check } from 'lucide-react';
+import { Folder } from 'lucide-react';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { GroupNodeData } from '@/types/workflow';
 
@@ -14,13 +14,12 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
   const updateNodeData = useWorkflowStore((s) => s.updateNodeData);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [titleInput, setTitleInput] = useState(data.title || '');
 
-  const saveTitle = useCallback(() => {
-    const trimmed = titleInput.trim();
-    updateNodeData(id, { title: trimmed || undefined } as Partial<GroupNodeData>);
+  const saveTitle = useCallback((text: string) => {
+    const trimmed = text.trim();
+    updateNodeData(id, { title: trimmed || 'Group' } as Partial<GroupNodeData>);
     setIsEditingTitle(false);
-  }, [id, titleInput, updateNodeData]);
+  }, [id, updateNodeData]);
 
   const isDragOver = (data as any)?.isDragOver;
   
@@ -64,16 +63,16 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
       aria-label={`Group container: ${data.title || 'Unnamed'}`}
       aria-describedby={`group-description-${id}`}
     >
-      {/* Resizer */}
+      {/* Resizer - Always visible */}
       <NodeResizer
         minWidth={360}
         minHeight={220}
         maxWidth={2000}
         maxHeight={1500}
         color="transparent"
-        handleClassName="!w-3 !h-3 !border-2 !border-[#095D40] !bg-white !rounded-full !opacity-0 group-hover:!opacity-100"
+        handleClassName="!w-3 !h-3 !border-2 !border-[#095D40] !bg-white !rounded-full !opacity-0 group-hover:!opacity-100 !transition-opacity"
         lineClassName="!hidden"
-        isVisible={selected}
+        isVisible={true}
         keepAspectRatio={false}
       />
 
@@ -84,50 +83,47 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
             <Folder className="h-3.5 w-3.5 text-[#0F172A]" strokeWidth={2.5} />
           </div>
           
-          {isEditingTitle ? (
-            <div className="flex items-center gap-2 nodrag flex-1 min-w-0">
-              <input
-                value={titleInput}
-                onChange={(e) => setTitleInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveTitle();
-                  if (e.key === 'Escape') {
-                    setIsEditingTitle(false);
-                    setTitleInput(data.title || '');
-                  }
-                }}
-                className="px-2 py-1 text-[13px] rounded border border-white/40 bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/70 text-[#0F172A] flex-1 min-w-0"
-                placeholder="Group name"
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-              />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  saveTitle();
-                }}
-                className="p-1 rounded bg-white/20 hover:bg-white/30 flex-shrink-0"
-              >
-                <Check className="w-3.5 h-3.5 text-white" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="text-[13px] font-semibold tracking-wide text-white truncate">
-                {data.title || 'Group'}
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsEditingTitle(true);
-                }}
-                className="p-1 rounded hover:bg-white/20 nodrag opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                aria-label="Edit group name"
-              >
-                <Pencil className="w-3.5 h-3.5 text-white/90" />
-              </button>
-            </div>
-          )}
+          <div
+            contentEditable={isEditingTitle}
+            suppressContentEditableWarning
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setIsEditingTitle(true);
+              // Select all text on double click
+              const range = document.createRange();
+              const sel = window.getSelection();
+              range.selectNodeContents(e.currentTarget);
+              sel?.removeAllRanges();
+              sel?.addRange(range);
+            }}
+            onBlur={(e) => {
+              if (isEditingTitle) {
+                saveTitle(e.currentTarget.textContent || '');
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                e.currentTarget.textContent = data.title || 'Group';
+                setIsEditingTitle(false);
+                e.currentTarget.blur();
+              }
+            }}
+            onClick={(e) => {
+              if (isEditingTitle) {
+                e.stopPropagation();
+              }
+            }}
+            className={`text-[13px] font-semibold tracking-wide text-white truncate flex-1 min-w-0 outline-none ${isEditingTitle ? 'nodrag cursor-text' : 'cursor-move'}`}
+            role="textbox"
+            aria-label="Group name"
+          >
+            {data.title || 'Group'}
+          </div>
         </div>
       </div>
 

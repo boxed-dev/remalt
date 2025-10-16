@@ -30,6 +30,14 @@ type ApifyInstagramItem = {
   videoPlayCount?: number;
   type?: string; // 'Video', 'Image', 'Sidecar' (carousel)
   isVideo?: boolean;
+  // Story-related fields (best-effort - Apify datasets may vary)
+  takenAt?: string | number;
+  takenAtTimestamp?: number;
+  timestamp?: number;
+  publishedTime?: string | number;
+  expiringAt?: string | number;
+  expireAt?: string | number;
+  isStory?: boolean;
 };
 
 function normaliseUrl(rawUrl: string): string {
@@ -50,10 +58,35 @@ function isStoryUrl(url: string): boolean {
   return /instagram\.com\/stories\//.test(url);
 }
 
+function toIsoDate(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'string') {
+    // If it's already an ISO-like string, try Date parse
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  }
+  if (typeof value === 'number') {
+    // Could be seconds or milliseconds
+    const ms = value < 10_000_000_000 ? value * 1000 : value;
+    const d = new Date(ms);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  }
+  return undefined;
+}
+
+function pickFirstIso(...values: Array<unknown>): string | undefined {
+  for (const v of values) {
+    const iso = toIsoDate(v);
+    if (iso) return iso;
+  }
+  return undefined;
+}
+
 function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: string) {
   // Handle both videos (reels) and images (posts)
   const videoUrl = item.videoUrl || item.videoUrls?.[0];
   const isVideo = item.isVideo || item.type === 'Video' || !!videoUrl;
+  const isStory = isStoryUrl(requestedUrl) || !!item.isStory || (item.url ? isStoryUrl(item.url) : false);
 
   const profilePic =
     item.ownerProfilePicUrl ||
@@ -98,6 +131,16 @@ function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: string) 
   const permalink = item.url ?? requestedUrl;
   const thumbnailFallback = permalink ? `https://image.microlink.io/${encodeURIComponent(permalink)}` : undefined;
 
+  // Story timestamps (best-effort)
+  const takenAt = pickFirstIso(
+    item.takenAt,
+    item.takenAtTimestamp,
+    item.timestamp,
+    item.publishedTime
+  );
+  const explicitExpires = pickFirstIso(item.expiringAt, item.expireAt);
+  const expiresAt = explicitExpires || (takenAt ? new Date(new Date(takenAt).getTime() + 24 * 60 * 60 * 1000).toISOString() : undefined);
+
   return {
     success: true as const,
     url: requestedUrl,
@@ -117,6 +160,9 @@ function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: string) 
     views: item.videoViewCount ?? item.videoPlayCount,
     comments: item.commentsCount,
     duration: item.videoDuration,
+    isStory,
+    takenAt,
+    expiresAt,
     rawId: item.id,
     isVideo,
     postType: item.type,

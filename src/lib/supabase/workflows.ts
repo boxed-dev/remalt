@@ -62,9 +62,18 @@ export type WorkflowSummary = {
  * Only fetches essential fields, dramatically reducing data transfer
  */
 export async function getUserWorkflowsSummary(supabase: SupabaseClient): Promise<WorkflowSummary[]> {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    console.warn('No authenticated user found');
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('workflows')
     .select('id, name, description, nodes, metadata, created_at, updated_at')
+    .eq('user_id', user.id) // ✅ CRITICAL: Filter by current user
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -91,9 +100,18 @@ export async function getUserWorkflowsSummary(supabase: SupabaseClient): Promise
  * Fetch all workflows for the current user
  */
 export async function getUserWorkflows(supabase: SupabaseClient): Promise<Workflow[]> {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    console.warn('No authenticated user found');
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('workflows')
     .select('*')
+    .eq('user_id', user.id) // ✅ CRITICAL: Filter by current user
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -224,9 +242,18 @@ export async function searchWorkflows(
   supabase: SupabaseClient,
   query: string
 ): Promise<Workflow[]> {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    console.warn('No authenticated user found');
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('workflows')
     .select('*')
+    .eq('user_id', user.id) // ✅ CRITICAL: Filter by current user
     .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
     .order('updated_at', { ascending: false });
 
@@ -245,9 +272,18 @@ export async function getWorkflowsByTag(
   supabase: SupabaseClient,
   tag: string
 ): Promise<Workflow[]> {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    console.warn('No authenticated user found');
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('workflows')
     .select('*')
+    .eq('user_id', user.id) // ✅ CRITICAL: Filter by current user
     .contains('metadata', { tags: [tag] })
     .order('updated_at', { ascending: false });
 

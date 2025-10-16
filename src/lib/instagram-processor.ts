@@ -16,7 +16,14 @@ export async function processInstagramImage(imageUrl: string, postCode: string, 
     // 1. Download image
     console.log(`[Instagram Processor] Step 1: Downloading image from Instagram CDN...`);
     const downloadStart = Date.now();
-    const imageResponse = await fetch(imageUrl);
+    const imageResponse = await fetch(imageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://www.instagram.com/',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
     if (!imageResponse.ok) {
       throw new Error(`Failed to download image: ${imageResponse.statusText}`);
     }
@@ -139,7 +146,15 @@ export async function processInstagramVideo(videoUrl: string, reelCode: string) 
     // 1. Download video
     console.log(`[Instagram Processor] Step 1: Downloading video from Instagram CDN...`);
     const downloadStart = Date.now();
-    const videoResponse = await fetch(videoUrl);
+    const videoResponse = await fetch(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://www.instagram.com/',
+        'Accept': 'video/mp4,video/*;q=0.8,*/*;q=0.5',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Range': 'bytes=0-',
+      },
+    });
     if (!videoResponse.ok) {
       throw new Error(`Failed to download video: ${videoResponse.statusText}`);
     }
