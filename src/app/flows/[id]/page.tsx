@@ -22,7 +22,9 @@ export default function WorkflowEditorPage() {
 
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [hasRedirected, setHasRedirected] = useState(false);
 
+  const workflow = useWorkflowStore((state) => state.workflow);
   const createWorkflow = useWorkflowStore((state) => state.createWorkflow);
   const loadWorkflow = useWorkflowStore((state) => state.loadWorkflow);
   const selectedNodes = useWorkflowStore((state) => state.selectedNodes);
@@ -48,6 +50,25 @@ export default function WorkflowEditorPage() {
     autoSaveDelay: 2000,
     userId: user?.id || null,
   });
+
+  // Handle redirect from /flows/new to /flows/[id] after first save
+  useEffect(() => {
+    // Only redirect if:
+    // 1. We're on the /flows/new route
+    // 2. We have a workflow with an actual ID
+    // 3. We haven't already redirected
+    // 4. The workflow has been saved (has nodes or edges)
+    if (
+      workflowId === 'new' &&
+      workflow?.id &&
+      !hasRedirected &&
+      (workflow.nodes.length > 0 || workflow.edges.length > 0)
+    ) {
+      console.log('🔄 Redirecting from /flows/new to /flows/' + workflow.id);
+      setHasRedirected(true);
+      router.replace(`/flows/${workflow.id}`);
+    }
+  }, [workflowId, workflow, hasRedirected, router]);
 
   // Handle visibility changes (tab switching)
   useEffect(() => {
