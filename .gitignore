@@ -48,3 +48,6 @@ transcript_test_results.json
 # Documentation (exclude all .md except README)
 *.md
 !README.md
+
+# Claude settings
+.claude/
