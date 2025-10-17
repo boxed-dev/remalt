@@ -33,10 +33,50 @@ export async function POST(req: NextRequest) {
     console.log('User ID:', user.id);
     console.log('Source:', imageUrl ? 'URL' : 'Base64 data');
 
-    // Prepare image URL for OpenAI
+    // Prepare image content for OpenAI
     let imageContent: string;
+
     if (imageUrl) {
-      imageContent = imageUrl;
+      // Check if it's an Uploadcare URL or external URL
+      const isUploadcareUrl = imageUrl.includes('ucarecdn.net') || imageUrl.includes('uploadcare.com');
+
+      if (isUploadcareUrl) {
+        // For Uploadcare URLs, download and convert to base64 to avoid OpenAI timeout
+        console.log('[Uploadcare] Downloading image from CDN...');
+        try {
+          // Add format transformation to ensure proper file type
+          const transformedUrl = imageUrl.endsWith('/')
+            ? `${imageUrl}-/format/auto/-/quality/smart/`
+            : `${imageUrl}/-/format/auto/-/quality/smart/`;
+
+          const imageResponse = await fetch(transformedUrl, {
+            headers: {
+              'User-Agent': 'Remalt/1.0',
+            },
+            signal: AbortSignal.timeout(10000), // 10 second timeout
+          });
+
+          if (!imageResponse.ok) {
+            throw new Error(`Failed to fetch image: ${imageResponse.status} ${imageResponse.statusText}`);
+          }
+
+          const arrayBuffer = await imageResponse.arrayBuffer();
+          const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+          // Detect mime type from response
+          const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+          imageContent = `data:${contentType};base64,${base64}`;
+
+          console.log('[Uploadcare] ✅ Image downloaded and converted to base64');
+        } catch (fetchError) {
+          console.error('[Uploadcare] Failed to download:', fetchError);
+          // Fallback to direct URL
+          imageContent = imageUrl;
+        }
+      } else {
+        // For external URLs, pass directly
+        imageContent = imageUrl;
+      }
     } else {
       // Detect mime type from base64 data
       const mimeType = imageData.startsWith('/9j/') ? 'image/jpeg' :

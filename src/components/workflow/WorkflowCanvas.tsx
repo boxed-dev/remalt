@@ -1035,7 +1035,7 @@ function WorkflowCanvasInner() {
 
   if (!workflow) {
     return (
-      <div className="flex items-center justify-center h-full bg-[#F3F4F6]">
+      <div className="flex items-center justify-center h-full bg-[#F0F9F4]">
         <div className="text-center max-w-md">
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center shadow-sm">
             <svg
@@ -1170,6 +1170,14 @@ function WorkflowCanvasInner() {
       data-lenis-prevent-wheel
       data-lenis-prevent-touch
     >
+      <style jsx global>{`
+        .react-flow__pane {
+          cursor: grab !important;
+        }
+        .react-flow__pane:active {
+          cursor: grabbing !important;
+        }
+      `}</style>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -1219,8 +1227,8 @@ function WorkflowCanvasInner() {
         <Background
           gap={16}
           size={2}
-          color="#D1D5DB"
-          style={{ backgroundColor: "#F9FAFB" }}
+          color="#D0E0D5"
+          style={{ backgroundColor: "#F0F9F4" }}
         />
       </ReactFlow>
 

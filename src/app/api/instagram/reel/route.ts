@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { uploadWithRetry, uploadMultipleWithPartialSuccess } from '@/lib/uploadcare/upload-service';
 
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN;
 const APIFY_ACTOR_ENDPOINT = 'https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items';
@@ -82,7 +83,7 @@ function pickFirstIso(...values: Array<unknown>): string | undefined {
   return undefined;
 }
 
-function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: string) {
+async function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: string) {
   // Handle both videos (reels) and images (posts)
   const videoUrl = item.videoUrl || item.videoUrls?.[0];
   const isVideo = item.isVideo || item.type === 'Video' || !!videoUrl;
@@ -141,14 +142,221 @@ function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: string) 
   const explicitExpires = pickFirstIso(item.expiringAt, item.expireAt);
   const expiresAt = explicitExpires || (takenAt ? new Date(new Date(takenAt).getTime() + 24 * 60 * 60 * 1000).toISOString() : undefined);
 
+  // ============================================
+  // UPLOADCARE PERMANENT MEDIA STORAGE
+  // ============================================
+  let uploadcareCdnUrl: string | undefined;
+  let uploadcareUuid: string | undefined;
+  let uploadcareThumbnailUrl: string | undefined;
+  let uploadcareThumbnailUuid: string | undefined;
+  let uploadcareImages: string[] | undefined;
+  let uploadcareImageUuids: string[] | undefined;
+  let backupStatus: 'success' | 'partial' | 'failed' = 'success';
+  const uploadErrors: string[] = [];
+
+  // Prepare comprehensive metadata for all uploads
+  const baseMetadata = {
+    source: 'instagram',
+    postCode: item.shortCode || 'unknown',
+    author: item.ownerUsername || 'unknown',
+    timestamp: new Date().toISOString(),
+    postType: item.type || 'unknown',
+  };
+
+  console.log('[Instagram API] 📤 Starting UploadCare media backup...');
+
+  // STRATEGY: Upload all media to UploadCare for permanent storage
+  // Priority: Videos > Carousels > Single Images > Thumbnails
+
+  try {
+    // 1. Handle video posts/reels
+    if (isVideo && videoUrl) {
+      try {
+        console.log('[Instagram API] 📹 Uploading video to UploadCare...');
+        const videoResult = await uploadWithRetry(
+          {
+            sourceUrl: videoUrl,
+            store: '1',
+            checkDuplicates: true,
+            saveDuplicates: true,
+            metadata: {
+              ...baseMetadata,
+              type: 'video',
+              duration: item.videoDuration?.toString() || 'unknown',
+            },
+          },
+          3 // Max 3 retries for videos
+        );
+        uploadcareCdnUrl = videoResult.cdnUrl;
+        uploadcareUuid = videoResult.uuid;
+        console.log(`[Instagram API] ✅ Video uploaded: ${uploadcareUuid}`);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[Instagram API] ❌ Video upload failed:', errorMsg);
+        uploadErrors.push(`Video: ${errorMsg}`);
+        backupStatus = 'partial';
+      }
+
+      // Upload video thumbnail separately
+      if (thumbnail) {
+        try {
+          console.log('[Instagram API] 🖼️  Uploading video thumbnail...');
+          const thumbnailResult = await uploadWithRetry(
+            {
+              sourceUrl: thumbnail,
+              store: '1',
+              checkDuplicates: true,
+              saveDuplicates: true,
+              metadata: {
+                ...baseMetadata,
+                type: 'video-thumbnail',
+                relatedVideo: uploadcareUuid || 'unknown',
+              },
+            },
+            2 // Fewer retries for thumbnails
+          );
+          uploadcareThumbnailUrl = thumbnailResult.cdnUrl;
+          uploadcareThumbnailUuid = thumbnailResult.uuid;
+          console.log(`[Instagram API] ✅ Thumbnail uploaded: ${uploadcareThumbnailUuid}`);
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          console.error('[Instagram API] ⚠️  Thumbnail upload failed:', errorMsg);
+          uploadErrors.push(`Thumbnail: ${errorMsg}`);
+          // Don't change status to partial for thumbnail failures
+        }
+      }
+    }
+    // 2. Handle carousel posts (multiple images)
+    else if (allImages && allImages.length > 0) {
+      try {
+        console.log(`[Instagram API] 🎠 Uploading ${allImages.length} carousel images...`);
+        const carouselResults = await uploadMultipleWithPartialSuccess(allImages, {
+          store: '1',
+          checkDuplicates: true,
+          saveDuplicates: true,
+          metadata: {
+            ...baseMetadata,
+            type: 'carousel-image',
+            carouselSize: allImages.length.toString(),
+          },
+        }, 2); // 2 retries per image
+
+        // Separate successful and failed uploads
+        const successfulUploads = carouselResults.filter(r => r.success && r.result);
+        const failedUploads = carouselResults.filter(r => !r.success);
+
+        if (successfulUploads.length > 0) {
+          uploadcareImages = successfulUploads.map(r => r.result!.cdnUrl);
+          uploadcareImageUuids = successfulUploads.map(r => r.result!.uuid);
+
+          // Use first successful image as primary
+          uploadcareCdnUrl = successfulUploads[0].result!.cdnUrl;
+          uploadcareUuid = successfulUploads[0].result!.uuid;
+
+          console.log(`[Instagram API] ✅ Carousel uploaded: ${successfulUploads.length}/${allImages.length} images`);
+        }
+
+        // Track failures
+        if (failedUploads.length > 0) {
+          failedUploads.forEach(failed => {
+            const errorMsg = `Image ${failed.url.substring(0, 50)}...: ${failed.error}`;
+            uploadErrors.push(errorMsg);
+            console.error(`[Instagram API] ⚠️  Carousel image failed: ${errorMsg}`);
+          });
+          backupStatus = successfulUploads.length > 0 ? 'partial' : 'failed';
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[Instagram API] ❌ Carousel upload failed:', errorMsg);
+        uploadErrors.push(`Carousel: ${errorMsg}`);
+        backupStatus = 'failed';
+      }
+    }
+    // 3. Handle single image posts
+    else if (thumbnail) {
+      try {
+        console.log('[Instagram API] 🖼️  Uploading image to UploadCare...');
+        const result = await uploadWithRetry(
+          {
+            sourceUrl: thumbnail,
+            store: '1',
+            checkDuplicates: true,
+            saveDuplicates: true,
+            metadata: {
+              ...baseMetadata,
+              type: 'image',
+            },
+          },
+          3 // Max 3 retries for primary images
+        );
+        uploadcareCdnUrl = result.cdnUrl;
+        uploadcareUuid = result.uuid;
+        console.log(`[Instagram API] ✅ Image uploaded: ${uploadcareUuid}`);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[Instagram API] ❌ Image upload failed:', errorMsg);
+        uploadErrors.push(`Image: ${errorMsg}`);
+        backupStatus = 'partial';
+      }
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[Instagram API] ❌ UploadCare backup failed:', errorMsg);
+    backupStatus = 'failed';
+    uploadErrors.push(`Critical: ${errorMsg}`);
+  }
+
+  // Determine final backup status
+  if (uploadErrors.length === 0) {
+    backupStatus = 'success';
+    console.log('[Instagram API] ✅ All media backed up to UploadCare');
+  } else if (!uploadcareCdnUrl && !uploadcareImages?.length) {
+    backupStatus = 'failed';
+    console.error('[Instagram API] ❌ Complete backup failure - no media uploaded');
+  } else {
+    backupStatus = 'partial';
+    console.warn('[Instagram API] ⚠️  Partial backup - some uploads failed');
+  }
+
+  // Generate optimized thumbnail URLs using UploadCare transformations
+  let optimizedThumbnail: string | undefined;
+  if (uploadcareThumbnailUuid) {
+    // For video thumbnails, create optimized preview (800x800, smart crop, webp)
+    optimizedThumbnail = `https://ucarecdn.com/${uploadcareThumbnailUuid}/-/preview/800x800/-/quality/smart/-/format/webp/`;
+  } else if (uploadcareUuid && !isVideo) {
+    // For images, create optimized preview
+    optimizedThumbnail = `https://ucarecdn.com/${uploadcareUuid}/-/preview/800x800/-/quality/smart/-/format/webp/`;
+  }
+
   return {
     success: true as const,
     url: requestedUrl,
     reelCode: item.shortCode,
-    videoUrl: videoUrl || undefined,
-    thumbnail,
+
+    // Primary media URLs (UploadCare first, original as fallback)
+    videoUrl: uploadcareCdnUrl && isVideo ? uploadcareCdnUrl : videoUrl,
+    thumbnail: optimizedThumbnail || uploadcareCdnUrl || uploadcareThumbnailUrl || thumbnail,
     thumbnailFallback,
-    images: allImages,
+    images: uploadcareImages || allImages,
+
+    // UploadCare backup info
+    uploadcare: {
+      status: backupStatus,
+      primaryCdnUrl: uploadcareCdnUrl,
+      primaryUuid: uploadcareUuid,
+      thumbnailCdnUrl: uploadcareThumbnailUrl,
+      thumbnailUuid: uploadcareThumbnailUuid,
+      carouselUrls: uploadcareImages,
+      carouselUuids: uploadcareImageUuids,
+      errors: uploadErrors.length > 0 ? uploadErrors : undefined,
+    },
+
+    // Original URLs (for fallback/reference)
+    originalVideoUrl: videoUrl,
+    originalThumbnail: thumbnail,
+    originalImages: allImages,
+
+    // Post metadata
     caption: item.caption,
     author: {
       username: item.ownerUsername,
@@ -166,10 +374,13 @@ function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: string) 
     rawId: item.id,
     isVideo,
     postType: item.type,
+    permalink,
   };
 }
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
+
   try {
     const body = await request.json();
     const requestedUrl = normaliseUrl(body?.url ?? '');
@@ -186,7 +397,7 @@ export async function POST(request: Request) {
 
     // Determine if this is a story or regular post
     const resultsType = isStoryUrl(requestedUrl) ? 'stories' : 'posts';
-    console.log(`[Instagram API] Detected ${resultsType} URL:`, requestedUrl);
+    console.log(`[Instagram API] 🎯 Fetching ${resultsType}:`, requestedUrl);
 
     const apifyResponse = await fetch(apifyUrl.toString(), {
       method: 'POST',
@@ -205,7 +416,7 @@ export async function POST(request: Request) {
 
     if (!apifyResponse.ok) {
       const errorPayload = await apifyResponse.text();
-      console.error('Apify request failed:', apifyResponse.status, errorPayload);
+      console.error('[Instagram API] ❌ Apify request failed:', apifyResponse.status, errorPayload);
       throw new Error('Failed to fetch Instagram post data');
     }
 
@@ -217,19 +428,38 @@ export async function POST(request: Request) {
     const item = data[0] as ApifyInstagramItem;
 
     // Debug logging to see what Apify returns
-    console.log('[Instagram API] Raw Apify item:', JSON.stringify(item, null, 2));
-    console.log('[Instagram API] displayUrl:', item.displayUrl);
-    console.log('[Instagram API] images:', item.images);
-    console.log('[Instagram API] url:', item.url);
+    console.log('[Instagram API] ✅ Apify data received');
+    console.log(`[Instagram API]   - Type: ${item.type}`);
+    console.log(`[Instagram API]   - Post code: ${item.shortCode}`);
+    console.log(`[Instagram API]   - Author: @${item.ownerUsername}`);
+    console.log(`[Instagram API]   - Has video: ${!!item.videoUrl}`);
+    console.log(`[Instagram API]   - Has thumbnail: ${!!item.displayUrl}`);
+    console.log(`[Instagram API]   - Is carousel: ${item.type === 'Sidecar'}`);
 
-    const responsePayload = mapApifyItemToResponse(item, requestedUrl);
+    const responsePayload = await mapApifyItemToResponse(item, requestedUrl);
 
-    console.log('[Instagram API] Mapped response:', JSON.stringify(responsePayload, null, 2));
+    const elapsed = Date.now() - startTime;
+    console.log(`[Instagram API] ✅ Complete success in ${elapsed}ms`);
+    console.log(`[Instagram API]   - Post type: ${responsePayload.postType}`);
+    console.log(`[Instagram API]   - Is video: ${responsePayload.isVideo}`);
+    console.log(`[Instagram API]   - Has carousel: ${!!responsePayload.images?.length}`);
+    console.log(`[Instagram API]   - UploadCare status: ${responsePayload.uploadcare.status}`);
+    if (responsePayload.uploadcare.errors) {
+      console.log(`[Instagram API]   - Upload errors: ${responsePayload.uploadcare.errors.length}`);
+    }
 
     return NextResponse.json(responsePayload);
   } catch (error) {
-    console.error('Error in /api/instagram/reel:', error);
+    const elapsed = Date.now() - startTime;
+    console.error(`[Instagram API] ❌ Failed after ${elapsed}ms:`, error);
     const message = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: message,
+        details: 'Please ensure the Instagram URL is correct and the post is public.',
+      },
+      { status: 500 }
+    );
   }
 }

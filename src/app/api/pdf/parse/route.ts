@@ -38,12 +38,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { pdfData, pdfUrl, storagePath } = await req.json();
+    const { pdfData, pdfUrl, storagePath, uploadcareCdnUrl } = await req.json();
 
     // Validate input
-    if (!pdfData && !pdfUrl && !storagePath) {
+    if (!pdfData && !pdfUrl && !storagePath && !uploadcareCdnUrl) {
       return NextResponse.json(
-        { error: 'PDF data, URL, or storage path is required' },
+        { error: 'PDF data, URL, storage path, or Uploadcare CDN URL is required' },
         { status: 400 }
       );
     }
@@ -59,18 +59,39 @@ export async function POST(req: NextRequest) {
 
     console.log('\n=== PDF Parsing Request ===');
     console.log('User ID:', user.id);
-    
+
     let pdfBuffer: ArrayBuffer;
     let fileSize: number;
-    let source: 'storage' | 'url' | 'upload';
+    let source: 'storage' | 'url' | 'upload' | 'uploadcare';
 
     // Get PDF data from different sources
-    if (storagePath) {
+    if (uploadcareCdnUrl) {
+      // Fetch from Uploadcare CDN
+      console.log('Source: Uploadcare CDN');
+      source = 'uploadcare';
+
+      const urlResponse = await withTimeout(
+        fetch(uploadcareCdnUrl),
+        30000,
+        'PDF download from Uploadcare CDN timed out'
+      );
+
+      if (!urlResponse.ok) {
+        return NextResponse.json(
+          { error: `Failed to fetch PDF from Uploadcare CDN: ${urlResponse.statusText}` },
+          { status: 400 }
+        );
+      }
+
+      pdfBuffer = await urlResponse.arrayBuffer();
+      fileSize = pdfBuffer.byteLength;
+
+    } else if (storagePath) {
       // Fetch from Supabase Storage
       console.log('Source: Supabase Storage');
       source = 'storage';
       const supabase = getSupabaseClient();
-      
+
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('workflow-pdfs')
         .download(storagePath);
@@ -85,12 +106,12 @@ export async function POST(req: NextRequest) {
 
       pdfBuffer = await fileData.arrayBuffer();
       fileSize = pdfBuffer.byteLength;
-      
+
     } else if (pdfUrl) {
       // Fetch from URL
       console.log('Source: URL');
       source = 'url';
-      
+
       const urlResponse = await withTimeout(
         fetch(pdfUrl),
         30000,
@@ -106,12 +127,12 @@ export async function POST(req: NextRequest) {
 
       pdfBuffer = await urlResponse.arrayBuffer();
       fileSize = pdfBuffer.byteLength;
-      
+
     } else {
       // Use provided base64 data (legacy support)
       console.log('Source: Base64 data');
       source = 'upload';
-      
+
       try {
         pdfBuffer = Buffer.from(pdfData, 'base64').buffer;
         fileSize = pdfBuffer.byteLength;

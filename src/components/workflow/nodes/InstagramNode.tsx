@@ -73,8 +73,14 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
   }, [id, data.postType, data.images, isCarousel]);
 
   // Proxy Instagram CDN URLs through our backend to avoid CORS issues
+  // UploadCare URLs are used directly as they're permanent and don't require proxying
   const getProxiedThumbnail = useCallback((url: string | undefined): string => {
     if (!url) return '';
+
+    // UploadCare URLs can be used directly (no proxy needed)
+    if (url.includes('ucarecdn.com')) {
+      return url;
+    }
 
     // If it's an Instagram CDN URL, proxy it
     if (url.includes('cdninstagram.com') || url.includes('fbcdn.net')) {
@@ -84,9 +90,15 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
     return url;
   }, []);
 
-  const [thumbnailSrc, setThumbnailSrc] = useState(
-    getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || ''
-  );
+  // Prefer UploadCare CDN URL for permanent storage, fallback to Instagram CDN
+  // For videos: use uploadcareThumbnailUrl (permanent thumbnail image)
+  // For images: use uploadcareCdnUrl (permanent image)
+  const [thumbnailSrc, setThumbnailSrc] = useState(() => {
+    if (data.isVideo) {
+      return data.uploadcareThumbnailUrl || getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || '';
+    }
+    return data.uploadcareCdnUrl || getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || '';
+  });
   const inputRef = useRef<HTMLInputElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const processedUrlRef = useRef<string | null>(null);
@@ -119,9 +131,14 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
   }, [data.url, url, isEditing]);
 
   useEffect(() => {
-    const nextThumbnail = getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || '';
+    // Prefer UploadCare CDN URL for permanent storage
+    // For videos: use uploadcareThumbnailUrl (permanent thumbnail image)
+    // For images: use uploadcareCdnUrl (permanent image)
+    const nextThumbnail = data.isVideo
+      ? (data.uploadcareThumbnailUrl || getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || '')
+      : (data.uploadcareCdnUrl || getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || '');
     setThumbnailSrc(nextThumbnail);
-  }, [data.thumbnail, data.thumbnailFallback, getProxiedThumbnail]);
+  }, [data.isVideo, data.uploadcareCdnUrl, data.uploadcareThumbnailUrl, data.thumbnail, data.thumbnailFallback, getProxiedThumbnail]);
 
   // Reset carousel index when URL changes
   useEffect(() => {
@@ -180,7 +197,6 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
         fetchStatus: 'success',
         videoUrl: result.videoUrl,
         thumbnail: result.thumbnail,
-        thumbnailFallback: result.thumbnailFallback,
         images: result.images,
         caption: result.caption,
         author: result.author,
@@ -193,96 +209,32 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
         isStory: result.isStory,
         takenAt: result.takenAt,
         expiresAt: result.expiresAt,
+        permalink: result.permalink,
+        // UploadCare backup fields (from new nested structure)
+        uploadcareCdnUrl: result.uploadcare?.primaryCdnUrl,
+        uploadcareUuid: result.uploadcare?.primaryUuid,
+        uploadcareThumbnailUrl: result.uploadcare?.thumbnailCdnUrl,
+        uploadcareThumbnailUuid: result.uploadcare?.thumbnailUuid,
+        uploadcareImages: result.uploadcare?.carouselUrls,
+        uploadcareImageUuids: result.uploadcare?.carouselUuids,
+        backupStatus: result.uploadcare?.status,
+        backupError: result.uploadcare?.errors?.join(', '),
+        // Original URLs for fallback
+        originalVideoUrl: result.originalVideoUrl,
+        originalThumbnail: result.originalThumbnail,
+        originalImages: result.originalImages,
       } as Partial<InstagramNodeData>);
 
       console.log('[InstagramNode] After updateNodeData - data.images:', data.images);
       console.log('[InstagramNode] After updateNodeData - data.postType:', data.postType);
 
-      // Trigger processing based on post type
-      if (result.videoUrl && result.isVideo) {
-        // Process video for transcription/analysis
-        processVideo(result.videoUrl, reelCode);
-      } else if (!result.isVideo && result.thumbnail) {
-        // Process image for visual analysis
-        processImage(result.thumbnail, reelCode, result.caption);
-      }
+      // UploadCare backup is now handled server-side in /api/instagram/reel
+      // Old processing code removed to prevent duplicate downloads
 
     } catch (error) {
       updateNodeData(id, {
         fetchStatus: 'error',
         fetchError: error instanceof Error ? error.message : 'Unknown error',
-      } as Partial<InstagramNodeData>);
-    }
-  }, [id, updateNodeData]);
-
-  const processImage = useCallback(async (imageUrl: string, postCode: string, caption?: string) => {
-    updateNodeData(id, {
-      analysisStatus: 'analyzing',
-      analysisError: undefined,
-    } as Partial<InstagramNodeData>);
-
-    try {
-      const response = await fetch('/api/instagram/process-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl, postCode, caption }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to process image');
-      }
-
-      updateNodeData(id, {
-        analysisStatus: 'success',
-        ocrText: result.ocrText,
-        summary: result.summary,
-        fullAnalysis: result.fullAnalysis,
-      } as Partial<InstagramNodeData>);
-
-    } catch (error) {
-      updateNodeData(id, {
-        analysisStatus: 'error',
-        analysisError: error instanceof Error ? error.message : 'Unknown error',
-      } as Partial<InstagramNodeData>);
-    }
-  }, [id, updateNodeData]);
-
-  const processVideo = useCallback(async (videoUrl: string, reelCode: string) => {
-    updateNodeData(id, {
-      storageStatus: 'uploading',
-      analysisStatus: 'idle',
-      analysisError: undefined,
-    } as Partial<InstagramNodeData>);
-
-    try {
-      const response = await fetch('/api/instagram/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoUrl, reelCode }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to process video');
-      }
-
-      updateNodeData(id, {
-        storageStatus: 'success',
-        analysisStatus: 'success',
-        storedVideoUrl: result.storedVideoUrl,
-        transcript: result.transcript,
-        summary: result.summary,
-        fullAnalysis: result.fullAnalysis,
-      } as Partial<InstagramNodeData>);
-
-    } catch (error) {
-      updateNodeData(id, {
-        storageStatus: 'error',
-        analysisStatus: 'error',
-        analysisError: error instanceof Error ? error.message : 'Unknown error',
       } as Partial<InstagramNodeData>);
     }
   }, [id, updateNodeData]);
@@ -442,7 +394,7 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
                     <img
                       src={
                         isCarousel
-                          ? getProxiedThumbnail(data.images![currentImageIndex])
+                          ? (data.uploadcareImages?.[currentImageIndex] || getProxiedThumbnail(data.images![currentImageIndex]))
                           : (thumbnailSrc || data.thumbnailFallback || `https://image.microlink.io/${encodeURIComponent(data.url || '')}`)
                       }
                       alt={isCarousel ? `Carousel image ${currentImageIndex + 1}` : 'Post thumbnail'}
@@ -554,15 +506,23 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
                           )}
                   </div>
 
-              {/* Story Expiration Info */}
-              {data.isStory && (
-                <div className="p-2 text-[11px] text-amber-800 bg-amber-50 rounded-lg border border-amber-200 space-y-0.5">
-                  <p className="font-medium">⚠️ Story expires after 24 hours</p>
-                  {data.takenAt && (
-                    <p className="text-[10px]">Taken: {formatDateShort(data.takenAt)}</p>
+              {/* Backup Status Warnings */}
+              {data.backupStatus === 'failed' && (
+                <div className="p-2 text-[11px] text-red-800 bg-red-50 rounded-lg border border-red-200 space-y-0.5">
+                  <p className="font-medium">⚠️ Media backup failed{data.isStory ? ' - story will expire after 24 hours' : ''}</p>
+                  {data.backupError && (
+                    <p className="text-[10px]">Error: {data.backupError}</p>
                   )}
-                  {data.expiresAt && (
+                  {data.isStory && data.expiresAt && (
                     <p className="text-[10px]">Expires: {formatDateShort(data.expiresAt)} {formatTimeLeft(data.expiresAt) && `(${formatTimeLeft(data.expiresAt)} left)`}</p>
+                  )}
+                </div>
+              )}
+              {data.backupStatus === 'partial' && (
+                <div className="p-2 text-[11px] text-yellow-800 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="font-medium">⚠️ Partial backup - some media may be unavailable later</p>
+                  {data.backupError && (
+                    <p className="text-[10px]">Details: {data.backupError}</p>
                   )}
                 </div>
               )}

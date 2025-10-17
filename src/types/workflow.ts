@@ -97,6 +97,9 @@ export interface PDFNodeData extends BaseNodeData {
   fileName?: string;
   fileSize?: number;
   storagePath?: string; // Path in Supabase storage
+  uploadcareCdnUrl?: string; // Uploadcare CDN URL
+  uploadcareUuid?: string; // Uploadcare file UUID for transformations
+  uploadSource?: 'url' | 'uploadcare' | 'supabase'; // Track upload source
   pageCount?: number; // Total number of pages
   parsedText?: string;
   headings?: string[];
@@ -114,6 +117,9 @@ export interface VoiceNodeData extends BaseNodeData {
   audioUrl?: string;
   audioStoragePath?: string;
   audioSignedUrlExpiresAt?: string;
+  uploadcareCdnUrl?: string; // Uploadcare CDN URL for uploaded audio
+  uploadcareUuid?: string; // Uploadcare file UUID
+  uploadSource?: 'recording' | 'uploadcare' | 'supabase'; // Track audio source
   uploadStatus?: 'idle' | 'uploading' | 'success' | 'error';
   audioFile?: File;
   duration?: number;
@@ -190,6 +196,7 @@ export interface ImageNodeData extends BaseNodeData {
 export interface InstagramNodeData extends BaseNodeData {
   url?: string;
   reelCode?: string;
+  permalink?: string; // Canonical Instagram permalink
   videoUrl?: string;
   thumbnail?: string;
   thumbnailFallback?: string;
@@ -220,6 +227,19 @@ export interface InstagramNodeData extends BaseNodeData {
   fullAnalysis?: string; // Complete Gemini video/image analysis
   ocrText?: string; // Text extracted from image posts
   analysisError?: string;
+  // UploadCare permanent storage (primary media)
+  uploadcareCdnUrl?: string; // Permanent UploadCare URL for video or primary image
+  uploadcareUuid?: string; // UploadCare file UUID for video or primary image
+  uploadcareThumbnailUrl?: string; // Permanent UploadCare thumbnail URL (for videos)
+  uploadcareThumbnailUuid?: string; // UploadCare thumbnail UUID (for videos)
+  uploadcareImages?: string[]; // Permanent UploadCare URLs for carousel images
+  uploadcareImageUuids?: string[]; // UploadCare UUIDs for carousel images
+  backupStatus?: 'idle' | 'backing-up' | 'success' | 'partial' | 'failed'; // Media backup status
+  backupError?: string; // Error message if backup fails
+  // Original URLs (for fallback/reference)
+  originalVideoUrl?: string; // Original Instagram video URL
+  originalThumbnail?: string; // Original Instagram thumbnail URL
+  originalImages?: string[]; // Original Instagram carousel image URLs
 }
 
 // LinkedIn Node

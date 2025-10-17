@@ -261,6 +261,21 @@
     visibility: visible !important;
     opacity: 1 !important;
   }
+
+  /* Selected node styling - dark green border with smooth corners */
+  .react-flow__node.selected {
+    outline: none !important;
+  }
+
+  .react-flow__node.selected > div {
+    box-shadow: 0 0 0 3px #095D40, 0 0 0 9px rgba(9, 93, 64, 0.15), 0 6px 20px rgba(9, 93, 64, 0.15) !important;
+    transition: box-shadow 0.2s ease-out !important;
+  }
+
+  /* Ensure group nodes don't get double styling */
+  .react-flow__node-group.selected > div {
+    box-shadow: none !important;
+  }
 }
 
 html.lenis-enabled,
