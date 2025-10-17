@@ -6,6 +6,11 @@ import { WorkflowSchema } from '@/lib/schemas/workflow-schema';
 import type { Workflow } from '@/types/workflow';
 import { ZodError } from 'zod';
 
+// Global save lock to prevent concurrent saves of the same workflow
+// Using both a promise map and a simple boolean lock for synchronous checking
+const activeSaves = new Map<string, Promise<void>>();
+const saveLocks = new Map<string, boolean>();
+
 function isWorkflowEmpty(workflow: Workflow | null): boolean {
   if (!workflow) return true;
 
@@ -44,97 +49,130 @@ export function useWorkflowPersistence({
       return;
     }
 
+    const workflowId = workflow.id;
+
+    // Synchronous lock check - if locked, skip immediately
+    if (saveLocks.get(workflowId)) {
+      console.log('⏭️ Skipping save: save already in progress for workflow', workflowId, '(locked)');
+      // Return the existing promise if available
+      return activeSaves.get(workflowId);
+    }
+
+    // Check if there's already an active save for this workflow
+    const existingSave = activeSaves.get(workflowId);
+    if (existingSave) {
+      console.log('⏭️ Skipping save: save already in progress for workflow', workflowId, '(promise exists)');
+      return existingSave; // Return the existing promise
+    }
+
+    // Acquire the lock IMMEDIATELY before any async operations
+    saveLocks.set(workflowId, true);
+
     console.log('🔄 Starting save for workflow:', workflow.name, 'userId:', userId);
     setSaveStatus(true, null, null);
 
     // Create client inside callback to ensure it has current auth session
     const supabase = createClient();
 
-    try {
-      // First, validate the workflow structure
-      const validationResult = WorkflowSchema.safeParse(workflow);
+    const savePromise = (async () => {
+      try {
+        // First, validate the workflow structure
+        const validationResult = WorkflowSchema.safeParse(workflow);
 
-      if (!validationResult.success) {
-        console.error('❌ Validation failed:', validationResult.error.issues);
-        throw validationResult.error;
-      }
-
-      const workflowToPersist = validationResult.data;
-
-      const { data, error } = await supabase
-        .from('workflows')
-        .upsert({
-          id: workflowToPersist.id,
-          user_id: userId,
-          name: workflowToPersist.name,
-          description: workflowToPersist.description || null,
-          nodes: workflowToPersist.nodes as any,
-          edges: workflowToPersist.edges as any,
-          viewport: workflowToPersist.viewport as any,
-          metadata: workflowToPersist.metadata as any,
-          // Note: updated_at is auto-set by database trigger
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('❌ Supabase error:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-        });
-        throw error;
-      }
-
-      // Verify save by checking returned data
-      if (!data) {
-        throw new Error('Save succeeded but no data returned');
-      }
-
-      // Verify critical fields match
-      if (data.id !== workflowToPersist.id) {
-        throw new Error('Save verification failed: ID mismatch');
-      }
-
-      if (data.nodes.length !== workflowToPersist.nodes.length) {
-        console.warn('⚠️ Node count mismatch after save:', {
-          expected: workflowToPersist.nodes.length,
-          actual: data.nodes.length
-        });
-      }
-
-      lastSavedWorkflow.current = workflow;
-      setSaveStatus(false, null, new Date().toISOString());
-
-      console.log('✅ Workflow saved and verified:', workflow.name, 'at', new Date().toLocaleTimeString());
-    } catch (error: unknown) {
-      if (retries > 0) {
-        console.warn(`⚠️ Save failed, retrying... (${retries} attempts left)`);
-        setTimeout(() => saveWorkflow(retries - 1), 2000); // Wait 2 seconds before retrying
-      } else {
-        if (error instanceof ZodError) {
-          console.error('❌ Zod validation failed after multiple retries:',
-            error.issues.map(issue => ({
-              path: issue.path.join('.'),
-              message: issue.message,
-              code: issue.code,
-            }))
-          );
-          setSaveStatus(false, 'Data validation failed. Check console for details.', null);
-        } else if (error instanceof Error) {
-          console.error('❌ Failed to save workflow after multiple retries:', {
-            error,
-            message: error.message,
-            stack: error.stack,
-          });
-          setSaveStatus(false, error.message || 'Failed to save workflow', null);
-        } else {
-          console.error('❌ Failed to save workflow after multiple retries with unknown error:', error);
-          setSaveStatus(false, 'An unknown error occurred while saving.', null);
+        if (!validationResult.success) {
+          console.error('❌ Validation failed:', validationResult.error.issues);
+          throw validationResult.error;
         }
+
+        const workflowToPersist = validationResult.data;
+
+        const { data, error } = await supabase
+          .from('workflows')
+          .upsert({
+            id: workflowToPersist.id,
+            user_id: userId,
+            name: workflowToPersist.name,
+            description: workflowToPersist.description || null,
+            nodes: workflowToPersist.nodes as any,
+            edges: workflowToPersist.edges as any,
+            viewport: workflowToPersist.viewport as any,
+            metadata: workflowToPersist.metadata as any,
+            // Note: updated_at is auto-set by database trigger
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('❌ Supabase error:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+          });
+          throw error;
+        }
+
+        // Verify save by checking returned data
+        if (!data) {
+          throw new Error('Save succeeded but no data returned');
+        }
+
+        // Verify critical fields match
+        if (data.id !== workflowToPersist.id) {
+          throw new Error('Save verification failed: ID mismatch');
+        }
+
+        if (data.nodes.length !== workflowToPersist.nodes.length) {
+          console.warn('⚠️ Node count mismatch after save:', {
+            expected: workflowToPersist.nodes.length,
+            actual: data.nodes.length
+          });
+        }
+
+        lastSavedWorkflow.current = workflow;
+        setSaveStatus(false, null, new Date().toISOString());
+
+        console.log('✅ Workflow saved and verified:', workflow.name, 'at', new Date().toLocaleTimeString());
+      } catch (error: unknown) {
+        if (retries > 0) {
+          console.warn(`⚠️ Save failed, retrying... (${retries} attempts left)`);
+          // Remove from active saves and locks before retrying
+          activeSaves.delete(workflowId);
+          saveLocks.delete(workflowId);
+          setTimeout(() => saveWorkflow(retries - 1), 2000); // Wait 2 seconds before retrying
+        } else {
+          if (error instanceof ZodError) {
+            console.error('❌ Zod validation failed after multiple retries:',
+              error.issues.map(issue => ({
+                path: issue.path.join('.'),
+                message: issue.message,
+                code: issue.code,
+              }))
+            );
+            setSaveStatus(false, 'Data validation failed. Check console for details.', null);
+          } else if (error instanceof Error) {
+            console.error('❌ Failed to save workflow after multiple retries:', {
+              error,
+              message: error.message,
+              stack: error.stack,
+            });
+            setSaveStatus(false, error.message || 'Failed to save workflow', null);
+          } else {
+            console.error('❌ Failed to save workflow after multiple retries with unknown error:', error);
+            setSaveStatus(false, 'An unknown error occurred while saving.', null);
+          }
+        }
+      } finally {
+        // Clean up the active save lock and promise
+        activeSaves.delete(workflowId);
+        saveLocks.delete(workflowId);
       }
-    }
+    })();
+
+    // Register this save as active
+    activeSaves.set(workflowId, savePromise);
+
+    return savePromise;
   }, [workflow, userId, setSaveStatus]);
 
   // Auto-save effect
@@ -159,6 +197,12 @@ export function useWorkflowPersistence({
       if (JSON.stringify(lastSavedWorkflow.current) === JSON.stringify(debouncedWorkflow)) {
         return;
       }
+    }
+
+    // Check if this workflow is already being saved BEFORE calling saveWorkflow
+    if (saveLocks.get(debouncedWorkflow.id)) {
+      console.log('⏭️ Skipping auto-save: save already in progress for workflow', debouncedWorkflow.id);
+      return;
     }
 
     // Auto-save the workflow

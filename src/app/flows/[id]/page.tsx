@@ -23,6 +23,7 @@ export default function WorkflowEditorPage() {
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [hasRedirected, setHasRedirected] = useState(false);
+  const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(null);
 
   const workflow = useWorkflowStore((state) => state.workflow);
   const createWorkflow = useWorkflowStore((state) => state.createWorkflow);
@@ -51,6 +52,14 @@ export default function WorkflowEditorPage() {
     userId: user?.id || null,
   });
 
+  // Reset redirect flag when navigating to /new to prevent stale redirects
+  useEffect(() => {
+    if (workflowId === "new") {
+      setHasRedirected(false);
+      setCurrentWorkflowId(null); // Clear current workflow ID tracker
+    }
+  }, [workflowId]);
+
   // Handle redirect from /flows/new to /flows/[id] after first save
   useEffect(() => {
     // Only redirect if:
@@ -58,17 +67,21 @@ export default function WorkflowEditorPage() {
     // 2. We have a workflow with an actual ID
     // 3. We haven't already redirected
     // 4. The workflow has been saved (has nodes or edges)
+    // 5. The workflow ID matches the one we're currently editing (not a stale workflow)
     if (
       workflowId === "new" &&
       workflow?.id &&
       !hasRedirected &&
-      (workflow.nodes.length > 0 || workflow.edges.length > 0)
+      (workflow.nodes.length > 0 || workflow.edges.length > 0) &&
+      workflow.id === currentWorkflowId // Only redirect if this matches the workflow we just created
     ) {
       console.log("🔄 Redirecting from /flows/new to /flows/" + workflow.id);
       setHasRedirected(true);
-      router.replace(`/flows/${workflow.id}`);
+      // Use push instead of replace to avoid full page reload (janky UX)
+      // Update the URL without reloading the page
+      window.history.replaceState(null, '', `/flows/${workflow.id}`);
     }
-  }, [workflowId, workflow, hasRedirected, router]);
+  }, [workflowId, workflow, hasRedirected, currentWorkflowId]);
 
   // Handle visibility changes (tab switching)
   useEffect(() => {
@@ -96,7 +109,17 @@ export default function WorkflowEditorPage() {
 
       // Check if this is a "new" workflow request
       if (workflowId === "new") {
+        // Clear any existing workflow state to prevent redirect to old workflow
+        const currentWorkflow = useWorkflowStore.getState().workflow;
+        if (currentWorkflow) {
+          useWorkflowStore.getState().clearWorkflow();
+        }
         createWorkflow("Untitled Workflow", "A new workflow");
+        // Get the newly created workflow's ID and track it
+        const newlyCreatedWorkflow = useWorkflowStore.getState().workflow;
+        if (newlyCreatedWorkflow) {
+          setCurrentWorkflowId(newlyCreatedWorkflow.id);
+        }
         setLoadingWorkflow(false);
         return;
       }
@@ -110,6 +133,7 @@ export default function WorkflowEditorPage() {
 
         if (workflowData) {
           loadWorkflow(workflowData);
+          setCurrentWorkflowId(workflowData.id);
         } else {
           setLoadError("Workflow not found");
         }
