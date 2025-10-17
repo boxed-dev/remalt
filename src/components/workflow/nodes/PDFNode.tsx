@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { FileText, Upload, Loader2, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp, BookOpen, Download, AlertTriangle } from 'lucide-react';
+import { FileText, Upload, Loader2, CheckCircle2, AlertCircle, Download, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useState, useRef, useMemo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
@@ -13,14 +13,18 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024;
 export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => {
   const [mode, setMode] = useState<'choose' | 'url' | 'upload'>('choose');
   const [url, setUrl] = useState(data.url || '');
-  const [showDetails, setShowDetails] = useState(false);
-  const [showSegments, setShowSegments] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [UploaderComponent, setUploader] = useState<React.ComponentType<any> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
   const hasParsedContent = useMemo(() => data.parseStatus === 'success' && (data.parsedText || (data.segments?.length ?? 0) > 0), [data.parseStatus, data.parsedText, data.segments]);
+
+  const pdfUrl = useMemo(() => {
+    if (data.uploadcareCdnUrl) return data.uploadcareCdnUrl;
+    if (data.url) return data.url;
+    return null;
+  }, [data.uploadcareCdnUrl, data.url]);
 
   const handleUrlSave = async () => {
     if (!url.trim()) {
@@ -56,8 +60,6 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
   const resetNode = () => {
     setMode('choose');
     setUrl('');
-    setShowDetails(false);
-    setShowSegments(false);
     updateNodeData(id, {
       fileName: undefined,
       url: undefined,
@@ -186,13 +188,6 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
     return null;
   };
 
-  const handleReparse = async (event: React.MouseEvent<HTMLButtonElement>) => {
-    stopPropagation(event);
-    setShowDetails(false);
-    setShowSegments(false);
-    await triggerParsing();
-  };
-
   const downloadParsedText = (event: React.MouseEvent<HTMLButtonElement>) => {
     stopPropagation(event);
     if (!data.parsedText) return;
@@ -220,8 +215,6 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
       console.log('[PDFNode] Upload complete:', firstCompleted.cdnUrl);
       setIsUploading(false);
       setMode('choose');
-      setShowDetails(false);
-      setShowSegments(false);
 
       updateNodeData(id, {
         fileName: firstCompleted.name || 'Document.pdf',
@@ -272,29 +265,44 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
 
         {data.fileName ? (
           <div className="space-y-2">
-            <div
-              onClick={resetNode}
-              onMouseDown={stopPropagation}
-              className="cursor-pointer rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2 hover:border-[#EF4444] transition-colors"
-            >
-              <div className="text-[12px] font-medium text-[#1A1D21] truncate" title={data.fileName}>
-                {data.fileName}
+            {/* PDF Preview */}
+            {pdfUrl && (
+              <div className="relative group">
+                <div className="rounded-lg border border-[#E5E7EB] overflow-hidden bg-white">
+                  <iframe
+                    src={`${pdfUrl}#view=FitH&toolbar=0&navpanes=0&scrollbar=0`}
+                    className="w-full h-32 pointer-events-none"
+                    title="PDF Preview"
+                  />
+                  {/* Overlay with file info */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end">
+                    <div className="p-2 w-full">
+                      <div className="text-[11px] font-medium text-white truncate" title={data.fileName}>
+                        {data.fileName}
+                      </div>
+                      {data.fileSize && (
+                        <div className="text-[9px] text-white/80">
+                          {formatFileSize(data.fileSize)}
+                          {data.pageCount && ` • ${data.pageCount} page${data.pageCount > 1 ? 's' : ''}`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* Click to open */}
+                  <button
+                    onClick={(e) => {
+                      stopPropagation(e);
+                      window.open(pdfUrl, '_blank');
+                    }}
+                    onMouseDown={stopPropagation}
+                    className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-white"
+                    title="Open PDF in new tab"
+                  >
+                    <ExternalLink className="h-3 w-3 text-[#1A1D21]" />
+                  </button>
+                </div>
               </div>
-              {data.url && (
-                <div className="text-[10px] text-[#6B7280] truncate" title={data.url}>{data.url}</div>
-              )}
-              {data.uploadcareCdnUrl && (
-                <div className="text-[10px] text-[#8B5CF6] truncate" title={data.uploadcareCdnUrl}>
-                  Uploadcare CDN
-                </div>
-              )}
-              {data.fileSize && (
-                <div className="text-[10px] text-[#6B7280] mt-1">
-                  Size: {formatFileSize(data.fileSize)}
-                  {data.pageCount && ` • ${data.pageCount} page${data.pageCount > 1 ? 's' : ''}`}
-                </div>
-              )}
-            </div>
+            )}
 
             {data.parseStatus === 'error' && (
               <div className="rounded-lg bg-[#FEF2F2] border border-[#FCA5A5] px-3 py-2">
@@ -307,90 +315,17 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
               </div>
             )}
 
-            {hasParsedContent && (
-              <div className="rounded-lg border border-[#E5E7EB] bg-white">
-                <button
-                  onClick={(event) => {
-                    stopPropagation(event);
-                    setShowDetails(prev => !prev);
-                  }}
-                  onMouseDown={stopPropagation}
-                  className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-medium text-[#1A1D21] hover:bg-[#F3F4F6] transition-colors rounded-t-lg"
-                >
-                  <span>Parsed summary</span>
-                  {showDetails ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                </button>
-                {showDetails && (
-                  <div className="space-y-2 px-3 pb-3 text-[11px] text-[#4B5563]">
-                    {data.parsedText && (
-                      <p className="line-clamp-3 leading-relaxed" title={data.parsedText}>
-                        {data.parsedText}
-                      </p>
-                    )}
-                    {data.segments && data.segments.length > 0 && (
-                      <button
-                        onClick={(event) => {
-                          stopPropagation(event);
-                          setShowSegments(prev => !prev);
-                        }}
-                        onMouseDown={stopPropagation}
-                        className="inline-flex items-center gap-1 rounded-full border border-[#E5E7EB] bg-[#F9FAFB] px-2 py-1 text-[10px] text-[#4338CA] hover:border-[#C7D2FE] transition-colors"
-                      >
-                        <BookOpen className="h-3 w-3" />
-                        {showSegments ? 'Hide segments' : `${data.segments.length} segments`}
-                      </button>
-                    )}
-                    {showSegments && data.segments && (
-                      <div className="max-h-36 space-y-2 overflow-y-auto rounded-md border border-[#E5E7EB] bg-[#F9FAFB] p-2">
-                        {data.segments.map((segment, index) => {
-                          const segmentContent = typeof segment === 'string' ? segment : segment.content;
-                          const page = typeof segment === 'string' ? undefined : segment.page;
-                          return (
-                            <div key={index} className="text-[10px] text-[#4B5563]">
-                              <strong className="mr-1 text-[#1F2937]">#{index + 1}{page !== undefined ? ` · p.${page}` : ''}:</strong>
-                              <span>{segmentContent}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
 
-            <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
+            {hasParsedContent && data.parsedText && (
               <button
-                onClick={(event) => {
-                  stopPropagation(event);
-                  resetNode();
-                }}
+                onClick={downloadParsedText}
                 onMouseDown={stopPropagation}
-                className="rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#6B7280] hover:border-[#EF4444] hover:text-[#EF4444] transition-colors"
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#E5E7EB] px-3 py-2 text-[11px] text-[#374151] hover:border-[#1A1D21] hover:bg-[#F9FAFB] transition-colors"
               >
-                Replace PDF
+                <Download className="h-3.5 w-3.5" />
+                Export parsed text
               </button>
-              {(data.parseStatus === 'error' || data.parseStatus === 'success') && (
-                <button
-                  onClick={handleReparse}
-                  onMouseDown={stopPropagation}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#FEE2E2] bg-[#FEF2F2] px-3 py-1 text-[#B91C1C] hover:bg-[#FEE2E2] transition-colors"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Re-parse
-                </button>
-              )}
-              {hasParsedContent && data.parsedText && (
-                <button
-                  onClick={downloadParsedText}
-                  onMouseDown={stopPropagation}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21] transition-colors"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Export text
-                </button>
-              )}
-            </div>
+            )}
           </div>
         ) : mode === 'choose' ? (
           <div className="space-y-2">
