@@ -15,13 +15,13 @@ function isWorkflowEmpty(workflow: Workflow | null): boolean {
   if (!workflow) return true;
 
   const hasStructure = workflow.nodes.length > 0 || workflow.edges.length > 0;
-  
+
   // Ignore default description "A new workflow" when checking if workflow is empty
   const defaultDescription = "a new workflow";
-  const hasCustomDescription = 
+  const hasCustomDescription =
     workflow.description?.trim() &&
     workflow.description.trim().toLowerCase() !== defaultDescription;
-  
+
   const hasCustomName =
     workflow.name.trim().toLowerCase() !== "untitled workflow";
 

@@ -111,7 +111,10 @@ export default function WorkflowEditorPage() {
       // This prevents race conditions when switching tabs while auto-save is in progress
       const currentWorkflow = useWorkflowStore.getState().workflow;
       if (currentWorkflow && currentWorkflow.id === workflowId) {
-        console.log("✅ Workflow already loaded in memory, skipping fetch:", workflowId);
+        console.log(
+          "✅ Workflow already loaded in memory, skipping fetch:",
+          workflowId
+        );
         setLoadingWorkflow(false);
         return;
       }

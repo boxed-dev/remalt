@@ -715,13 +715,11 @@ function WorkflowCanvasInner() {
           // If somehow a group has a parent, remove it
           useWorkflowStore.getState().updateNode(node.id, { parentId: null });
         }
-        
+
         // Reset z-index locally and ensure no stray highlights
         setNodes((prev) =>
           prev.map((n) =>
-            n.id === node.id
-              ? { ...n, zIndex: 1, parentId: undefined }
-              : n
+            n.id === node.id ? { ...n, zIndex: 1, parentId: undefined } : n
           )
         );
         lastDragPayloadRef.current = null;
@@ -795,11 +793,50 @@ function WorkflowCanvasInner() {
         });
 
       if (hitGroups.length > 0) {
-        // Sort by z-index and then by intersection area for better targeting
+        // Sort by z-index first, then by actual intersection area (not group size!)
         const target = hitGroups.sort((a, b) => {
+          // Primary: Sort by z-index (highest first - group on top)
           const zDiff = (b.zIndex || 0) - (a.zIndex || 0);
           if (zDiff !== 0) return zDiff;
-          // If same z-index, prefer the one with larger intersection
+
+          // Secondary: Calculate actual intersection area with the dropped node
+          const getIntersectionArea = (group: Node) => {
+            const groupWidth = group.width || group.measured?.width || 640;
+            const groupHeight = group.height || group.measured?.height || 420;
+
+            const groupRect = {
+              x: group.position.x,
+              y: group.position.y,
+              width: groupWidth,
+              height: groupHeight,
+            };
+
+            const intersectX = Math.max(
+              0,
+              Math.min(
+                nodeRect.x + nodeRect.width,
+                groupRect.x + groupRect.width
+              ) - Math.max(nodeRect.x, groupRect.x)
+            );
+            const intersectY = Math.max(
+              0,
+              Math.min(
+                nodeRect.y + nodeRect.height,
+                groupRect.y + groupRect.height
+              ) - Math.max(nodeRect.y, groupRect.y)
+            );
+
+            return intersectX * intersectY;
+          };
+
+          const areaA = getIntersectionArea(a);
+          const areaB = getIntersectionArea(b);
+          const areaDiff = areaB - areaA;
+
+          // If intersection areas differ, prefer larger intersection
+          if (Math.abs(areaDiff) > 1) return areaDiff;
+
+          // Tertiary: Only if intersection areas are equal, fall back to group size
           return (
             (b.width || 0) * (b.height || 0) - (a.width || 0) * (a.height || 0)
           );

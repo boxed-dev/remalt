@@ -1,7 +1,8 @@
-import { memo, useCallback, useMemo, useState } from 'react';
-import { NodeResizer, Handle, Position } from '@xyflow/react';
-import { useWorkflowStore } from '@/lib/stores/workflow-store';
-import type { GroupNodeData } from '@/types/workflow';
+import { memo, useCallback, useMemo, useState } from "react";
+import { NodeResizer, Handle, Position } from "@xyflow/react";
+import { Folder } from "lucide-react";
+import { useWorkflowStore } from "@/lib/stores/workflow-store";
+import type { GroupNodeData } from "@/types/workflow";
 
 interface GroupNodeProps {
   id: string;
@@ -15,49 +16,59 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
-  const saveTitle = useCallback((text: string) => {
-    const trimmed = text.trim();
-    updateNodeData(id, { title: trimmed || 'Group' } as Partial<GroupNodeData>);
-    setIsEditingTitle(false);
-  }, [id, updateNodeData]);
+  const saveTitle = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      updateNodeData(id, {
+        title: trimmed || "Group",
+      } as Partial<GroupNodeData>);
+      setIsEditingTitle(false);
+    },
+    [id, updateNodeData]
+  );
 
   // Handle resize to properly update node dimensions and position
-  const handleResize = useCallback((event: any, params: any) => {
-    // Update the node's style to reflect new dimensions
-    // This ensures the node maintains its visual consistency during resize
-    updateNode(id, {
-      style: {
-        width: params.width,
-        height: params.height,
-      },
-    });
-  }, [id, updateNode]);
+  const handleResize = useCallback(
+    (event: any, params: any) => {
+      // Update the node's style to reflect new dimensions
+      // This ensures the node maintains its visual consistency during resize
+      updateNode(id, {
+        style: {
+          width: params.width,
+          height: params.height,
+        },
+      });
+    },
+    [id, updateNode]
+  );
 
   const isDragOver = (data as any)?.isDragOver;
-  
+
   // Calculate border and shadow styles based on state
   const containerStyles = useMemo(() => {
     if (isDragOver) {
       return {
-        border: '',
-        outline: 'outline outline-4 outline-dashed outline-[#095D40] outline-offset-0',
-        shadow: 'shadow-[0_0_0_8px_rgba(9,93,64,0.15)]',
-        bg: 'bg-[#D4E5DF]/30'
+        border: "",
+        outline:
+          "outline outline-4 outline-dashed outline-[#10B981] outline-offset-0",
+        shadow: "shadow-[0_0_0_8px_rgba(16,185,129,0.15)]",
+        bg: "bg-[#10B981]/5",
       };
     }
     if (selected) {
       return {
-        border: '',
-        outline: 'outline outline-3 outline-[#095D40] outline-offset-0',
-        shadow: 'shadow-[0_0_0_6px_rgba(9,93,64,0.15),0_6px_20px_rgba(9,93,64,0.15)]',
-        bg: 'bg-white'
+        border: "",
+        outline: "outline outline-3 outline-[#095D40] outline-offset-0",
+        shadow:
+          "shadow-[0_0_0_6px_rgba(9,93,64,0.15),0_6px_20px_rgba(9,93,64,0.15)]",
+        bg: "bg-white",
       };
     }
     return {
-      border: '',
-      outline: '',
-      shadow: 'shadow-lg hover:shadow-xl',
-      bg: 'bg-white'
+      border: "",
+      outline: "",
+      shadow: "shadow-lg hover:shadow-xl",
+      bg: "bg-white",
     };
   }, [isDragOver, selected]);
 
@@ -72,7 +83,7 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
         relative overflow-visible
       `}
       role="group"
-      aria-label={`Group container: ${data.title || 'Unnamed'}`}
+      aria-label={`Group container: ${data.title || "Unnamed"}`}
       aria-describedby={`group-description-${id}`}
     >
       {/* Resizer - Always visible */}
@@ -89,9 +100,13 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
         onResize={handleResize}
       />
 
-      {/* Header - Brand teal bar with title */}
-      <div className="bg-[#095D40] px-4 py-2.5 flex items-center justify-between rounded-t-2xl">
+      {/* Header - Dark bar with title */}
+      <div className="bg-[#0F172A] px-4 py-2.5 flex items-center justify-between rounded-t-2xl cursor-move">
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
+          <div className="bg-white rounded-md p-1.5 flex items-center justify-center flex-shrink-0">
+            <Folder className="h-3.5 w-3.5 text-[#0F172A]" strokeWidth={2.5} />
+          </div>
+
           <div
             contentEditable={isEditingTitle}
             suppressContentEditableWarning
@@ -107,17 +122,17 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
             }}
             onBlur={(e) => {
               if (isEditingTitle) {
-                saveTitle(e.currentTarget.textContent || '');
+                saveTitle(e.currentTarget.textContent || "");
               }
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === "Enter") {
                 e.preventDefault();
                 e.currentTarget.blur();
               }
-              if (e.key === 'Escape') {
+              if (e.key === "Escape") {
                 e.preventDefault();
-                e.currentTarget.textContent = data.title || 'Group';
+                e.currentTarget.textContent = data.title || "Group";
                 setIsEditingTitle(false);
                 e.currentTarget.blur();
               }
@@ -127,11 +142,13 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
                 e.stopPropagation();
               }
             }}
-            className={`text-[13px] font-semibold tracking-wide text-white truncate flex-1 min-w-0 outline-none ${isEditingTitle ? 'nodrag cursor-text' : ''}`}
+            className={`text-[13px] font-semibold tracking-wide text-white truncate flex-1 min-w-0 outline-none ${
+              isEditingTitle ? "nodrag cursor-text" : "cursor-move"
+            }`}
             role="textbox"
             aria-label="Group name"
           >
-            {data.title || 'Group'}
+            {data.title || "Group"}
           </div>
         </div>
       </div>
@@ -144,7 +161,8 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
         {/* Empty state hint - shown during drag-over to indicate drop zone */}
         {isDragOver && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center text-[#095D40] text-[13px] font-semibold">
+            <div className="text-center text-[#10B981] text-[13px] font-medium">
+              <Folder className="h-10 w-10 mx-auto mb-2 opacity-60" />
               <p>Drop here to add to group</p>
             </div>
           </div>
@@ -174,7 +192,10 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
 
       {/* Hidden description for screen readers */}
       <div id={`group-description-${id}`} className="sr-only">
-        This is a group container that can hold other workflow nodes. You can drag nodes into this group, resize the group, and move the entire group around the canvas. Use keyboard shortcuts: Ctrl+G to create a group, Ctrl+Shift+G to ungroup, Ctrl+Shift+C to select group children.
+        This is a group container that can hold other workflow nodes. You can
+        drag nodes into this group, resize the group, and move the entire group
+        around the canvas. Use keyboard shortcuts: Ctrl+G to create a group,
+        Ctrl+Shift+G to ungroup, Ctrl+Shift+C to select group children.
       </div>
 
       {/* Connection handles - positioned relative to the main container */}
@@ -184,7 +205,7 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
         position={Position.Right}
         isConnectable={true}
         className="!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#155EEF] hover:!scale-125 !transition-all !duration-150 !opacity-100 pointer-events-auto"
-        style={{ right: '-7px', zIndex: 50 }}
+        style={{ right: "-7px", zIndex: 50 }}
       />
     </div>
   );

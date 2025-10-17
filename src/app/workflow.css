@@ -5,7 +5,8 @@
   will-change: transform;
   transform: translateZ(0);
   backface-visibility: hidden;
-  transition: filter 200ms ease, box-shadow 250ms ease, transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: filter 200ms ease, box-shadow 250ms ease,
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Disable transform transition during resize to prevent visual jumping */
@@ -34,7 +35,8 @@ div[class*="react-flow__node"].react-flow__node-group {
 
 /* Selected nodes - Enhanced with ring and glow (except groups which handle their own styling) */
 .react-flow__node.selected:not(.react-flow__node-group) {
-  box-shadow: 0 0 0 3px #095D40, 0 6px 20px rgba(9, 93, 64, 0.25), 0 0 40px rgba(9, 93, 64, 0.15);
+  box-shadow: 0 0 0 3px #095d40, 0 6px 20px rgba(9, 93, 64, 0.25),
+    0 0 40px rgba(9, 93, 64, 0.15);
   animation: selection-ring 2s ease-in-out infinite;
 }
 
@@ -77,11 +79,14 @@ div[class*="react-flow__node"].react-flow__node-group {
 }
 
 @keyframes selection-ring {
-  0%, 100% {
-    box-shadow: 0 0 0 3px #095D40, 0 6px 20px rgba(9, 93, 64, 0.25), 0 0 40px rgba(9, 93, 64, 0.15);
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px #095d40, 0 6px 20px rgba(9, 93, 64, 0.25),
+      0 0 40px rgba(9, 93, 64, 0.15);
   }
   50% {
-    box-shadow: 0 0 0 3px #095D40, 0 8px 24px rgba(9, 93, 64, 0.3), 0 0 50px rgba(9, 93, 64, 0.2);
+    box-shadow: 0 0 0 3px #095d40, 0 8px 24px rgba(9, 93, 64, 0.3),
+      0 0 50px rgba(9, 93, 64, 0.2);
   }
 }
 
@@ -104,7 +109,7 @@ div[class*="react-flow__node"].react-flow__node-group {
 
 /* Edge path */
 .react-flow__edge-path {
-  stroke: #9CA3AF;
+  stroke: #9ca3af;
   stroke-width: 3.5;
   stroke-linecap: round;
 }
@@ -124,19 +129,19 @@ div[class*="react-flow__node"].react-flow__node-group {
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #095D40;
+  stroke: #095d40;
   stroke-width: 4.5;
 }
 
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke: #6B7280;
+  stroke: #6b7280;
   stroke-width: 4;
 }
 
 /* Controls */
 .react-flow__controls {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid #E8ECEF;
+  border: 1px solid #e8ecef;
   border-radius: 16px;
   overflow: hidden;
   backdrop-filter: blur(12px);
@@ -145,7 +150,7 @@ div[class*="react-flow__node"].react-flow__node-group {
 
 .react-flow__controls-button {
   background: transparent;
-  border-bottom: 1px solid #E8ECEF;
+  border-bottom: 1px solid #e8ecef;
   width: 48px;
   height: 48px;
   transition: all 200ms ease;
@@ -156,18 +161,18 @@ div[class*="react-flow__node"].react-flow__node-group {
 }
 
 .react-flow__controls-button:hover {
-  background: #F5F5F7;
+  background: #f5f5f7;
 }
 
 .react-flow__controls-button svg {
   width: 22px;
   height: 22px;
-  fill: #6B7280;
+  fill: #6b7280;
   transition: fill 200ms ease;
 }
 
 .react-flow__controls-button:hover svg {
-  fill: #095D40;
+  fill: #095d40;
 }
 
 /* Attribution */
@@ -178,12 +183,12 @@ div[class*="react-flow__node"].react-flow__node-group {
 /* Selection */
 .react-flow__selection {
   background: rgba(9, 93, 64, 0.08);
-  border: 1.5px solid #095D40;
+  border: 1.5px solid #095d40;
 }
 
 /* Connection line - Enhanced with animation */
 .react-flow__connectionline {
-  stroke: #095D40;
+  stroke: #095d40;
   stroke-width: 4;
   stroke-linecap: round;
   filter: drop-shadow(0 2px 4px rgba(9, 93, 64, 0.3));
@@ -191,7 +196,8 @@ div[class*="react-flow__node"].react-flow__node-group {
 }
 
 @keyframes connection-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.8;
     stroke-width: 4;
   }
@@ -218,7 +224,8 @@ div[class*="react-flow__node"].react-flow__node-group {
 
 /* Edge hover - Smooth thickness transition (removed transition from d attribute for instant rendering) */
 .react-flow__edge .react-flow__edge-path {
-  transition: stroke 200ms cubic-bezier(0.4, 0, 0.2, 1), stroke-width 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: stroke 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    stroke-width 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Edge selected - Enhanced glow */
@@ -240,13 +247,12 @@ div[class*="react-flow__node"].react-flow__node-group {
 /* Node hover (groups handle their own hover state) */
 .react-flow__node:hover:not(.react-flow__node-group) {
   filter: brightness(0.98);
-  box-shadow:
-    0 8px 16px rgba(0, 0, 0, 0.08),
-    0 4px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.06);
 }
 
 @keyframes drag-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.6;
     transform: scale(1);
   }
@@ -271,11 +277,9 @@ div[class*="react-flow__node"].react-flow__node-group {
 .react-flow__handle:hover {
   opacity: 1 !important;
   transform: scale(1.5);
-  border-color: #095D40 !important;
+  border-color: #095d40 !important;
   border-width: 3px !important;
-  box-shadow:
-    0 0 0 4px rgba(9, 93, 64, 0.15),
-    0 0 12px rgba(9, 93, 64, 0.3),
+  box-shadow: 0 0 0 4px rgba(9, 93, 64, 0.15), 0 0 12px rgba(9, 93, 64, 0.3),
     0 4px 8px rgba(0, 0, 0, 0.1) !important;
   animation: pulse-handle 1.5s ease-in-out infinite;
 }
@@ -288,11 +292,13 @@ div[class*="react-flow__node"].react-flow__node-group {
 }
 
 @keyframes pulse-ring {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 4px rgba(9, 93, 64, 0.15), 0 2px 8px rgba(9, 93, 64, 0.2);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(9, 93, 64, 0.08), 0 4px 12px rgba(9, 93, 64, 0.15);
+    box-shadow: 0 0 0 10px rgba(9, 93, 64, 0.08),
+      0 4px 12px rgba(9, 93, 64, 0.15);
   }
 }
 
@@ -315,7 +321,8 @@ div[class*="react-flow__node"].react-flow__node-group {
 }
 
 @keyframes glow-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 6px rgba(9, 93, 64, 0.25), 0 0 20px rgba(9, 93, 64, 0.4);
   }
   50% {
@@ -328,7 +335,7 @@ div[class*="react-flow__node"].react-flow__node-group {
   opacity: 1;
   transform: translateZ(0) scale(2);
   box-shadow: 0 0 0 8px rgba(9, 93, 64, 0.3), 0 0 25px rgba(9, 93, 64, 0.5);
-  border-color: #095D40 !important;
+  border-color: #095d40 !important;
 }
 
 /* Source handle (where connection starts) */
@@ -387,11 +394,39 @@ div[class*="react-flow__node"].react-flow__node-group {
   animation-name: slide-in-from-right;
 }
 
-/* Custom Chat Scrollbar - Removed duplicate (defined in globals.css) */
+/* Custom Chat Scrollbar */
+.chat-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 200ms ease;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.chat-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af rgba(0, 0, 0, 0.02);
+}
 
 /* Loading pulse animation */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
