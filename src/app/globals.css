@@ -52,7 +52,7 @@
   --card-foreground: #333333;
   --popover: #FFFFFF;
   --popover-foreground: #333333;
-  --primary: #095D40;
+  --primary: #10875D;
   --primary-foreground: #FFFFFF;
   --secondary: #F5F5F7;
   --secondary-foreground: #333333;
@@ -63,20 +63,20 @@
   --destructive: #FF3B30;
   --border: #E8ECEF;
   --input: #F5F5F7;
-  --ring: #095D40;
-  --chart-1: #095D40;
+  --ring: #10875D;
+  --chart-1: #10875D;
   --chart-2: #D4AF7F;
   --chart-3: #333333;
   --chart-4: #9ca3af;
   --chart-5: #d1d5db;
   --sidebar: #FFFFFF;
   --sidebar-foreground: #333333;
-  --sidebar-primary: #095D40;
+  --sidebar-primary: #10875D;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #D4AF7F;
   --sidebar-accent-foreground: #333333;
   --sidebar-border: #E8ECEF;
-  --sidebar-ring: #095D40;
+  --sidebar-ring: #10875D;
 }
 
 .dark {
@@ -86,7 +86,7 @@
   --card-foreground: #FFFFFF;
   --popover: #333333;
   --popover-foreground: #FFFFFF;
-  --primary: #095D40;
+  --primary: #10875D;
   --primary-foreground: #FFFFFF;
   --secondary: #1f2937;
   --secondary-foreground: #FFFFFF;
@@ -97,20 +97,20 @@
   --destructive: #ef4444;
   --border: #374151;
   --input: #1f2937;
-  --ring: #095D40;
-  --chart-1: #095D40;
+  --ring: #10875D;
+  --chart-1: #10875D;
   --chart-2: #D4AF7F;
   --chart-3: #6b7280;
   --chart-4: #9ca3af;
   --chart-5: #d1d5db;
   --sidebar: #333333;
   --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #095D40;
+  --sidebar-primary: #10875D;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #D4AF7F;
   --sidebar-accent-foreground: #000000;
   --sidebar-border: #374151;
-  --sidebar-ring: #095D40;
+  --sidebar-ring: #10875D;
 }
 
 @layer base {
@@ -268,7 +268,7 @@
   }
 
   .react-flow__node.selected > div {
-    box-shadow: 0 0 0 3px #095D40, 0 0 0 9px rgba(9, 93, 64, 0.15), 0 6px 20px rgba(9, 93, 64, 0.15) !important;
+    box-shadow: 0 0 0 3px #10875D, 0 0 0 9px rgba(16, 135, 93, 0.15), 0 6px 20px rgba(16, 135, 93, 0.15) !important;
     transition: box-shadow 0.2s ease-out !important;
   }
 
