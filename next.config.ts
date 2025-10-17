@@ -35,7 +35,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  transpilePackages: ['@uploadcare/react-uploader', '@blocknote/core', '@blocknote/react', '@blocknote/shadcn'],
+  transpilePackages: ['@uploadcare/react-uploader', '@blocknote/core', '@blocknote/react', '@blocknote/shadcn', '@deepgram/sdk'],
+  webpack: (config, { isServer }) => {
+    // Exclude Node.js-only modules from browser bundle
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        ws: false,
+        'utf-8-validate': false,
+        'bufferutil': false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

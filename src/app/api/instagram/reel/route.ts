@@ -1,33 +1,10 @@
 import { NextResponse } from 'next/server';
-import { uploadWithRetry, uploadMultipleFromUrls, getCdnUrl } from '@/lib/uploadcare/upload-service';
+import { uploadWithRetry, uploadMultipleWithPartialSuccess } from '@/lib/uploadcare/upload-service';
 
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN;
+const APIFY_ACTOR_ENDPOINT = 'https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items';
 
-// Apify actors to try in order (most specific to most general)
-const APIFY_ACTORS = [
-  {
-    id: 'apify/instagram-scraper',
-    name: 'Instagram Scraper',
-    prepareInput: (url: string) => ({
-      directUrls: [url],
-      resultsType: 'posts',
-      resultsLimit: 1,
-      addParentData: false,
-      enhanceUserSearchWithFacebookPage: false,
-    }),
-  },
-  {
-    id: 'clockworks/instagram-scraper',
-    name: 'Clockworks Instagram',
-    prepareInput: (url: string) => ({
-      directUrls: [url],
-      resultsType: 'posts',
-      resultsLimit: 1,
-    }),
-  },
-];
-
-type InstagramMediaItem = {
+type ApifyInstagramItem = {
   id?: string;
   shortCode?: string;
   caption?: string;
@@ -43,8 +20,6 @@ type InstagramMediaItem = {
   owner?: {
     profile_pic_url?: string;
     profilePicUrl?: string;
-    username?: string;
-    full_name?: string;
   };
   images?: Array<{ url?: string } | string>;
   videoUrl?: string;
@@ -54,30 +29,16 @@ type InstagramMediaItem = {
   likesCount?: number;
   videoViewCount?: number;
   videoPlayCount?: number;
-  type?: string;
+  type?: string; // 'Video', 'Image', 'Sidecar' (carousel)
   isVideo?: boolean;
+  // Story-related fields (best-effort - Apify datasets may vary)
   takenAt?: string | number;
   takenAtTimestamp?: number;
   timestamp?: number;
   publishedTime?: string | number;
-};
-
-type OEmbedResponse = {
-  version: string;
-  title?: string;
-  author_name?: string;
-  author_url?: string;
-  author_id?: number;
-  media_id?: string;
-  provider_name: string;
-  provider_url: string;
-  type: string;
-  width?: number | null;
-  height?: number | null;
-  html?: string;
-  thumbnail_url?: string;
-  thumbnail_width?: number;
-  thumbnail_height?: number;
+  expiringAt?: string | number;
+  expireAt?: string | number;
+  isStory?: boolean;
 };
 
 function normaliseUrl(rawUrl: string): string {
@@ -88,259 +49,101 @@ function normaliseUrl(rawUrl: string): string {
 
   try {
     const parsed = new URL(trimmed);
-    if (!parsed.hostname.includes('instagram.com')) {
-      throw new Error('URL must be an Instagram URL');
-    }
     return parsed.toString();
   } catch (error) {
     throw new Error('Invalid Instagram URL');
   }
 }
 
-function extractShortcodeFromUrl(url: string): string | null {
-  const patterns = [
-    /instagram\.com\/p\/([A-Za-z0-9_-]+)/,
-    /instagram\.com\/reel\/([A-Za-z0-9_-]+)/,
-    /instagram\.com\/reels\/([A-Za-z0-9_-]+)/,
-    /instagram\.com\/tv\/([A-Za-z0-9_-]+)/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) {
-      return match[1];
-    }
-  }
-  return null;
+function isStoryUrl(url: string): boolean {
+  return /instagram\.com\/stories\//.test(url);
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Request timed out after ${timeoutMs / 1000} seconds`);
-    }
-    throw error;
+function toIsoDate(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'string') {
+    // If it's already an ISO-like string, try Date parse
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
   }
+  if (typeof value === 'number') {
+    // Could be seconds or milliseconds
+    const ms = value < 10_000_000_000 ? value * 1000 : value;
+    const d = new Date(ms);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  }
+  return undefined;
 }
 
-async function tryInstagramOEmbed(postUrl: string): Promise<Partial<InstagramMediaItem>> {
-  console.log('[Instagram API] 🔄 Trying Instagram oEmbed API...');
-
-  const oembedUrl = `https://graph.facebook.com/v18.0/instagram_oembed?url=${encodeURIComponent(postUrl)}&access_token=ignore&omitscript=true`;
-
-  const response = await fetchWithTimeout(oembedUrl, {}, 8000);
-
-  if (!response.ok) {
-    throw new Error(`oEmbed failed: ${response.status}`);
+function pickFirstIso(...values: Array<unknown>): string | undefined {
+  for (const v of values) {
+    const iso = toIsoDate(v);
+    if (iso) return iso;
   }
-
-  const data: OEmbedResponse = await response.json();
-  const shortcode = extractShortcodeFromUrl(postUrl);
-
-  return {
-    shortCode: shortcode || undefined,
-    url: postUrl,
-    thumbnailUrl: data.thumbnail_url,
-    displayUrl: data.thumbnail_url,
-    ownerUsername: data.author_name,
-    caption: data.title,
-  };
+  return undefined;
 }
 
-async function tryDirectScrape(postUrl: string): Promise<Partial<InstagramMediaItem>> {
-  console.log('[Instagram API] 🔄 Trying direct HTML scrape...');
-
-  const response = await fetchWithTimeout(
-    postUrl,
-    {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-    },
-    12000
-  );
-
-  if (!response.ok) {
-    throw new Error(`Direct scrape failed: ${response.status}`);
-  }
-
-  const html = await response.text();
-
-  // Extract Open Graph meta tags
-  const ogImage = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/)?.[1];
-  const ogTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/)?.[1];
-  const ogDescription = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/)?.[1];
-  const ogVideo = html.match(/<meta\s+property="og:video"\s+content="([^"]+)"/)?.[1];
-
-  const shortcode = extractShortcodeFromUrl(postUrl);
-
-  return {
-    shortCode: shortcode || undefined,
-    url: postUrl,
-    thumbnailUrl: ogImage,
-    displayUrl: ogImage,
-    videoUrl: ogVideo,
-    caption: ogDescription || ogTitle,
-    isVideo: !!ogVideo,
-  };
-}
-
-async function tryApifyScraper(postUrl: string): Promise<InstagramMediaItem> {
-  if (!APIFY_TOKEN) {
-    throw new Error('Apify token not configured');
-  }
-
-  const errors: Array<{ actor: string; error: string }> = [];
-
-  // Try each actor in sequence until one succeeds
-  for (const actor of APIFY_ACTORS) {
-    try {
-      console.log(`[Instagram API] 🔄 Trying Apify actor: ${actor.name}...`);
-
-      const apifyUrl = new URL(`https://api.apify.com/v2/acts/${actor.id}/run-sync-get-dataset-items`);
-      apifyUrl.searchParams.set('token', APIFY_TOKEN);
-      apifyUrl.searchParams.set('timeout', '45'); // 45 second timeout
-
-      const inputData = actor.prepareInput(postUrl);
-
-      const response = await fetchWithTimeout(
-        apifyUrl.toString(),
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(inputData),
-        },
-        50000 // 50 second client timeout
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error('No data returned');
-      }
-
-      console.log(`[Instagram API] ✅ ${actor.name} succeeded`);
-      return data[0] as InstagramMediaItem;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[Instagram API] ✗ ${actor.name} failed: ${errorMsg}`);
-      errors.push({ actor: actor.name, error: errorMsg });
-      // Continue to next actor
-    }
-  }
-
-  // All actors failed
-  throw new Error(
-    `All Apify actors failed:\n${errors.map(e => `- ${e.actor}: ${e.error}`).join('\n')}`
-  );
-}
-
-async function fetchInstagramData(postUrl: string): Promise<InstagramMediaItem> {
-  const errors: Array<{ method: string; error: string; time: number }> = [];
-
-  // STRATEGY 1: Try Instagram oEmbed first (fastest, works for public posts)
-  try {
-    const startTime = Date.now();
-    const data = await tryInstagramOEmbed(postUrl);
-    const elapsed = Date.now() - startTime;
-    console.log(`[Instagram API] ✅ oEmbed success (${elapsed}ms)`);
-    return data as InstagramMediaItem;
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Instagram API] ❌ oEmbed failed:', errorMsg);
-    errors.push({ method: 'oEmbed', error: errorMsg, time: 0 });
-  }
-
-  // STRATEGY 2: Try direct HTML scrape (fast, gets basic data)
-  try {
-    const startTime = Date.now();
-    const data = await tryDirectScrape(postUrl);
-    const elapsed = Date.now() - startTime;
-    console.log(`[Instagram API] ✅ Direct scrape success (${elapsed}ms)`);
-    return data as InstagramMediaItem;
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Instagram API] ❌ Direct scrape failed:', errorMsg);
-    errors.push({ method: 'Direct Scrape', error: errorMsg, time: 0 });
-  }
-
-  // STRATEGY 3: Try Apify as last resort (slower but most complete data)
-  if (APIFY_TOKEN) {
-    try {
-      const startTime = Date.now();
-      const data = await tryApifyScraper(postUrl);
-      const elapsed = Date.now() - startTime;
-      console.log(`[Instagram API] ✅ Apify success (${elapsed}ms)`);
-      return data;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[Instagram API] ❌ Apify failed:', errorMsg);
-      errors.push({ method: 'Apify', error: errorMsg, time: 0 });
-    }
-  }
-
-  // All methods failed
-  console.error('[Instagram API] ❌ All methods failed:', errors);
-  throw new Error(
-    `Failed to fetch Instagram data. Tried ${errors.length} methods:\n` +
-    errors.map(e => `- ${e.method}: ${e.error}`).join('\n')
-  );
-}
-
-async function processInstagramData(item: InstagramMediaItem, requestedUrl: string) {
+async function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: string) {
+  // Handle both videos (reels) and images (posts)
   const videoUrl = item.videoUrl || item.videoUrls?.[0];
   const isVideo = item.isVideo || item.type === 'Video' || !!videoUrl;
+  const isStory = isStoryUrl(requestedUrl) || !!item.isStory || (item.url ? isStoryUrl(item.url) : false);
 
+  const profilePic =
+    item.ownerProfilePicUrl ||
+    item.owner?.profile_pic_url ||
+    item.owner?.profilePicUrl ||
+    undefined;
+
+  // Try multiple potential thumbnail sources from Apify
   let thumbnail =
     item.displayUrl ||
     item.thumbnailUrl ||
     item.thumbnail ||
     item.imageUrl;
 
+  // If still no thumbnail, try to extract from images array
   if (!thumbnail && Array.isArray(item.images) && item.images.length > 0) {
     const firstImage = item.images[0];
-    thumbnail = typeof firstImage === 'string' ? firstImage : firstImage?.url;
+    if (typeof firstImage === 'string') {
+      thumbnail = firstImage;
+    } else if (firstImage?.url) {
+      thumbnail = firstImage.url;
+    }
   }
 
+  // Extract ALL images for carousel posts (Sidecar)
   let allImages: string[] | undefined = undefined;
   if (item.type === 'Sidecar' && Array.isArray(item.images) && item.images.length > 0) {
-    allImages = item.images
-      .map(img => (typeof img === 'string' ? img : img?.url))
-      .filter((url): url is string => !!url);
+    allImages = item.images.map((img) => {
+      if (typeof img === 'string') return img;
+      if (img && typeof img === 'object' && 'url' in img) return img.url as string;
+      return '';
+    }).filter(Boolean);
+
+    console.log(`[Instagram API] Extracted ${allImages.length} carousel images`);
   }
 
-  if (!thumbnail && !videoUrl && !allImages?.length) {
+  // For image posts, if no thumbnail found, throw error
+  if (!thumbnail && !videoUrl) {
     throw new Error('No media content found for this post');
   }
 
-  const profilePic =
-    item.ownerProfilePicUrl ||
-    item.owner?.profile_pic_url ||
-    item.owner?.profilePicUrl;
+  const permalink = item.url ?? requestedUrl;
+  const thumbnailFallback = permalink ? `https://image.microlink.io/${encodeURIComponent(permalink)}` : undefined;
 
-  const username = item.ownerUsername || item.owner?.username;
-  const fullName = item.ownerFullName || item.owner?.full_name;
+  // Story timestamps (best-effort)
+  const takenAt = pickFirstIso(
+    item.takenAt,
+    item.takenAtTimestamp,
+    item.timestamp,
+    item.publishedTime
+  );
+  const explicitExpires = pickFirstIso(item.expiringAt, item.expireAt);
+  const expiresAt = explicitExpires || (takenAt ? new Date(new Date(takenAt).getTime() + 24 * 60 * 60 * 1000).toISOString() : undefined);
 
   // ============================================
-  // UPLOADCARE-CENTRIC MEDIA STORAGE
+  // UPLOADCARE PERMANENT MEDIA STORAGE
   // ============================================
   let uploadcareCdnUrl: string | undefined;
   let uploadcareUuid: string | undefined;
@@ -355,8 +158,9 @@ async function processInstagramData(item: InstagramMediaItem, requestedUrl: stri
   const baseMetadata = {
     source: 'instagram',
     postCode: item.shortCode || 'unknown',
-    author: username || 'unknown',
+    author: item.ownerUsername || 'unknown',
     timestamp: new Date().toISOString(),
+    postType: item.type || 'unknown',
   };
 
   console.log('[Instagram API] 📤 Starting UploadCare media backup...');
@@ -365,7 +169,7 @@ async function processInstagramData(item: InstagramMediaItem, requestedUrl: stri
   // Priority: Videos > Carousels > Single Images > Thumbnails
 
   try {
-    // 1. Handle video posts
+    // 1. Handle video posts/reels
     if (isVideo && videoUrl) {
       try {
         console.log('[Instagram API] 📹 Uploading video to UploadCare...');
@@ -426,7 +230,7 @@ async function processInstagramData(item: InstagramMediaItem, requestedUrl: stri
     else if (allImages && allImages.length > 0) {
       try {
         console.log(`[Instagram API] 🎠 Uploading ${allImages.length} carousel images...`);
-        const carouselResults = await uploadMultipleFromUrls(allImages, {
+        const carouselResults = await uploadMultipleWithPartialSuccess(allImages, {
           store: '1',
           checkDuplicates: true,
           saveDuplicates: true,
@@ -435,21 +239,37 @@ async function processInstagramData(item: InstagramMediaItem, requestedUrl: stri
             type: 'carousel-image',
             carouselSize: allImages.length.toString(),
           },
-        });
+        }, 2); // 2 retries per image
 
-        uploadcareImages = carouselResults.map(r => r.cdnUrl);
-        uploadcareImageUuids = carouselResults.map(r => r.uuid);
+        // Separate successful and failed uploads
+        const successfulUploads = carouselResults.filter(r => r.success && r.result);
+        const failedUploads = carouselResults.filter(r => !r.success);
 
-        // Use first image as primary
-        uploadcareCdnUrl = carouselResults[0]?.cdnUrl;
-        uploadcareUuid = carouselResults[0]?.uuid;
+        if (successfulUploads.length > 0) {
+          uploadcareImages = successfulUploads.map(r => r.result!.cdnUrl);
+          uploadcareImageUuids = successfulUploads.map(r => r.result!.uuid);
 
-        console.log(`[Instagram API] ✅ Carousel uploaded: ${uploadcareImageUuids.length} images`);
+          // Use first successful image as primary
+          uploadcareCdnUrl = successfulUploads[0].result!.cdnUrl;
+          uploadcareUuid = successfulUploads[0].result!.uuid;
+
+          console.log(`[Instagram API] ✅ Carousel uploaded: ${successfulUploads.length}/${allImages.length} images`);
+        }
+
+        // Track failures
+        if (failedUploads.length > 0) {
+          failedUploads.forEach(failed => {
+            const errorMsg = `Image ${failed.url.substring(0, 50)}...: ${failed.error}`;
+            uploadErrors.push(errorMsg);
+            console.error(`[Instagram API] ⚠️  Carousel image failed: ${errorMsg}`);
+          });
+          backupStatus = successfulUploads.length > 0 ? 'partial' : 'failed';
+        }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         console.error('[Instagram API] ❌ Carousel upload failed:', errorMsg);
         uploadErrors.push(`Carousel: ${errorMsg}`);
-        backupStatus = 'partial';
+        backupStatus = 'failed';
       }
     }
     // 3. Handle single image posts
@@ -508,8 +328,6 @@ async function processInstagramData(item: InstagramMediaItem, requestedUrl: stri
     optimizedThumbnail = `https://ucarecdn.com/${uploadcareUuid}/-/preview/800x800/-/quality/smart/-/format/webp/`;
   }
 
-  const permalink = item.url || requestedUrl;
-
   return {
     success: true as const,
     url: requestedUrl,
@@ -518,6 +336,7 @@ async function processInstagramData(item: InstagramMediaItem, requestedUrl: stri
     // Primary media URLs (UploadCare first, original as fallback)
     videoUrl: uploadcareCdnUrl && isVideo ? uploadcareCdnUrl : videoUrl,
     thumbnail: optimizedThumbnail || uploadcareCdnUrl || uploadcareThumbnailUrl || thumbnail,
+    thumbnailFallback,
     images: uploadcareImages || allImages,
 
     // UploadCare backup info
@@ -540,8 +359,8 @@ async function processInstagramData(item: InstagramMediaItem, requestedUrl: stri
     // Post metadata
     caption: item.caption,
     author: {
-      username,
-      fullName,
+      username: item.ownerUsername,
+      fullName: item.ownerFullName,
       profilePicUrl: profilePic,
       id: item.ownerId,
     },
@@ -549,6 +368,9 @@ async function processInstagramData(item: InstagramMediaItem, requestedUrl: stri
     views: item.videoViewCount ?? item.videoPlayCount,
     comments: item.commentsCount,
     duration: item.videoDuration,
+    isStory,
+    takenAt,
+    expiresAt,
     rawId: item.id,
     isVideo,
     postType: item.type,
@@ -563,19 +385,68 @@ export async function POST(request: Request) {
     const body = await request.json();
     const requestedUrl = normaliseUrl(body?.url ?? '');
 
-    console.log('[Instagram API] 🎯 Fetching:', requestedUrl);
+    if (!APIFY_TOKEN) {
+      return NextResponse.json(
+        { success: false, error: 'Instagram integration is not configured' },
+        { status: 503 }
+      );
+    }
 
-    const instagramData = await fetchInstagramData(requestedUrl);
-    const responsePayload = await processInstagramData(instagramData, requestedUrl);
+    const apifyUrl = new URL(APIFY_ACTOR_ENDPOINT);
+    apifyUrl.searchParams.set('token', APIFY_TOKEN);
+
+    // Determine if this is a story or regular post
+    const resultsType = isStoryUrl(requestedUrl) ? 'stories' : 'posts';
+    console.log(`[Instagram API] 🎯 Fetching ${resultsType}:`, requestedUrl);
+
+    const apifyResponse = await fetch(apifyUrl.toString(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        directUrls: [requestedUrl],
+        addParentData: false,
+        enhanceUserSearchWithFacebookPage: false,
+        resultsType,
+        resultsLimit: 1,
+      }),
+      cache: 'no-store',
+    });
+
+    if (!apifyResponse.ok) {
+      const errorPayload = await apifyResponse.text();
+      console.error('[Instagram API] ❌ Apify request failed:', apifyResponse.status, errorPayload);
+      throw new Error('Failed to fetch Instagram post data');
+    }
+
+    const data = await apifyResponse.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('No data returned for the requested post');
+    }
+
+    const item = data[0] as ApifyInstagramItem;
+
+    // Debug logging to see what Apify returns
+    console.log('[Instagram API] ✅ Apify data received');
+    console.log(`[Instagram API]   - Type: ${item.type}`);
+    console.log(`[Instagram API]   - Post code: ${item.shortCode}`);
+    console.log(`[Instagram API]   - Author: @${item.ownerUsername}`);
+    console.log(`[Instagram API]   - Has video: ${!!item.videoUrl}`);
+    console.log(`[Instagram API]   - Has thumbnail: ${!!item.displayUrl}`);
+    console.log(`[Instagram API]   - Is carousel: ${item.type === 'Sidecar'}`);
+
+    const responsePayload = await mapApifyItemToResponse(item, requestedUrl);
 
     const elapsed = Date.now() - startTime;
-    console.log(`[Instagram API] ✅ Complete success in ${elapsed}ms:`, {
-      postType: responsePayload.postType,
-      isVideo: responsePayload.isVideo,
-      hasCarousel: !!responsePayload.images?.length,
-      uploadcareStatus: responsePayload.uploadcare.status,
-      uploadcareErrors: responsePayload.uploadcare.errors?.length || 0,
-    });
+    console.log(`[Instagram API] ✅ Complete success in ${elapsed}ms`);
+    console.log(`[Instagram API]   - Post type: ${responsePayload.postType}`);
+    console.log(`[Instagram API]   - Is video: ${responsePayload.isVideo}`);
+    console.log(`[Instagram API]   - Has carousel: ${!!responsePayload.images?.length}`);
+    console.log(`[Instagram API]   - UploadCare status: ${responsePayload.uploadcare.status}`);
+    if (responsePayload.uploadcare.errors) {
+      console.log(`[Instagram API]   - Upload errors: ${responsePayload.uploadcare.errors.length}`);
+    }
 
     return NextResponse.json(responsePayload);
   } catch (error) {

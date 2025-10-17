@@ -1,6 +1,5 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { NodeResizer, Handle, Position } from '@xyflow/react';
-import { Folder } from 'lucide-react';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { GroupNodeData } from '@/types/workflow';
 
@@ -41,9 +40,9 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
     if (isDragOver) {
       return {
         border: '',
-        outline: 'outline outline-4 outline-dashed outline-[#10B981] outline-offset-0',
-        shadow: 'shadow-[0_0_0_8px_rgba(16,185,129,0.15)]',
-        bg: 'bg-[#10B981]/5'
+        outline: 'outline outline-4 outline-dashed outline-[#095D40] outline-offset-0',
+        shadow: 'shadow-[0_0_0_8px_rgba(9,93,64,0.15)]',
+        bg: 'bg-[#D4E5DF]/30'
       };
     }
     if (selected) {
@@ -90,13 +89,9 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
         onResize={handleResize}
       />
 
-      {/* Header - Dark bar with title */}
-      <div className="bg-[#0F172A] px-4 py-2.5 flex items-center justify-between rounded-t-2xl cursor-move">
+      {/* Header - Brand teal bar with title */}
+      <div className="bg-[#095D40] px-4 py-2.5 flex items-center justify-between rounded-t-2xl">
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
-          <div className="bg-white rounded-md p-1.5 flex items-center justify-center flex-shrink-0">
-            <Folder className="h-3.5 w-3.5 text-[#0F172A]" strokeWidth={2.5} />
-          </div>
-          
           <div
             contentEditable={isEditingTitle}
             suppressContentEditableWarning
@@ -132,7 +127,7 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
                 e.stopPropagation();
               }
             }}
-            className={`text-[13px] font-semibold tracking-wide text-white truncate flex-1 min-w-0 outline-none ${isEditingTitle ? 'nodrag cursor-text' : 'cursor-move'}`}
+            className={`text-[13px] font-semibold tracking-wide text-white truncate flex-1 min-w-0 outline-none ${isEditingTitle ? 'nodrag cursor-text' : ''}`}
             role="textbox"
             aria-label="Group name"
           >
@@ -149,8 +144,7 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
         {/* Empty state hint - shown during drag-over to indicate drop zone */}
         {isDragOver && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center text-[#10B981] text-[13px] font-medium">
-              <Folder className="h-10 w-10 mx-auto mb-2 opacity-60" />
+            <div className="text-center text-[#095D40] text-[13px] font-semibold">
               <p>Drop here to add to group</p>
             </div>
           </div>

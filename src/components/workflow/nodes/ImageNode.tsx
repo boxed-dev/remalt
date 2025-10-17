@@ -1,8 +1,7 @@
 "use client";
 
-import { memo } from 'react';
-import { Image as ImageIcon, Loader2, RefreshCw, ChevronDown, ChevronUp, Eye, CheckCircle2, AlertCircle, Upload } from 'lucide-react';
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { memo, useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Image as ImageIcon, Loader2, Eye, CheckCircle2, AlertCircle, Upload, X } from 'lucide-react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
@@ -10,21 +9,16 @@ import type { ImageNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
 
 export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>) => {
-  const [mode, setMode] = useState<'idle' | 'url' | 'upload'>('idle');
+  const [mode, setMode] = useState<'choose' | 'url' | 'upload'>('choose');
   const [url, setUrl] = useState(data.imageUrl || '');
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
-  const [showAnalysis, setShowAnalysis] = useState(false);
-  const [showOcr, setShowOcr] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [UploaderComponent, setUploader] = useState<React.ComponentType<any> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
   const safeImageUrl = useMemo(() => data.imageUrl || data.thumbnail, [data.imageUrl, data.thumbnail]);
-
-  const hasAnalysis = useMemo(() => data.analysisStatus === 'success' && !!data.analysisData, [data.analysisData, data.analysisStatus]);
-  const hasOcr = useMemo(() => !!data.ocrText && data.ocrText.trim().length > 0, [data.ocrText]);
 
   // Reset error state when image URL changes
   useEffect(() => {
@@ -58,7 +52,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
       }
 
       console.log('🔍 Starting image analysis...', analysisSource.kind === 'url' ? analysisSource.payload : 'base64');
-      
+
       updateNodeData(id, {
         analysisStatus: 'analyzing',
         analysisError: undefined,
@@ -78,12 +72,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
       const result = await response.json();
 
       if (response.ok) {
-        console.log('✅ Image analysis completed successfully:', {
-          hasOCR: !!result.ocrText,
-          hasDescription: !!result.description,
-          tagCount: result.tags?.length || 0,
-          colorCount: result.colors?.length || 0
-        });
+        console.log('✅ Image analysis completed successfully');
         updateNodeData(id, {
           ocrText: result.ocrText,
           analysisData: {
@@ -110,32 +99,44 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
     }
   }, [data.imageFile, data.imageUrl, id, updateNodeData]);
 
-  // Auto-trigger analysis when image is uploaded or when status is set to loading
+  // Auto-trigger analysis when image is uploaded
   useEffect(() => {
     if (safeImageUrl && (data.analysisStatus === 'idle' || data.analysisStatus === 'loading')) {
-      console.log('Auto-triggering analysis for image:', safeImageUrl, 'Status:', data.analysisStatus);
+      console.log('Auto-triggering analysis for image:', safeImageUrl);
       void triggerAnalysis({ kind: 'url', payload: safeImageUrl });
     }
   }, [safeImageUrl, data.analysisStatus, triggerAnalysis]);
 
   const handleUrlSave = async () => {
-    if (url.trim()) {
-      setShowAnalysis(false);
-      setShowOcr(false);
-      updateNodeData(id, {
-        imageUrl: url,
-        thumbnail: url,
-        uploadcareCdnUrl: undefined,
-        uploadSource: 'url',
-        analysisStatus: 'loading',
-        analysisError: undefined,
-      } as Partial<ImageNodeData>);
+    if (!url.trim()) {
+      setMode('choose');
+      return;
     }
-    setMode('idle');
+
+    // Basic URL validation
+    try {
+      new URL(url.trim());
+    } catch {
+      updateNodeData(id, {
+        analysisStatus: 'error',
+        analysisError: 'Invalid URL format',
+      } as Partial<ImageNodeData>);
+      return;
+    }
+
+    updateNodeData(id, {
+      imageUrl: url,
+      thumbnail: url,
+      uploadcareCdnUrl: undefined,
+      uploadSource: 'url',
+      analysisStatus: 'loading',
+      analysisError: undefined,
+    } as Partial<ImageNodeData>);
+    setMode('choose');
   };
 
   const resetNode = () => {
-    setMode('idle');
+    setMode('choose');
     setUrl('');
     setImageError(false);
     setImageLoading(true);
@@ -149,8 +150,6 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
       ocrText: undefined,
       analysisError: undefined,
     } as Partial<ImageNodeData>);
-    setShowAnalysis(false);
-    setShowOcr(false);
   };
 
   const stopPropagation = (event: React.MouseEvent | React.TouchEvent) => {
@@ -185,26 +184,6 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
     return null;
   };
 
-  const handleReanalyze = async (event: React.MouseEvent<HTMLButtonElement>) => {
-    stopPropagation(event);
-    setShowAnalysis(false);
-    setShowOcr(false);
-    updateNodeData(id, {
-      analysisStatus: 'loading',
-      analysisError: undefined,
-    } as Partial<ImageNodeData>);
-  };
-
-  const toggleAnalysis = (event: React.MouseEvent<HTMLButtonElement>) => {
-    stopPropagation(event);
-    setShowAnalysis(prev => !prev);
-  };
-
-  const toggleOcr = (event: React.MouseEvent<HTMLButtonElement>) => {
-    stopPropagation(event);
-    setShowOcr(prev => !prev);
-  };
-
   const openFullImage = (event: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
     stopPropagation(event);
     if (data.imageUrl)
@@ -214,10 +193,9 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
   const handleUploaderChange = useCallback(({ allEntries }: { allEntries?: Array<{ status: string; cdnUrl?: string }> }) => {
     const firstCompleted = allEntries?.find((entry) => entry.status === 'success' && entry.cdnUrl);
     if (firstCompleted?.cdnUrl) {
+      console.log('✅ Image uploaded to Uploadcare:', firstCompleted.cdnUrl);
       setIsUploading(false);
-      setMode('idle');
-      setShowAnalysis(false);
-      setShowOcr(false);
+      setMode('choose');
       updateNodeData(id, {
         imageUrl: firstCompleted.cdnUrl,
         thumbnail: firstCompleted.cdnUrl,
@@ -241,13 +219,15 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
   const closeUploader = (event: React.MouseEvent) => {
     stopPropagation(event);
     if (!isUploading) {
-      setMode('idle');
+      setMode('choose');
+      setUploader(null);
     }
   };
 
   return (
     <BaseNode id={id} parentId={parentId}>
       <div className="w-[280px] space-y-2">
+        {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <ImageIcon className="h-4 w-4 text-[#F59E0B]" />
@@ -257,8 +237,9 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
         </div>
 
         {safeImageUrl ? (
+          /* Image loaded state */
           <div className="space-y-2">
-            <div className="relative w-full h-40 bg-[#F5F5F7] rounded overflow-hidden">
+            <div className="relative w-full h-56 bg-[#F5F5F7] rounded-lg overflow-hidden group">
               {imageLoading && !imageError && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Loader2 className="h-6 w-6 animate-spin text-[#F59E0B]" />
@@ -270,248 +251,120 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
                   <p className="text-[11px] text-[#6B7280]">Failed to load image</p>
                   <button
                     onClick={resetNode}
+                    onMouseDown={stopPropagation}
                     className="mt-2 text-[10px] text-[#F59E0B] hover:underline"
                   >
                     Try again
                   </button>
                 </div>
               ) : (
-                <img
-                  src={safeImageUrl}
-                  alt={data.caption || 'Image'}
-                  onClick={resetNode}
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => {
-                    setImageError(true);
-                    setImageLoading(false);
-                  }}
-                  className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition"
-                  style={{ display: imageLoading ? 'none' : 'block' }}
-                />
+                <>
+                  <img
+                    src={safeImageUrl}
+                    alt={data.caption || 'Image'}
+                    onLoad={() => setImageLoading(false)}
+                    onError={() => {
+                      setImageError(true);
+                      setImageLoading(false);
+                    }}
+                    className="w-full h-full object-cover"
+                    style={{ display: imageLoading ? 'none' : 'block' }}
+                  />
+                  {/* Remove overlay button */}
+                  <button
+                    onClick={resetNode}
+                    onMouseDown={stopPropagation}
+                    className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove image"
+                  >
+                    <X className="h-3.5 w-3.5 text-[#6B7280] hover:text-[#EF4444]" />
+                  </button>
+                </>
               )}
             </div>
+
+            {/* Caption */}
             {data.caption && (
               <div className="text-[11px] text-[#6B7280]">{data.caption}</div>
             )}
+
+            {/* Error message */}
             {data.analysisStatus === 'error' && (
               <div className="rounded-lg bg-[#FEF2F2] px-3 py-2 text-[11px] text-[#B91C1C]">
                 {data.analysisError || 'Analysis failed. Try again.'}
               </div>
             )}
-            {hasAnalysis && (
-              <div className="rounded-lg border border-[#E5E7EB] bg-[#F9FAFB]">
-                <button
-                  onClick={toggleAnalysis}
-                  onMouseDown={stopPropagation}
-                  className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-medium text-[#1A1D21] hover:bg-[#F3F4F6]"
-                >
-                  <span>AI insights</span>
-                  {showAnalysis ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                </button>
-                {showAnalysis && (
-                  <div className="space-y-2 px-3 pb-3 text-[11px] text-[#4B5563]">
-                    {data.analysisData?.description && (
-                      <p className="leading-relaxed">{data.analysisData.description}</p>
-                    )}
-                    {data.analysisData?.tags?.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {data.analysisData.tags.slice(0, 6).map((tag: string, idx: number) => (
-                          <span key={idx} className="rounded-full bg-white px-2 py-1 text-[10px] text-[#374151] shadow-sm">
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {data.analysisData?.colors?.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {data.analysisData.colors.slice(0, 5).map((color: string, idx: number) => (
-                          <span
-                            key={idx}
-                            className="flex items-center gap-1 rounded-md border border-[#E5E7EB] bg-white px-2 py-1 text-[10px]"
-                          >
-                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-                            {color}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-            {hasOcr && (
-              <div className="rounded-lg border border-[#E5E7EB] bg-[#F9FAFB]">
-                <button
-                  onClick={toggleOcr}
-                  onMouseDown={stopPropagation}
-                  className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-medium text-[#1A1D21] hover:bg-[#F3F4F6]"
-                >
-                  <span>OCR text</span>
-                  {showOcr ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                </button>
-                {showOcr && (
-                  <div className="max-h-32 overflow-y-auto px-3 pb-3 text-[11px] leading-relaxed text-[#4B5563]">
-                    {data.ocrText}
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
-              <button
-                onClick={openUploader}
-                className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#6B7280] hover:border-[#F59E0B] hover:text-[#F59E0B]"
-              >
-                <Upload className="h-3.5 w-3.5" />
-                Upload new
-              </button>
-              <button
-                onClick={(event) => {
-                  stopPropagation(event);
-                  setMode('url');
-                  setUrl(data.imageUrl || '');
-                }}
-                className="rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#6B7280] hover:border-[#1A1D21] hover:text-[#1A1D21]"
-              >
-                Paste URL
-              </button>
-              <button
-                onClick={(event) => {
-                  stopPropagation(event);
-                  resetNode();
-                }}
-                className="rounded-lg border border-[#FEE2E2] bg-[#FEF2F2] px-3 py-1 text-[#B91C1C] hover:bg-[#FEE2E2]"
-              >
-                Remove
-              </button>
-              {(data.analysisStatus === 'error' || data.analysisStatus === 'success') && (
-                <button
-                  onClick={handleReanalyze}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#E0E7FF] bg-[#EEF2FF] px-3 py-1 text-[#4338CA] hover:bg-[#E0E7FF]"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Re-analyze
-                </button>
-              )}
-              {data.imageUrl && (
+
+            {/* Actions */}
+            {data.imageUrl && (
+              <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
                 <button
                   onClick={openFullImage}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21]"
+                  onMouseDown={stopPropagation}
+                  className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21] transition-colors"
                 >
                   <Eye className="h-3.5 w-3.5" />
                   Open
                 </button>
-              )}
-            </div>
-            {mode === 'url' && (
-              <div className="mt-2 border border-[#E5E7EB] rounded-lg bg-[#F9FAFB] p-3">
-                <div className="text-[11px] text-[#6B7280] mb-2">Paste an image URL to update this node.</div>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleUrlSave();
-                    if (e.key === 'Escape') setMode('idle');
-                  }}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full px-3 py-2 text-[12px] border border-[#E5E7EB] rounded focus:outline-none focus:border-[#F59E0B] bg-white"
-                  autoFocus
-                />
-                <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={() => setMode('idle')}
-                    className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleUrlSave}
-                    disabled={!url.trim()}
-                    className="flex-1 px-3 py-2 text-[11px] bg-[#F59E0B] text-white rounded hover:bg-[#D97706] disabled:opacity-40 disabled:cursor-not-allowed transition"
-                  >
-                    Update
-                  </button>
-                </div>
-              </div>
-            )}
-            {mode === 'upload' && (
-              <div className="mt-2 border border-[#E5E7EB] rounded-lg bg-white p-3">
-                <div className="text-[11px] text-[#6B7280] mb-3">Upload a new image to replace the current one</div>
-                {UploaderComponent ? (
-                  <UploaderComponent
-                    pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY!}
-                    classNameUploader="uc-light uc-purple"
-                    sourceList="local, camera, gdrive, facebook"
-                    filesViewMode="grid"
-                    userAgentIntegration="remalt-next"
-                    onChange={handleUploaderChange}
-                  />
-                ) : (
-                  <div className="flex h-32 items-center justify-center text-[11px] text-[#6B7280]">Loading uploader...</div>
-                )}
-                <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={closeUploader}
-                    disabled={isUploading}
-                    className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded transition disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Cancel
-                  </button>
-                </div>
               </div>
             )}
           </div>
-        ) : mode === 'idle' ? (
+        ) : mode === 'choose' ? (
+          /* Choose mode - initial state */
           <div className="space-y-2">
             <button
               onClick={openUploader}
-              className="w-full rounded-lg border border-dashed border-[#E5E7EB] bg-[#F9FAFB] px-4 py-5 text-center hover:border-[#F59E0B] hover:bg-[#FEF3C7] transition"
+              onMouseDown={stopPropagation}
+              className="w-full p-3 border border-dashed border-[#E5E7EB] rounded-lg hover:border-[#F59E0B] hover:bg-[#FEF3C7] transition-colors group"
             >
-              <Upload className="h-8 w-8 text-[#F59E0B] mx-auto mb-2" />
-              <div className="text-[12px] font-medium text-[#1A1D21]">Click to upload image</div>
-              <div className="text-[11px] text-[#6B7280] mt-1">
-                Upload from local, camera, Google Drive, or Facebook
-              </div>
+              <Upload className="h-6 w-6 text-[#F59E0B] mx-auto mb-1.5" />
+              <div className="text-[11px] font-medium text-[#1A1D21] text-center">Upload Image</div>
+              <div className="text-[10px] text-[#6B7280] text-center mt-0.5">Local, camera, Drive, or Facebook</div>
             </button>
             <button
               onClick={() => {
                 setMode('url');
                 setUrl('');
               }}
-              className="w-full p-3 border border-dashed border-[#E5E7EB] rounded hover:border-[#F59E0B] hover:bg-[#FEF3C7] transition text-center"
+              onMouseDown={stopPropagation}
+              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg hover:border-[#F59E0B] hover:text-[#F59E0B] transition-colors text-center text-[11px] text-[#6B7280]"
             >
-              <div className="text-[11px] text-[#6B7280] font-medium">Or paste image URL</div>
+              Paste URL
             </button>
           </div>
         ) : mode === 'upload' ? (
+          /* Upload mode - Uploadcare uploader */
           <div className="space-y-2">
-              <div className="rounded-lg border border-[#E5E7EB] bg-white p-3">
-              <div className="text-[11px] text-[#6B7280] mb-3">Upload an image to analyze</div>
+            <div className="rounded-lg border border-[#E5E7EB] bg-white p-3">
               {UploaderComponent ? (
                 <UploaderComponent
                   pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY!}
                   classNameUploader="uc-light uc-purple"
                   sourceList="local, camera, gdrive, facebook"
                   filesViewMode="grid"
+                  imagesOnly={true}
+                  accept="image/*"
                   userAgentIntegration="remalt-next"
                   onChange={handleUploaderChange}
                 />
               ) : (
-                <div className="flex h-32 items-center justify-center text-[11px] text-[#6B7280]">Loading uploader...</div>
+                <div className="flex h-32 items-center justify-center text-[11px] text-[#6B7280]">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Loading...
+                </div>
               )}
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={closeUploader}
-                disabled={isUploading}
-                className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded transition disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-            </div>
+            <button
+              onClick={closeUploader}
+              onMouseDown={stopPropagation}
+              disabled={isUploading}
+              className="w-full px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isUploading ? 'Uploading...' : 'Cancel'}
+            </button>
           </div>
         ) : (
+          /* URL mode - paste URL input */
           <div className="space-y-2">
             <input
               ref={inputRef}
@@ -520,29 +373,33 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleUrlSave();
-                if (e.key === 'Escape') setMode('idle');
+                if (e.key === 'Escape') setMode('choose');
               }}
               placeholder="https://example.com/image.jpg"
-              className="w-full px-3 py-2 text-[12px] border border-[#E5E7EB] rounded focus:outline-none focus:border-[#F59E0B]"
+              className="w-full px-3 py-2 text-[12px] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] transition-all"
               autoFocus
             />
             <div className="flex gap-2">
               <button
-                onClick={() => setMode('idle')}
-                className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded transition"
+                onClick={() => setMode('choose')}
+                onMouseDown={stopPropagation}
+                className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors"
               >
                 Back
               </button>
               <button
                 onClick={handleUrlSave}
+                onMouseDown={stopPropagation}
                 disabled={!url.trim()}
-                className="flex-1 px-3 py-2 text-[11px] bg-[#F59E0B] text-white rounded hover:bg-[#D97706] disabled:opacity-40 disabled:cursor-not-allowed transition"
+                className="flex-1 px-3 py-2 text-[11px] bg-[#F59E0B] text-white rounded-lg hover:bg-[#D97706] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Add URL
               </button>
             </div>
           </div>
         )}
+
+        {/* AI Instructions */}
         <AIInstructionsInline
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ImageNodeData>)}
@@ -553,3 +410,5 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
     </BaseNode>
   );
 });
+
+ImageNode.displayName = 'ImageNode';

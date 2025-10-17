@@ -233,3 +233,43 @@ export async function uploadWithRetry(
 
   throw lastError || new Error('Upload failed after retries');
 }
+
+export interface UploadResultWithError {
+  success: boolean;
+  result?: UploadResult;
+  error?: string;
+  url: string;
+}
+
+/**
+ * Upload multiple URLs with partial failure support
+ * Returns results for successful uploads and errors for failed ones
+ */
+export async function uploadMultipleWithPartialSuccess(
+  urls: string[],
+  options: Omit<UploadFromUrlParams, 'sourceUrl'> = {},
+  maxRetries = 2
+): Promise<UploadResultWithError[]> {
+  const uploadPromises = urls.map(async (url): Promise<UploadResultWithError> => {
+    try {
+      const result = await uploadWithRetry({
+        ...options,
+        sourceUrl: url,
+      }, maxRetries);
+      return {
+        success: true,
+        result,
+        url,
+      };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        error: errorMsg,
+        url,
+      };
+    }
+  });
+
+  return Promise.all(uploadPromises);
+}

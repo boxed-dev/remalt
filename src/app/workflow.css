@@ -387,34 +387,7 @@ div[class*="react-flow__node"].react-flow__node-group {
   animation-name: slide-in-from-right;
 }
 
-/* Custom Chat Scrollbar */
-.chat-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.chat-scrollbar::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 8px;
-}
-
-.chat-scrollbar::-webkit-scrollbar-thumb {
-  background: #9CA3AF;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  transition: background 200ms ease;
-}
-
-.chat-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #6B7280;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-.chat-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #9CA3AF rgba(0, 0, 0, 0.02);
-}
+/* Custom Chat Scrollbar - Removed duplicate (defined in globals.css) */
 
 /* Loading pulse animation */
 @keyframes pulse {

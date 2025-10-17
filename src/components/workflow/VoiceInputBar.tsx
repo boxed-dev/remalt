@@ -394,13 +394,15 @@ function Waveform({ frequencyData }: { frequencyData: Uint8Array }) {
     <div className="flex items-center justify-center gap-1.5 h-full px-4">
       {Array.from(frequencyData).map((value, i) => {
         // Use ACTUAL frequency value from microphone (0-255)
-        // Apply amplification and minimum height for better visibility
         const normalizedValue = value / 255; // 0-1 range
         const amplified = Math.min(normalizedValue * 2.5, 1); // 2.5x amplification
-        const heightPercent = Math.max(30, amplified * 100);
+
+        // Only show bars with minimum height if there's actual audio
+        // Otherwise hide them completely to avoid visual glitches
+        const heightPercent = amplified > 0.1 ? Math.max(30, amplified * 100) : 0;
 
         // Opacity based on actual audio level
-        const opacity = 0.6 + (amplified * 0.4);
+        const opacity = amplified > 0.1 ? 0.6 + (amplified * 0.4) : 0;
 
         return (
           <div

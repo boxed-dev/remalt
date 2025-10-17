@@ -1,9 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * API endpoint to provide Deepgram API key for client-side WebSocket
  * Uses Node.js runtime for full environment variable access
  */
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // Verify Deepgram API key exists
@@ -16,6 +19,8 @@ export async function GET() {
         { status: 500 }
       );
     }
+
+    console.log('[Deepgram Key API] Providing API key for browser WebSocket');
 
     // Return the API key for client-side use
     return NextResponse.json({

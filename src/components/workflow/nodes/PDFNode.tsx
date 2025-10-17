@@ -397,25 +397,23 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
             <button
               onClick={openUploader}
               onMouseDown={stopPropagation}
-              className="w-full p-4 border-2 border-dashed border-[#E5E7EB] rounded-lg hover:border-[#EF4444] hover:bg-[#FEF2F2] transition-all cursor-pointer group"
+              className="w-full p-3 border border-dashed border-[#E5E7EB] rounded-lg hover:border-[#EF4444] hover:bg-[#FEF2F2] transition-colors group"
             >
-              <Upload className="h-8 w-8 text-[#EF4444] mx-auto mb-2 group-hover:scale-110 transition-transform" />
+              <Upload className="h-6 w-6 text-[#EF4444] mx-auto mb-1.5" />
               <div className="text-[11px] font-medium text-[#1A1D21] text-center">Upload PDF</div>
-              <div className="text-[9px] text-[#6B7280] text-center mt-1">From local, URL, Drive, or Dropbox</div>
+              <div className="text-[10px] text-[#6B7280] text-center mt-0.5">Local, URL, Drive, or Dropbox</div>
             </button>
             <button
               onClick={() => setMode('url')}
               onMouseDown={stopPropagation}
-              className="w-full p-4 border-2 border-dashed border-[#E5E7EB] rounded-lg hover:border-[#EF4444] hover:bg-[#FEF2F2] transition-all text-center group"
+              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg hover:border-[#EF4444] hover:text-[#EF4444] transition-colors text-center text-[11px] text-[#6B7280]"
             >
-              <FileText className="h-8 w-8 text-[#EF4444] mx-auto mb-2 group-hover:scale-110 transition-transform" />
-              <div className="text-[11px] font-medium text-[#1A1D21]">Paste URL</div>
+              Paste URL
             </button>
           </div>
         ) : mode === 'upload' ? (
           <div className="space-y-2">
             <div className="rounded-lg border border-[#E5E7EB] bg-white p-3">
-              <div className="text-[11px] text-[#6B7280] mb-3 font-medium">Upload your PDF file</div>
               {UploaderComponent ? (
                 <UploaderComponent
                   pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY!}
@@ -428,8 +426,8 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
                 />
               ) : (
                 <div className="flex h-32 items-center justify-center text-[11px] text-[#6B7280]">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  Loading uploader...
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Loading...
                 </div>
               )}
             </div>

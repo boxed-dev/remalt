@@ -96,7 +96,7 @@ GEMINI_API_KEY=                     # Google Gemini API key
 # Optional
 DEEPGRAM_API_KEY=                   # Voice transcription
 PYTHON_API_URL=                     # Python API URL (default: http://localhost:5001)
-APIFY_API_KEY=                      # LinkedIn post fetching (required for LinkedIn nodes)
+APIFY_API_TOKEN=                    # Apify API token (Instagram + LinkedIn nodes)
 JINA_API_KEY=                       # Web scraping (20 RPM free, 200 RPM with key)
 SCREENSHOTONE_API_KEY=              # Screenshot provider (Priority 1)
 APIFLASH_API_KEY=                   # Screenshot provider (Priority 2)
@@ -244,12 +244,15 @@ PDF document parsing:
 - Returns: `segments` (array of text chunks with headings)
 
 ### `/api/instagram/reel` (POST)
-Instagram post/reel/story data fetching via Apify:
+Instagram post/reel/story data fetching via Apify Instagram Scraper:
 - Accepts: `url` (Instagram post/reel/story URL)
+- Uses `apify/instagram-scraper` actor via run-sync-get-dataset-items API
 - Auto-detects content type (posts, reels, stories) from URL pattern
 - Supports carousel posts (Sidecar type) with multiple images
-- Returns: `reelCode`, `caption`, `author`, `likes`, `views`, `comments`, `videoUrl`, `images[]`, `postType`
-- **Note**: Stories expire after 24 hours and require public access or authentication
+- Returns: `reelCode`, `caption`, `author`, `likes`, `views`, `comments`, `videoUrl`, `images[]`, `postType`, `isStory`, `takenAt`, `expiresAt`
+- **Note**: Stories expire after 24 hours and require public access
+- **Requires**: `APIFY_API_TOKEN` environment variable
+- **Processing**: Uses `/lib/instagram-processor.ts` for Gemini Vision/Flash analysis of images/videos
 
 ### `/api/linkedin/post` (POST)
 LinkedIn post data fetching via Apify:

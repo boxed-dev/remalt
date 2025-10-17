@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "@uploadcare/react-uploader/core.css";
 import { GlobalHeader } from "@/components/layout/global-header";
 import { SmoothScrollProvider } from "@/components/layout/smooth-scroll-provider";
 

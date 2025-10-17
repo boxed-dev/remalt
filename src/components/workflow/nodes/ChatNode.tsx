@@ -316,7 +316,7 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
             </button>
           </div>
           {/* Wrapper for scroll isolation */}
-          <div className="relative">
+          <div className="relative rounded-lg bg-[#FAFBFC] border border-[#E8ECEF]">
             <div
               ref={scrollContainerRef}
               onScroll={handleScroll}
@@ -329,7 +329,7 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
               data-lenis-prevent
               data-lenis-prevent-wheel
               data-lenis-prevent-touch
-              className="relative h-[480px] overflow-y-auto overflow-x-hidden space-y-3 scroll-smooth chat-scrollbar"
+              className="relative h-[480px] overflow-y-auto overflow-x-hidden px-3 py-3 space-y-3 scroll-smooth chat-scrollbar"
               style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
             >
               {data.messages.length > 0 ? (
@@ -430,7 +430,7 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
                   </div>
                 ))
               ) : (
-                <div className="text-[12px] text-[#9CA3AF] text-center pt-16">
+                <div className="flex items-center justify-center h-full text-[12px] text-[#9CA3AF]">
                   No messages yet
                 </div>
               )}
@@ -516,7 +516,7 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
             data-lenis-prevent
             data-lenis-prevent-wheel
             data-lenis-prevent-touch
-            className="relative flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-3 chat-scrollbar"
+            className="relative flex-1 overflow-y-auto overflow-x-hidden px-8 py-6 space-y-4 chat-scrollbar bg-[#FAFBFC]"
             style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
           >
             {data.messages.length > 0 ? (

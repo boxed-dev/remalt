@@ -16,16 +16,14 @@ export const TextNode = memo(({ id, data, parentId }: NodeProps<TextNodeData>) =
 
   return (
     <BaseNode id={id} parentId={parentId}>
-      <div className="w-[520px] rounded-xl overflow-hidden">
-        {/* Blue Header - exactly like the image */}
-        <div className="bg-[#5B7FE8] px-4 py-2.5 flex items-center gap-2.5 rounded-t-xl">
-          <div className="bg-white rounded-md p-1.5 flex items-center justify-center">
-            <Type className="h-3.5 w-3.5 text-[#5B7FE8]" strokeWidth={2.5} />
-          </div>
-          <span className="text-[13px] font-semibold text-white tracking-wide">Text</span>
+      <div className="w-[520px]">
+        {/* Minimal Header */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-[#E5E7EB]">
+          <Type className="h-4 w-4 text-[#6B7280]" />
+          <span className="text-[12px] font-medium text-[#1A1D21]">Text</span>
         </div>
 
-        {/* Editor Content - Full clickable area */}
+        {/* Editor Content */}
         <div className="bg-white">
           <BlockNoteEditor
             initialContent={data.content}
@@ -35,8 +33,8 @@ export const TextNode = memo(({ id, data, parentId }: NodeProps<TextNodeData>) =
           />
         </div>
 
-        {/* AI Instructions at bottom */}
-        <div className="px-4 pb-3 bg-white border-t border-[#F3F4F6] rounded-b-xl">
+        {/* AI Instructions */}
+        <div className="px-3 py-2 border-t border-[#E5E7EB]">
           <AIInstructionsInline
             value={data.aiInstructions}
             onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<TextNodeData>)}
