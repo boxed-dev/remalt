@@ -4,6 +4,7 @@ import "./globals.css";
 import "@uploadcare/react-uploader/core.css";
 import { GlobalHeader } from "@/components/layout/global-header";
 import { SmoothScrollProvider } from "@/components/layout/smooth-scroll-provider";
+import { Toaster } from "sonner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -32,6 +33,7 @@ export default function RootLayout({
           <main className="pt-14">
             {children}
           </main>
+          <Toaster position="bottom-right" richColors expand={true} />
         </SmoothScrollProvider>
       </body>
     </html>

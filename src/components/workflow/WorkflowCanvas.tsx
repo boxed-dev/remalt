@@ -303,15 +303,30 @@ function WorkflowCanvasInner() {
     setEdges(mappedEdges);
   }, [mappedEdges, setEdges]);
 
+  // FIXED: Add proper debouncing (500ms) to prevent excessive viewport updates
+  const viewportDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+
   const scheduleViewportPersist = useCallback(
     (viewport: Viewport) => {
+      // Clear existing RAF
       if (rafHandle.current) {
         cancelAnimationFrame(rafHandle.current);
       }
 
+      // Clear existing debounce timer
+      if (viewportDebounceTimer.current) {
+        clearTimeout(viewportDebounceTimer.current);
+      }
+
+      // Use RAF for smooth updates during pan/zoom
       rafHandle.current = requestAnimationFrame(() => {
         rafHandle.current = null;
-        updateViewport(viewport);
+
+        // Debounce the actual store update
+        viewportDebounceTimer.current = setTimeout(() => {
+          updateViewport(viewport);
+          viewportDebounceTimer.current = null;
+        }, 500); // 500ms debounce
       });
     },
     [updateViewport]
@@ -321,6 +336,9 @@ function WorkflowCanvasInner() {
     return () => {
       if (rafHandle.current) {
         cancelAnimationFrame(rafHandle.current);
+      }
+      if (viewportDebounceTimer.current) {
+        clearTimeout(viewportDebounceTimer.current);
       }
     };
   }, []);

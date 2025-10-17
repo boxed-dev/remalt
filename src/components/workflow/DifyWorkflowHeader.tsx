@@ -4,6 +4,8 @@ import { ChevronLeft, MoreHorizontal, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { useState, useRef, useEffect } from 'react';
+import { SaveStatusIndicator } from './SaveStatusIndicator';
+import { toast } from 'sonner';
 
 export function DifyWorkflowHeader() {
   const router = useRouter();
@@ -29,9 +31,24 @@ export function DifyWorkflowHeader() {
   };
 
   const handleSaveName = () => {
-    if (editedName.trim() && editedName !== workflowName) {
-      updateWorkflowMetadata({ name: editedName.trim() });
+    const trimmedName = editedName.trim();
+
+    // FIXED: Validate workflow name
+    if (!trimmedName) {
+      toast.error('Workflow name cannot be empty');
+      return;
     }
+
+    if (trimmedName.length > 100) {
+      toast.error('Workflow name is too long (max 100 characters)');
+      return;
+    }
+
+    if (trimmedName !== workflowName) {
+      updateWorkflowMetadata({ name: trimmedName });
+      toast.success('Workflow name updated');
+    }
+
     setIsEditingName(false);
   };
 
@@ -88,8 +105,11 @@ export function DifyWorkflowHeader() {
         </div>
       </div>
 
-      {/* Right section - Action buttons */}
-      <div className="flex items-center gap-2">
+      {/* Right section - Save status and action buttons */}
+      <div className="flex items-center gap-3">
+        {/* FIXED: Mount SaveStatusIndicator */}
+        <SaveStatusIndicator />
+
         <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 text-[13px] font-medium">
           <MoreHorizontal className="h-4 w-4" />
         </button>

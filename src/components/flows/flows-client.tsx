@@ -7,6 +7,17 @@ import { FlowCard } from "@/components/flows/flow-card";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { deleteWorkflow, type WorkflowSummary } from "@/lib/supabase/workflows";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface FlowsClientProps {
   initialWorkflows: WorkflowSummary[];
@@ -16,6 +27,9 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
   const router = useRouter();
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>(initialWorkflows);
   const [searchQuery, setSearchQuery] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const filteredFlows = useMemo(() => {
     let filtered = workflows;
@@ -38,16 +52,32 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
     router.push(`/flows/new`);
   };
 
-  const handleDeleteFlow = async (flowId: string) => {
+  const handleDeleteClick = (flowId: string) => {
+    setWorkflowToDelete(flowId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!workflowToDelete) return;
+
     try {
+      setIsDeleting(true);
       const supabase = createClient();
-      await deleteWorkflow(supabase, flowId);
+      await deleteWorkflow(supabase, workflowToDelete);
 
       // Remove from local state
-      setWorkflows(workflows.filter(w => w.id !== flowId));
+      setWorkflows(workflows.filter(w => w.id !== workflowToDelete));
+      toast.success('Workflow deleted successfully');
+
+      // FIXED: Refresh the page data to ensure list is up to date
+      router.refresh();
     } catch (error) {
       console.error('Failed to delete workflow:', error);
-      alert('Failed to delete workflow. Please try again.');
+      toast.error('Failed to delete workflow. Please try again.');
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setWorkflowToDelete(null);
     }
   };
 
@@ -110,7 +140,7 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                     tags: flow.metadata?.tags?.map(tag => ({ name: tag as any, color: '#007AFF', count: 0 })) || []
                   }}
                   onClick={() => handleFlowClick(flow.id)}
-                  onDelete={() => handleDeleteFlow(flow.id)}
+                  onDelete={() => handleDeleteClick(flow.id)}
                 />
               ))}
             </div>
@@ -162,6 +192,29 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
           )}
         </div>
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Workflow?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the workflow
+              and all its content.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

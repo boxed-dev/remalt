@@ -669,8 +669,11 @@ export const useWorkflowStore = create<WorkflowStore>()(
         // Add snapshot to history
         state.history.push(snapshot);
 
-        // Limit history to 50 items
-        if (state.history.length > 50) {
+        // FIXED: Reduce history limit from 50 to 10 items to prevent memory leaks
+        // Each history item is a full workflow clone which can be multiple MBs for large workflows
+        const MAX_HISTORY_ITEMS = 10;
+
+        if (state.history.length > MAX_HISTORY_ITEMS) {
           state.history.shift();
         } else {
           state.historyIndex = state.history.length - 1;

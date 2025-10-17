@@ -22,10 +22,9 @@ export default function WorkflowEditorPage() {
 
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [hasRedirected, setHasRedirected] = useState(false);
-  const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(
-    null
-  );
+  // FIXED: Use refs to prevent re-render loops and duplicate workflow creation
+  const workflowCreatedRef = useRef(false);
+  const isRedirectingRef = useRef(false);
 
   const workflow = useWorkflowStore((state) => state.workflow);
   const createWorkflow = useWorkflowStore((state) => state.createWorkflow);
@@ -54,71 +53,39 @@ export default function WorkflowEditorPage() {
     userId: user?.id || null,
   });
 
-  // Reset redirect flag when navigating to /new to prevent stale redirects
+  // FIXED: Handle redirect from /flows/new to /flows/[id] after first node added
+  // Using ref to prevent redirect loops
   useEffect(() => {
-    if (workflowId === "new") {
-      setHasRedirected(false);
-      setCurrentWorkflowId(null); // Clear current workflow ID tracker
-    }
-  }, [workflowId]);
-
-  // Handle redirect from /flows/new to /flows/[id] after first save
-  useEffect(() => {
-    // Only redirect if:
-    // 1. We're on the /flows/new route
-    // 2. We have a workflow with an actual ID
-    // 3. We haven't already redirected
-    // 4. The workflow has been saved (has nodes or edges)
-    // 5. The workflow ID matches the one we're currently editing (not a stale workflow)
     if (
       workflowId === "new" &&
       workflow?.id &&
-      !hasRedirected &&
-      (workflow.nodes.length > 0 || workflow.edges.length > 0) &&
-      workflow.id === currentWorkflowId // Only redirect if this matches the workflow we just created
+      !isRedirectingRef.current &&
+      (workflow.nodes.length > 0 || workflow.edges.length > 0)
     ) {
       console.log("🔄 Redirecting from /flows/new to /flows/" + workflow.id);
-      setHasRedirected(true);
-      // Use push instead of replace to avoid full page reload (janky UX)
-      // Update the URL without reloading the page
-      window.history.replaceState(null, "", `/flows/${workflow.id}`);
+      isRedirectingRef.current = true;
+      router.replace(`/flows/${workflow.id}`, { scroll: false });
     }
-  }, [workflowId, workflow, hasRedirected, currentWorkflowId]);
+  }, [workflowId, workflow, router]);
 
-  // Load workflow from Supabase
+  // FIXED: Simplified workflow loading logic to prevent duplicate creation
   useEffect(() => {
     async function loadWorkflowData() {
       if (userLoading || !user) return;
 
-      // Check if this is a "new" workflow request
+      // Handle new workflow creation
       if (workflowId === "new") {
-        // Clear any existing workflow state to prevent redirect to old workflow
-        const currentWorkflow = useWorkflowStore.getState().workflow;
-        if (currentWorkflow) {
-          useWorkflowStore.getState().clearWorkflow();
-        }
-        createWorkflow("Untitled Workflow", "A new workflow");
-        // Get the newly created workflow's ID and track it
-        const newlyCreatedWorkflow = useWorkflowStore.getState().workflow;
-        if (newlyCreatedWorkflow) {
-          setCurrentWorkflowId(newlyCreatedWorkflow.id);
+        // CRITICAL: Only create workflow once using ref guard
+        if (!workflowCreatedRef.current) {
+          console.log("📝 Creating new workflow");
+          workflowCreatedRef.current = true;
+          createWorkflow("Untitled Workflow", "A new workflow");
         }
         setLoadingWorkflow(false);
         return;
       }
 
-      // CRITICAL FIX: Prevent reloading workflow if we already have it in memory
-      // This prevents race conditions when switching tabs while auto-save is in progress
-      const currentWorkflow = useWorkflowStore.getState().workflow;
-      if (currentWorkflow && currentWorkflow.id === workflowId) {
-        console.log(
-          "✅ Workflow already loaded in memory, skipping fetch:",
-          workflowId
-        );
-        setLoadingWorkflow(false);
-        return;
-      }
-
+      // Handle loading existing workflow
       try {
         setLoadingWorkflow(true);
         setLoadError(null);
@@ -127,8 +94,8 @@ export default function WorkflowEditorPage() {
         const workflowData = await getWorkflow(supabase, workflowId);
 
         if (workflowData) {
+          console.log("📖 Loading workflow:", workflowData.name);
           loadWorkflow(workflowData);
-          setCurrentWorkflowId(workflowData.id);
         } else {
           setLoadError("Workflow not found");
         }
