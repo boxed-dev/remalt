@@ -23,7 +23,9 @@ export default function WorkflowEditorPage() {
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [hasRedirected, setHasRedirected] = useState(false);
-  const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(null);
+  const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(
+    null
+  );
 
   const workflow = useWorkflowStore((state) => state.workflow);
   const createWorkflow = useWorkflowStore((state) => state.createWorkflow);
@@ -79,28 +81,9 @@ export default function WorkflowEditorPage() {
       setHasRedirected(true);
       // Use push instead of replace to avoid full page reload (janky UX)
       // Update the URL without reloading the page
-      window.history.replaceState(null, '', `/flows/${workflow.id}`);
+      window.history.replaceState(null, "", `/flows/${workflow.id}`);
     }
   }, [workflowId, workflow, hasRedirected, currentWorkflowId]);
-
-  // Handle visibility changes (tab switching)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        // Force re-render when tab becomes visible
-        const state = useWorkflowStore.getState();
-        if (state.workflow) {
-          // Touch the workflow to trigger re-render
-          state.loadWorkflow(state.workflow);
-        }
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
 
   // Load workflow from Supabase
   useEffect(() => {
@@ -120,6 +103,15 @@ export default function WorkflowEditorPage() {
         if (newlyCreatedWorkflow) {
           setCurrentWorkflowId(newlyCreatedWorkflow.id);
         }
+        setLoadingWorkflow(false);
+        return;
+      }
+
+      // CRITICAL FIX: Prevent reloading workflow if we already have it in memory
+      // This prevents race conditions when switching tabs while auto-save is in progress
+      const currentWorkflow = useWorkflowStore.getState().workflow;
+      if (currentWorkflow && currentWorkflow.id === workflowId) {
+        console.log("✅ Workflow already loaded in memory, skipping fetch:", workflowId);
         setLoadingWorkflow(false);
         return;
       }
