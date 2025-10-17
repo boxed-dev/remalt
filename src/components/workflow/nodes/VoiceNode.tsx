@@ -1,6 +1,6 @@
 import { memo } from 'react';
-import { Mic, Loader2, CheckCircle2, ChevronDown, ChevronUp, Download, Square } from 'lucide-react';
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { Mic, Loader2, CheckCircle2, ChevronDown, ChevronUp, Download, Square, Upload } from 'lucide-react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
@@ -11,6 +11,7 @@ import { recordingManager, type RecordingState } from '@/lib/recording-manager';
 let currentRecordingNodeId: string | null = null;
 
 export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>) => {
+  const [mode, setMode] = useState<'idle' | 'upload'>('idle');
   const [showTranscript, setShowTranscript] = useState(false);
   const [isRecordingThisNode, setIsRecordingThisNode] = useState(false);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
@@ -18,12 +19,14 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
   const [finalTranscripts, setFinalTranscripts] = useState<string[]>([]);
   const [duration, setDuration] = useState(0);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [UploaderComponent, setUploader] = useState<React.ComponentType<any> | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
   const hasTranscript = useMemo(() => data.transcriptStatus === 'success' && !!data.transcript, [data.transcriptStatus, data.transcript]);
-  const hasAudio = useMemo(() => !!data.audioUrl, [data.audioUrl]);
+  const hasAudio = useMemo(() => !!data.audioUrl || !!data.uploadcareCdnUrl, [data.audioUrl, data.uploadcareCdnUrl]);
   const transcriptWordCount = useMemo(() => {
     if (!data.transcript)
       return 0;
@@ -80,6 +83,7 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
 
         updateNodeData(id, {
           audioUrl,
+          uploadSource: 'recording',
           transcript: recordingData.transcript,
           duration: recordingData.duration,
           transcriptStatus: 'success',
@@ -159,6 +163,8 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
       // Clear old data
       updateNodeData(id, {
         audioUrl: undefined,
+        uploadcareCdnUrl: undefined,
+        uploadcareUuid: undefined,
         transcript: undefined,
         duration: undefined,
         transcriptStatus: 'idle',
@@ -224,13 +230,97 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
 
   const downloadAudio = (event: React.MouseEvent<HTMLButtonElement>) => {
     stopPropagation(event);
-    if (!data.audioUrl)
-      return;
+    const audioSrc = data.uploadcareCdnUrl || data.audioUrl;
+    if (!audioSrc) return;
 
     const link = document.createElement('a');
-    link.href = data.audioUrl;
+    link.href = audioSrc;
     link.download = 'audio.webm';
     link.click();
+  };
+
+  const handleUploaderChange = useCallback(({ allEntries }: { allEntries?: Array<{ status: string; cdnUrl?: string; uuid?: string; name?: string; size?: number }> }) => {
+    console.log('[VoiceNode] Uploader change event:', allEntries);
+
+    const firstCompleted = allEntries?.find((entry) => entry.status === 'success' && entry.cdnUrl);
+
+    if (firstCompleted?.cdnUrl) {
+      console.log('[VoiceNode] Upload complete:', firstCompleted.cdnUrl);
+      setIsUploading(false);
+      setMode('idle');
+
+      updateNodeData(id, {
+        uploadcareCdnUrl: firstCompleted.cdnUrl,
+        uploadcareUuid: firstCompleted.uuid,
+        uploadSource: 'uploadcare',
+        transcriptStatus: 'transcribing',
+        transcriptError: undefined,
+        audioUrl: undefined,
+      } as Partial<VoiceNodeData>);
+
+      // Trigger transcription with Uploadcare URL
+      void triggerTranscription(firstCompleted.cdnUrl);
+    } else if (allEntries && allEntries.some((entry) => entry.status === 'uploading')) {
+      setIsUploading(true);
+      updateNodeData(id, {
+        uploadStatus: 'uploading',
+      } as Partial<VoiceNodeData>);
+    }
+  }, [id, updateNodeData]);
+
+  const triggerTranscription = async (audioUrl: string) => {
+    try {
+      console.log('[VoiceNode] Starting transcription for:', audioUrl);
+
+      updateNodeData(id, {
+        transcriptStatus: 'transcribing',
+        transcriptError: undefined,
+      } as Partial<VoiceNodeData>);
+
+      const response = await fetch('/api/voice/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ audioUrl }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.transcript) {
+        console.log('[VoiceNode] Transcription successful');
+        updateNodeData(id, {
+          transcript: result.transcript,
+          transcriptStatus: 'success',
+          transcriptError: undefined,
+        } as Partial<VoiceNodeData>);
+      } else {
+        console.error('[VoiceNode] Transcription failed:', result.error);
+        updateNodeData(id, {
+          transcriptStatus: 'error',
+          transcriptError: result.error || 'Failed to transcribe audio',
+        } as Partial<VoiceNodeData>);
+      }
+    } catch (error) {
+      console.error('[VoiceNode] Transcription exception:', error);
+      updateNodeData(id, {
+        transcriptStatus: 'error',
+        transcriptError: error instanceof Error ? error.message : 'Failed to transcribe audio',
+      } as Partial<VoiceNodeData>);
+    }
+  };
+
+  const openUploader = async (event: React.MouseEvent) => {
+    stopPropagation(event);
+    const { FileUploaderRegular } = await import('@uploadcare/react-uploader/next');
+    setUploader(() => FileUploaderRegular);
+    setMode('upload');
+  };
+
+  const closeUploader = (event: React.MouseEvent) => {
+    stopPropagation(event);
+    if (!isUploading) {
+      setMode('idle');
+    }
   };
 
   const liveWordCount = [...finalTranscripts.join(' ').split(/\s+/), ...interimTranscript.split(/\s+/)].filter(Boolean).length;
@@ -256,6 +346,12 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
             <div className="inline-flex items-center gap-1 rounded-full bg-[#EEF2FF] px-2 py-1 text-[10px] text-[#4338CA]">
               <Loader2 className="h-3 w-3 animate-spin" />
               <span>Processing</span>
+            </div>
+          )}
+          {data.transcriptStatus === 'transcribing' && !isRecordingThisNode && (
+            <div className="inline-flex items-center gap-1 rounded-full bg-[#EEF2FF] px-2 py-1 text-[10px] text-[#4338CA]">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Transcribing</span>
             </div>
           )}
           {data.transcriptStatus === 'success' && !isRecordingThisNode && (
@@ -376,17 +472,22 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
         )}
 
         {/* Existing audio display */}
-        {hasAudio && !showRecordingUI && (
+        {hasAudio && !showRecordingUI && mode === 'idle' && (
           <div className="space-y-2">
             <div className="rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-3">
+              {data.uploadcareCdnUrl && (
+                <div className="text-[10px] text-[#8B5CF6] mb-2 truncate" title={data.uploadcareCdnUrl}>
+                  Uploadcare CDN
+                </div>
+              )}
               <audio
                 controls
                 className="h-8 w-full"
                 onPointerDown={stopPropagation}
                 onTouchStart={stopPropagation}
               >
-                <source src={data.audioUrl!} type="audio/webm" />
-                <source src={data.audioUrl!} type="audio/mpeg" />
+                <source src={data.uploadcareCdnUrl || data.audioUrl!} type="audio/webm" />
+                <source src={data.uploadcareCdnUrl || data.audioUrl!} type="audio/mpeg" />
                 Your browser does not support the audio element.
               </audio>
             </div>
@@ -443,17 +544,61 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
           </div>
         )}
 
-        {/* Initial state - click to record */}
-        {!hasAudio && !showRecordingUI && (
-          <button
-            onClick={handleStartRecording}
-            onMouseDown={stopPropagation}
-            className="w-full p-4 border-2 border-dashed border-[#E5E7EB] rounded-lg hover:border-[#8B5CF6] hover:bg-[#F5F5F7] transition-all group"
-          >
-            <Mic className="h-8 w-8 text-[#8B5CF6] mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <div className="text-[12px] font-medium text-[#1A1D21] mb-1">Click to Record</div>
-            <div className="text-[10px] text-[#6B7280]">Live transcription with Deepgram</div>
-          </button>
+        {/* Upload mode */}
+        {mode === 'upload' && (
+          <div className="space-y-2">
+            <div className="rounded-lg border border-[#E5E7EB] bg-white p-3">
+              <div className="text-[11px] text-[#6B7280] mb-3 font-medium">Upload audio file</div>
+              {UploaderComponent ? (
+                <UploaderComponent
+                  pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY!}
+                  classNameUploader="uc-light uc-purple"
+                  sourceList="local, url, gdrive"
+                  accept="audio/*"
+                  maxFileSize={104857600} // 100MB
+                  userAgentIntegration="remalt-next"
+                  onChange={handleUploaderChange}
+                />
+              ) : (
+                <div className="flex h-32 items-center justify-center text-[11px] text-[#6B7280]">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  Loading uploader...
+                </div>
+              )}
+            </div>
+            <button
+              onClick={closeUploader}
+              onMouseDown={stopPropagation}
+              disabled={isUploading}
+              className="w-full px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isUploading ? 'Uploading...' : 'Cancel'}
+            </button>
+          </div>
+        )}
+
+        {/* Initial state - click to record or upload */}
+        {!hasAudio && !showRecordingUI && mode === 'idle' && (
+          <div className="space-y-2">
+            <button
+              onClick={handleStartRecording}
+              onMouseDown={stopPropagation}
+              className="w-full p-4 border-2 border-dashed border-[#E5E7EB] rounded-lg hover:border-[#8B5CF6] hover:bg-[#F5F5F7] transition-all group"
+            >
+              <Mic className="h-8 w-8 text-[#8B5CF6] mx-auto mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-[12px] font-medium text-[#1A1D21] mb-1">Click to Record</div>
+              <div className="text-[10px] text-[#6B7280]">Live transcription with Deepgram</div>
+            </button>
+            <button
+              onClick={openUploader}
+              onMouseDown={stopPropagation}
+              className="w-full p-4 border-2 border-dashed border-[#E5E7EB] rounded-lg hover:border-[#8B5CF6] hover:bg-[#F5F5F7] transition-all group"
+            >
+              <Upload className="h-8 w-8 text-[#8B5CF6] mx-auto mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-[12px] font-medium text-[#1A1D21] mb-1">Upload Audio File</div>
+              <div className="text-[10px] text-[#6B7280]">From local, URL, or Drive</div>
+            </button>
+          </div>
         )}
       </div>
 
@@ -466,3 +611,5 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
     </BaseNode>
   );
 });
+
+VoiceNode.displayName = 'VoiceNode';

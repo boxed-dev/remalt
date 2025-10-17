@@ -1170,6 +1170,14 @@ function WorkflowCanvasInner() {
       data-lenis-prevent-wheel
       data-lenis-prevent-touch
     >
+      <style jsx global>{`
+        .react-flow__pane {
+          cursor: grab !important;
+        }
+        .react-flow__pane:active {
+          cursor: grabbing !important;
+        }
+      `}</style>
       <ReactFlow
         nodes={nodes}
         edges={edges}

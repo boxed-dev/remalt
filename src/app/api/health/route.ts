@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { log } from 'next-axiom';
 
 interface HealthCheckResult {
   service: string;
@@ -54,11 +55,23 @@ async function checkService(
   }
 }
 
+let pythonApiUrl: string;
+
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.PYTHON_API_URL) {
+    throw new Error(
+      'PYTHON_API_URL environment variable is not set in production.',
+    );
+  }
+  pythonApiUrl = process.env.PYTHON_API_URL;
+} else {
+  pythonApiUrl = process.env.PYTHON_API_URL || 'http://localhost:5001';
+}
+
 // Check Python API health
 async function checkPythonAPI(): Promise<{ ok: boolean; details?: any; error?: string }> {
   try {
-    const pythonApiUrl = process.env.PYTHON_API_URL || 'http://localhost:5001';
-    const response = await fetch(`${pythonApiUrl}/health`, {
+    const response = await fetch(`${pythonApiUrl}/api/health`, {
       method: 'GET',
       signal: AbortSignal.timeout(3000),
     });

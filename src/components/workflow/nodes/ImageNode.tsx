@@ -440,7 +440,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
                 <div className="text-[11px] text-[#6B7280] mb-3">Upload a new image to replace the current one</div>
                 {UploaderComponent ? (
                   <UploaderComponent
-                    pubkey="94c0b598f78b9fe9b471"
+                    pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY!}
                     classNameUploader="uc-light uc-purple"
                     sourceList="local, camera, gdrive, facebook"
                     filesViewMode="grid"
@@ -490,7 +490,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
               <div className="text-[11px] text-[#6B7280] mb-3">Upload an image to analyze</div>
               {UploaderComponent ? (
                 <UploaderComponent
-                  pubkey="94c0b598f78b9fe9b471"
+                  pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY!}
                   classNameUploader="uc-light uc-purple"
                   sourceList="local, camera, gdrive, facebook"
                   filesViewMode="grid"

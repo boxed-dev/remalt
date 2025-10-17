@@ -7,6 +7,7 @@ import ytdl from '@distube/ytdl-core';
 import { Readable } from 'stream';
 import { createClient } from '@deepgram/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { log } from 'next-axiom';
 
 // Configuration
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
@@ -80,7 +81,19 @@ async function retryWithBackoff<T>(
  */
 export async function getPythonTranscript(url: string): Promise<TranscriptionResult | null> {
   try {
-    const pythonApiUrl = process.env.PYTHON_API_URL || 'http://localhost:5001';
+    let pythonApiUrl: string;
+
+    if (process.env.NODE_ENV === 'production') {
+      if (!process.env.PYTHON_API_URL) {
+        throw new Error(
+          'PYTHON_API_URL environment variable is not set in production.',
+        );
+      }
+      pythonApiUrl = process.env.PYTHON_API_URL;
+    } else {
+      pythonApiUrl = process.env.PYTHON_API_URL || 'http://localhost:5001';
+    }
+
     console.log(`[Python API] Calling ${pythonApiUrl}/api/transcribe`);
 
     const result = await retryWithBackoff(async () => {
