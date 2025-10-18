@@ -614,10 +614,23 @@ function WorkflowCanvasInner() {
       const nodeHeight =
         draggedNode.height || draggedNode.measured?.height || 200;
 
-      // Create rectangle representing the dragged node's bounds
+      // Calculate absolute position of the node
+      // If node has a parent, its position is relative to parent, so convert to absolute
+      let absoluteX = point.x;
+      let absoluteY = point.y;
+      
+      if (draggedNode.parentId) {
+        const parent = reactFlowInstance.getNode(draggedNode.parentId);
+        if (parent) {
+          absoluteX = parent.position.x + point.x;
+          absoluteY = parent.position.y + point.y;
+        }
+      }
+
+      // Create rectangle representing the dragged node's bounds in absolute coordinates
       const nodeRect = {
-        x: point.x,
-        y: point.y,
+        x: absoluteX,
+        y: absoluteY,
         width: nodeWidth,
         height: nodeHeight,
       };
@@ -835,42 +848,70 @@ function WorkflowCanvasInner() {
 
         const parent = store.getNode(target.id);
         if (parent) {
-          // Calculate relative position based on absolute node position
-          const relX = node.position.x - parent.position.x;
-          const relY = node.position.y - parent.position.y;
+          // Check if node is already a child of this group
+          const current = useWorkflowStore.getState().getNode(node.id);
+          const isAlreadyChild = current?.parentId === parent.id;
 
-          // Update node with parent relationship and relative position
-          useWorkflowStore
-            .getState()
-            .updateNode(node.id, { parentId: parent.id, zIndex: 2 });
-          useWorkflowStore
-            .getState()
-            .updateNodePosition(node.id, { x: relX, y: relY });
+          if (isAlreadyChild) {
+            // Node is already a child of this group - position is already relative
+            // No need to recalculate or update anything
+            console.log(
+              `⏭️ Node "${node.id}" already child of group "${
+                (parent.data as any)?.title || "Unnamed"
+              }" - skipping reparenting`
+            );
+          } else {
+            // Node is being adopted by a new group (or was not in any group)
+            // Calculate relative position from absolute position
+            let absX = node.position.x;
+            let absY = node.position.y;
 
-          // Force React Flow to update with new parent relationship
-          // Keep extent undefined to allow free dragging
-          setNodes((prev) =>
-            prev.map((n) =>
-              n.id === node.id
-                ? {
-                    ...n,
-                    position: { x: relX, y: relY },
-                    parentId: parent.id,
-                    extent: undefined,
-                    zIndex: 2,
-                  }
-                : n
-            )
-          );
+            // If node had a different parent, convert to absolute first
+            if (current?.parentId) {
+              const oldParent = useWorkflowStore
+                .getState()
+                .getNode(current.parentId);
+              if (oldParent) {
+                absX = oldParent.position.x + node.position.x;
+                absY = oldParent.position.y + node.position.y;
+              }
+            }
 
-          // Provide user feedback through console (can be replaced with toast notifications)
-          console.log(
-            `✅ Node "${node.id}" moved into group "${
-              (parent.data as any)?.title || "Unnamed"
-            }" (overlap: ${Math.round(
-              nodeRect.width * nodeRect.height * 100
-            )}px²)`
-          );
+            // Calculate relative position for new parent
+            const relX = absX - parent.position.x;
+            const relY = absY - parent.position.y;
+
+            // Update node with parent relationship and relative position
+            useWorkflowStore
+              .getState()
+              .updateNode(node.id, { parentId: parent.id, zIndex: 2 });
+            useWorkflowStore
+              .getState()
+              .updateNodePosition(node.id, { x: relX, y: relY });
+
+            // Force React Flow to update with new parent relationship
+            // Keep extent undefined to allow free dragging
+            setNodes((prev) =>
+              prev.map((n) =>
+                n.id === node.id
+                  ? {
+                      ...n,
+                      position: { x: relX, y: relY },
+                      parentId: parent.id,
+                      extent: undefined,
+                      zIndex: 2,
+                    }
+                  : n
+              )
+            );
+
+            // Provide user feedback through console (can be replaced with toast notifications)
+            console.log(
+              `✅ Node "${node.id}" adopted by group "${
+                (parent.data as any)?.title || "Unnamed"
+              }"`
+            );
+          }
         }
       } else {
         // If dragged out from a group, convert back to absolute
