@@ -21,6 +21,12 @@ function hashWorkflow(workflow: Workflow | null): string {
 function isWorkflowEmpty(workflow: Workflow | null): boolean {
   if (!workflow) return true;
 
+  // A workflow should be saved if it has ANY of:
+  // 1. Nodes or edges (actual content)
+  // 2. Custom name (user renamed it)
+  // 3. Custom description (user added description)
+  // 4. Modified viewport (user panned/zoomed)
+  
   const hasStructure = workflow.nodes.length > 0 || workflow.edges.length > 0;
 
   // Ignore default description "A new workflow" when checking if workflow is empty
@@ -38,19 +44,25 @@ function isWorkflowEmpty(workflow: Workflow | null): boolean {
     workflow.viewport.y !== 0 ||
     workflow.viewport.zoom !== 1;
 
-  return !hasStructure && !hasDescription && !hasCustomName && !hasModifiedViewport;
+  // IMPROVED: Only consider empty if it has NO content AND NO customization
+  // This ensures we save as soon as user makes ANY meaningful change
+  return !hasStructure && !hasCustomDescription && !hasCustomName && !hasModifiedViewport;
 }
 
 interface UseWorkflowPersistenceOptions {
   autoSave?: boolean;
   autoSaveDelay?: number;
   userId: string | null;
+  workflowId?: string | null; // Current workflow ID from route (for validation)
+  onFirstSave?: (workflow: Workflow) => void; // Callback after first successful save
 }
 
 export function useWorkflowPersistence({
   autoSave = true,
   autoSaveDelay = 2000, // 2 seconds debounce
   userId,
+  workflowId = null,
+  onFirstSave,
 }: UseWorkflowPersistenceOptions) {
   const workflow = useWorkflowStore((state) => state.workflow);
   const setSaveStatus = useWorkflowStore((state) => state.setSaveStatus);
@@ -58,6 +70,9 @@ export function useWorkflowPersistence({
   const [debouncedWorkflow] = useDebounce(workflow, autoSaveDelay);
   const isInitialMount = useRef(true);
   const lastSavedWorkflow = useRef<Workflow | null>(null);
+  const hasCalledFirstSave = useRef(false);
+  const isMountedRef = useRef(true);
+  const currentWorkflowIdRef = useRef<string | null>(workflowId);
 
   // Manual save function
   const saveWorkflow = useCallback(async (retries = 3): Promise<void> => {
@@ -157,6 +172,12 @@ export function useWorkflowPersistence({
           lastSavedWorkflow.current = workflow;
           setSaveStatus(false, null, new Date().toISOString());
 
+          // Call onFirstSave callback if this is the first successful save
+          if (!hasCalledFirstSave.current && onFirstSave) {
+            hasCalledFirstSave.current = true;
+            onFirstSave(workflow);
+          }
+
         console.log('✅ Workflow saved and verified:', workflow.name, 'at', new Date().toLocaleTimeString());
       } catch (error: unknown) {
         if (retries > 0) {
@@ -215,6 +236,21 @@ export function useWorkflowPersistence({
 
   // Auto-save effect
   useEffect(() => {
+    // CRITICAL: Check if component is still mounted (prevent saves from unmounted instances)
+    if (!isMountedRef.current) {
+      console.log("⏭️ Skipping auto-save: component unmounted");
+      return;
+    }
+
+    // CRITICAL: Check if workflow ID changed since debounce started
+    if (currentWorkflowIdRef.current !== workflowId) {
+      console.log("⏭️ Skipping auto-save: workflow ID changed", {
+        current: currentWorkflowIdRef.current,
+        new: workflowId,
+      });
+      return;
+    }
+
     // Skip auto-save on initial mount
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -223,6 +259,16 @@ export function useWorkflowPersistence({
 
     // Skip if auto-save is disabled
     if (!autoSave || !debouncedWorkflow || !userId) {
+      return;
+    }
+
+    // CRITICAL: Verify workflow ID matches current route to prevent cross-contamination
+    if (workflowId && workflowId !== "new" && debouncedWorkflow.id !== workflowId) {
+      console.log("⏭️ Skipping auto-save: workflow ID mismatch", {
+        routeId: workflowId,
+        workflowId: debouncedWorkflow.id,
+        workflowName: debouncedWorkflow.name,
+      });
       return;
     }
 
@@ -253,13 +299,23 @@ export function useWorkflowPersistence({
     saveWorkflow();
   }, [debouncedWorkflow, autoSave, userId, saveWorkflow]);
 
-  // Cleanup on unmount - FIXED: Clean up memory leaks
+  // Track current workflow ID to detect changes
+  useEffect(() => {
+    currentWorkflowIdRef.current = workflowId;
+    hasCalledFirstSave.current = false;
+  }, [workflowId]);
+
+  // Cleanup on unmount
   useEffect(() => {
     const currentWorkflowId = workflow?.id;
+    isMountedRef.current = true;
 
     return () => {
+      console.log("🧹 Cleaning up useWorkflowPersistence hook");
+      isMountedRef.current = false;
       isInitialMount.current = true;
       lastSavedWorkflow.current = null;
+      hasCalledFirstSave.current = false;
 
       // Clean up global maps for this workflow to prevent memory leaks
       if (currentWorkflowId) {
@@ -271,5 +327,6 @@ export function useWorkflowPersistence({
 
   return {
     saveWorkflow,
+    isSaved: hasCalledFirstSave.current, // Indicates if workflow has been saved at least once
   };
 }

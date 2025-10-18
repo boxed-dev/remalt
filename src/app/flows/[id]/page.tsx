@@ -22,13 +22,14 @@ export default function WorkflowEditorPage() {
 
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  // FIXED: Use refs to prevent re-render loops and duplicate workflow creation
+  // Refs to prevent re-render loops and duplicate workflow creation
   const workflowCreatedRef = useRef(false);
-  const isRedirectingRef = useRef(false);
+  const hasNavigatedFromNewRef = useRef(false);
 
   const workflow = useWorkflowStore((state) => state.workflow);
   const createWorkflow = useWorkflowStore((state) => state.createWorkflow);
   const loadWorkflow = useWorkflowStore((state) => state.loadWorkflow);
+  const clearWorkflow = useWorkflowStore((state) => state.clearWorkflow);
   const selectedNodes = useWorkflowStore((state) => state.selectedNodes);
   const copyNodes = useWorkflowStore((state) => state.copyNodes);
   const duplicateNode = useWorkflowStore((state) => state.duplicateNode);
@@ -46,38 +47,37 @@ export default function WorkflowEditorPage() {
     });
   }, [user, userLoading]);
 
-  // Auto-save integration
-  const { saveWorkflow } = useWorkflowPersistence({
+  // Auto-save integration with callback for navigation after first save
+  const { saveWorkflow, isSaved } = useWorkflowPersistence({
     autoSave: true,
-    autoSaveDelay: 2000,
+    autoSaveDelay: 1000, // Faster autosave for better UX (1 second)
     userId: user?.id || null,
+    workflowId: workflowId, // Pass current route ID for validation
+    onFirstSave: (savedWorkflow) => {
+      // FIGMA-LIKE: Only navigate to the permanent URL after first successful save
+      if (workflowId === "new" && !hasNavigatedFromNewRef.current) {
+        console.log("✅ First save complete, navigating to:", savedWorkflow.id);
+        hasNavigatedFromNewRef.current = true;
+        router.replace(`/flows/${savedWorkflow.id}`, { scroll: false });
+      }
+    },
   });
 
-  // FIXED: Handle redirect from /flows/new to /flows/[id] after first node added
-  // Using ref to prevent redirect loops
-  useEffect(() => {
-    if (
-      workflowId === "new" &&
-      workflow?.id &&
-      !isRedirectingRef.current &&
-      (workflow.nodes.length > 0 || workflow.edges.length > 0)
-    ) {
-      console.log("🔄 Redirecting from /flows/new to /flows/" + workflow.id);
-      isRedirectingRef.current = true;
-      router.replace(`/flows/${workflow.id}`, { scroll: false });
-    }
-  }, [workflowId, workflow, router]);
-
-  // FIXED: Simplified workflow loading logic to prevent duplicate creation
+  // Workflow loading logic - Figma-like approach
   useEffect(() => {
     async function loadWorkflowData() {
       if (userLoading || !user) return;
+
+      // CRITICAL: Clear workflow store at the start to prevent cross-contamination
+      // This ensures clean state when switching between workflows
+      console.log("🧹 Clearing workflow store for fresh load");
+      clearWorkflow();
 
       // Handle new workflow creation
       if (workflowId === "new") {
         // CRITICAL: Only create workflow once using ref guard
         if (!workflowCreatedRef.current) {
-          console.log("📝 Creating new workflow");
+          console.log("📝 Creating new workflow (stays on /new until saved)");
           workflowCreatedRef.current = true;
           createWorkflow("Untitled Workflow", "A new workflow");
         }
@@ -110,7 +110,14 @@ export default function WorkflowEditorPage() {
     }
 
     loadWorkflowData();
-  }, [workflowId, user, userLoading, createWorkflow, loadWorkflow]);
+    
+    // Cleanup function: Reset guards when workflowId changes
+    return () => {
+      // Reset creation guards
+      workflowCreatedRef.current = false;
+      hasNavigatedFromNewRef.current = false;
+    };
+  }, [workflowId, user, userLoading, createWorkflow, loadWorkflow, clearWorkflow]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
