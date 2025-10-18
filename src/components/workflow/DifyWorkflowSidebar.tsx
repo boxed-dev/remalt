@@ -125,9 +125,9 @@ export function DifyWorkflowSidebar() {
 
   return (
     <>
-      <aside className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-xl shadow-lg border border-gray-200/80 flex flex-col overflow-hidden pointer-events-auto w-12">
-      <div className="flex-1 overflow-y-auto py-1 max-h-[calc(100vh-120px)]">
-        {/* Collapsed view - only icons */}
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 flex items-center pointer-events-none">
+        {/* Sidebar with scroll */}
+        <aside className="bg-white rounded-xl shadow-lg border border-gray-200/80 overflow-y-auto py-1 max-h-[calc(100vh-120px)] pointer-events-auto w-12">
           <div className="flex flex-col">
             {/* Social Media Compact 2x2 Grid in Collapsed View - At the top */}
             {NODES.some(node => node.subcategory === 'social') && (
@@ -137,7 +137,7 @@ export function DifyWorkflowSidebar() {
                   e.stopPropagation();
                   setSocialMediaDialogOpen(true);
                 }}
-                className="relative flex items-stretch w-12 h-12 justify-center p-1 group"
+                className="peer/social relative flex items-stretch w-12 h-12 justify-center p-1 group"
                 title="Social Media"
               >
                 <div className="rounded-lg p-[2px] flex-1 flex items-center justify-center flex-col gap-[2px] group-hover:border-[#D4E5DF] group-hover:bg-[#D4E5DF] transition-colors border border-gray-200">
@@ -158,13 +158,6 @@ export function DifyWorkflowSidebar() {
                     </div>
                   </div>
                 </div>
-                {/* Tooltip */}
-                <div className="absolute left-full ml-2 px-3 py-2 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900">Socials</span>
-                  <span className="text-xs font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200">
-                    S
-                  </span>
-                </div>
               </button>
             )}
 
@@ -175,7 +168,7 @@ export function DifyWorkflowSidebar() {
                 onDragStart={(e) => handleDragStart(e, node.id)}
                 onDragEnd={handleDragEnd}
                 onClick={(e) => handleNodeClick(e, node.id)}
-                className="relative flex items-stretch w-12 h-12 justify-center p-1 group"
+                className={`peer/${node.id} relative flex items-stretch w-12 h-12 justify-center p-1 group`}
                 title={node.label}
               >
                 <div className="rounded-lg p-[2px] flex-1 flex items-center justify-center flex-col gap-[2px] group-hover:border-[#D4E5DF] group-hover:bg-[#D4E5DF] transition-colors">
@@ -183,20 +176,44 @@ export function DifyWorkflowSidebar() {
                     {node.icon}
                   </div>
                 </div>
-                {/* Tooltip with keyboard shortcut */}
-                <div className="absolute left-full ml-2 px-3 py-2 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900">{node.label}</span>
-                  {node.shortcut && (
-                    <span className="text-xs font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200">
-                      {node.shortcut}
-                    </span>
-                  )}
-                </div>
               </button>
             ))}
           </div>
+        </aside>
+
+        {/* Tooltips container - outside the scrollable area */}
+        <div className="absolute left-full ml-2 top-0 pointer-events-none">
+          {/* Social Media Tooltip */}
+          {NODES.some(node => node.subcategory === 'social') && (
+            <div className="absolute peer-hover/social:opacity-100 opacity-0 transition-opacity px-3 py-2 bg-white rounded-lg shadow-lg border border-gray-200 whitespace-nowrap z-[100] flex items-center gap-2" style={{ top: '4px' }}>
+              <span className="text-sm font-medium text-gray-900">Socials</span>
+              <span className="text-xs font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200">
+                S
+              </span>
+            </div>
+          )}
+
+          {/* Individual Node Tooltips */}
+          {NODES.filter(node => node.subcategory !== 'social').map((node, index) => {
+            const offset = NODES.some(n => n.subcategory === 'social') ? 1 : 0;
+            const topPosition = (index + offset) * 48 + 4;
+            return (
+              <div
+                key={node.id}
+                className={`absolute peer-hover/${node.id}:opacity-100 opacity-0 transition-opacity px-3 py-2 bg-white rounded-lg shadow-lg border border-gray-200 whitespace-nowrap z-[100] flex items-center gap-2`}
+                style={{ top: `${topPosition}px` }}
+              >
+                <span className="text-sm font-medium text-gray-900">{node.label}</span>
+                {node.shortcut && (
+                  <span className="text-xs font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200">
+                    {node.shortcut}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </aside>
 
     <SocialMediaDialog
       open={socialMediaDialogOpen}
