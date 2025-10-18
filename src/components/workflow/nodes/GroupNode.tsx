@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useState } from "react";
-import { NodeResizer, Handle, Position } from "@xyflow/react";
+import { NodeResizer, Handle, Position, useReactFlow } from "@xyflow/react";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
 import type { GroupNodeData, WorkflowNode } from "@/types/workflow";
 
