@@ -1,8 +1,8 @@
 import { memo, useCallback, useMemo, useState } from "react";
-import { NodeResizer, Handle, Position } from "@xyflow/react";
+import { NodeResizer, Handle, Position, useReactFlow } from "@xyflow/react";
 import { Folder } from "lucide-react";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
-import type { GroupNodeData } from "@/types/workflow";
+import type { GroupNodeData, WorkflowNode } from "@/types/workflow";
 
 interface GroupNodeProps {
   id: string;
@@ -13,8 +13,93 @@ interface GroupNodeProps {
 export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
   const updateNodeData = useWorkflowStore((s) => s.updateNodeData);
   const updateNode = useWorkflowStore((s) => s.updateNode);
+  const workflow = useWorkflowStore((s) => s.workflow);
+  const reactFlowInstance = useReactFlow();
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+
+  // Calculate minimum dimensions based on child nodes
+  // This prevents the group from being resized smaller than its contents
+  const { minWidth, minHeight } = useMemo(() => {
+    const HEADER_HEIGHT = 44; // Height of the dark header bar
+    const PADDING = 16; // Padding to ensure children aren't right at the edge
+    const DEFAULT_MIN_WIDTH = 360;
+    const DEFAULT_MIN_HEIGHT = 220;
+
+    // Early return if no workflow loaded
+    if (!workflow || !reactFlowInstance) {
+      return {
+        minWidth: DEFAULT_MIN_WIDTH,
+        minHeight: DEFAULT_MIN_HEIGHT,
+      };
+    }
+
+    // Get all nodes from ReactFlow (includes measured dimensions)
+    const allReactFlowNodes = reactFlowInstance.getNodes();
+    
+    // Find child nodes of this group from Zustand store
+    const childIds = workflow.nodes
+      .filter((node: WorkflowNode) => node.parentId === id)
+      .map((node: WorkflowNode) => node.id);
+
+    if (childIds.length === 0) {
+      return {
+        minWidth: DEFAULT_MIN_WIDTH,
+        minHeight: DEFAULT_MIN_HEIGHT,
+      };
+    }
+
+    // Calculate the bounding box that contains all children
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    childIds.forEach((childId: string) => {
+      // Get the ReactFlow node which has measured dimensions
+      const reactFlowNode = allReactFlowNodes.find(n => n.id === childId);
+      const workflowNode = workflow.nodes.find((n: WorkflowNode) => n.id === childId);
+      
+      if (!reactFlowNode || !workflowNode) return;
+
+      // Child positions are relative to the group
+      const childX = workflowNode.position.x;
+      const childY = workflowNode.position.y;
+      
+      // Get child dimensions - use measured dimensions from ReactFlow
+      // ReactFlow's measured property contains the actual rendered size
+      const childWidth = 
+        reactFlowNode.measured?.width ?? 
+        reactFlowNode.width ?? 
+        workflowNode.style?.width ?? 
+        300;
+      const childHeight = 
+        reactFlowNode.measured?.height ?? 
+        reactFlowNode.height ?? 
+        workflowNode.style?.height ?? 
+        200;
+
+      // Calculate bounds
+      minX = Math.min(minX, childX);
+      minY = Math.min(minY, childY);
+      maxX = Math.max(maxX, childX + childWidth);
+      maxY = Math.max(maxY, childY + childHeight);
+    });
+
+    // Calculate required dimensions
+    // Add padding to ensure children aren't at the exact edge
+    // Add header height to account for the dark title bar
+    const requiredWidth = Math.max(DEFAULT_MIN_WIDTH, maxX - minX + PADDING * 2);
+    const requiredHeight = Math.max(
+      DEFAULT_MIN_HEIGHT,
+      maxY - minY + PADDING * 2 + HEADER_HEIGHT
+    );
+
+    return {
+      minWidth: Math.ceil(requiredWidth),
+      minHeight: Math.ceil(requiredHeight),
+    };
+  }, [id, workflow, reactFlowInstance]);
 
   const saveTitle = useCallback(
     (text: string) => {
@@ -88,8 +173,8 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
     >
       {/* Resizer - Always visible */}
       <NodeResizer
-        minWidth={360}
-        minHeight={220}
+        minWidth={minWidth}
+        minHeight={minHeight}
         maxWidth={2000}
         maxHeight={1500}
         color="transparent"
