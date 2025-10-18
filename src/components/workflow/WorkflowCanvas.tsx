@@ -629,6 +629,9 @@ function WorkflowCanvasInner() {
           const groupWidth = g.width || g.measured?.width || 640;
           const groupHeight = g.height || g.measured?.height || 420;
 
+          // Group header height (the dark bar at the top)
+          const headerHeight = 44;
+
           const groupRect = {
             x: g.position.x,
             y: g.position.y,
@@ -636,29 +639,31 @@ function WorkflowCanvasInner() {
             height: groupHeight,
           };
 
-          // Calculate intersection area
-          const intersectX = Math.max(
-            0,
-            Math.min(
-              nodeRect.x + nodeRect.width,
-              groupRect.x + groupRect.width
-            ) - Math.max(nodeRect.x, groupRect.x)
-          );
-          const intersectY = Math.max(
-            0,
-            Math.min(
-              nodeRect.y + nodeRect.height,
-              groupRect.y + groupRect.height
-            ) - Math.max(nodeRect.y, groupRect.y)
-          );
-          const intersectArea = intersectX * intersectY;
-          const nodeArea = nodeRect.width * nodeRect.height;
+          // Content area is the drop zone (excludes the header)
+          const contentArea = {
+            x: groupRect.x,
+            y: groupRect.y + headerHeight,
+            width: groupRect.width,
+            height: groupRect.height - headerHeight,
+          };
 
-          // Highlight if at least 30% of the node is over the group (for large nodes) or 50% (for small nodes)
-          const requiredOverlap = nodeArea > 40000 ? 0.3 : 0.5;
-          const hit = intersectArea / nodeArea >= requiredOverlap;
+          // Calculate the right and bottom edges of both rectangles
+          const nodeRight = nodeRect.x + nodeRect.width;
+          const nodeBottom = nodeRect.y + nodeRect.height;
+          const contentRight = contentArea.x + contentArea.width;
+          const contentBottom = contentArea.y + contentArea.height;
 
-          return { g, hit };
+          // Check if the ENTIRE node is contained within the group's CONTENT AREA
+          // This ensures nodes can only be dropped in the white area, not covering the header
+          // Add small padding (2px) to account for border rendering and floating point precision
+          const padding = 2;
+          const isFullyContained =
+            nodeRect.x >= contentArea.x + padding &&
+            nodeRect.y >= contentArea.y + padding &&
+            nodeRight <= contentRight - padding &&
+            nodeBottom <= contentBottom - padding;
+
+          return { g, hit: isFullyContained };
         });
 
       setNodes((prev) =>
@@ -682,11 +687,10 @@ function WorkflowCanvasInner() {
 
   const onNodeDrag = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      const pointer = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-      lastDragPayloadRef.current = { nodeId: node.id, point: pointer };
+      // Use the node's actual position, not the cursor position
+      // The node position is the top-left corner of the node
+      const nodePosition = { x: node.position.x, y: node.position.y };
+      lastDragPayloadRef.current = { nodeId: node.id, point: nodePosition };
       if (dragRafRef.current !== null) return;
       dragRafRef.current = requestAnimationFrame(() => {
         dragRafRef.current = null;
@@ -695,7 +699,7 @@ function WorkflowCanvasInner() {
         processDragHighlight(payload.nodeId, payload.point);
       });
     },
-    [processDragHighlight, screenToFlowPosition]
+    [processDragHighlight]
   );
 
   const onNodeDragStart = useCallback(
@@ -775,10 +779,11 @@ function WorkflowCanvasInner() {
         .filter((n) => n.type === "group" && n.id !== node.id)
         .filter((g) => !isAncestor(node.id, g.id))
         .filter((g) => {
-          // Check if the node's rectangle intersects with the group
-          // For better UX, require at least 30% of the node to be inside the group
           const groupWidth = g.width || g.measured?.width || 640;
           const groupHeight = g.height || g.measured?.height || 420;
+
+          // Group header height (the dark bar at the top)
+          const headerHeight = 44;
 
           const groupRect = {
             x: g.position.x,
@@ -787,77 +792,45 @@ function WorkflowCanvasInner() {
             height: groupHeight,
           };
 
-          // Calculate intersection
-          const intersectX = Math.max(
-            0,
-            Math.min(
-              nodeRect.x + nodeRect.width,
-              groupRect.x + groupRect.width
-            ) - Math.max(nodeRect.x, groupRect.x)
-          );
-          const intersectY = Math.max(
-            0,
-            Math.min(
-              nodeRect.y + nodeRect.height,
-              groupRect.y + groupRect.height
-            ) - Math.max(nodeRect.y, groupRect.y)
-          );
-          const intersectArea = intersectX * intersectY;
-          const nodeArea = nodeRect.width * nodeRect.height;
+          // Content area is the drop zone (excludes the header)
+          const contentArea = {
+            x: groupRect.x,
+            y: groupRect.y + headerHeight,
+            width: groupRect.width,
+            height: groupRect.height - headerHeight,
+          };
 
-          // Require at least 30% overlap for larger nodes, or 50% for small nodes
-          const requiredOverlap = nodeArea > 40000 ? 0.3 : 0.5;
-          return intersectArea / nodeArea >= requiredOverlap;
+          // Calculate the right and bottom edges of both rectangles
+          const nodeRight = nodeRect.x + nodeRect.width;
+          const nodeBottom = nodeRect.y + nodeRect.height;
+          const contentRight = contentArea.x + contentArea.width;
+          const contentBottom = contentArea.y + contentArea.height;
+
+          // Check if the ENTIRE node is contained within the group's CONTENT AREA
+          // This ensures nodes can only be dropped in the white area, not covering the header
+          // Add small padding (2px) to account for border rendering and floating point precision
+          const padding = 2;
+          const isFullyContained =
+            nodeRect.x >= contentArea.x + padding &&
+            nodeRect.y >= contentArea.y + padding &&
+            nodeRight <= contentRight - padding &&
+            nodeBottom <= contentBottom - padding;
+
+          return isFullyContained;
         });
 
       if (hitGroups.length > 0) {
-        // Sort by z-index first, then by actual intersection area (not group size!)
+        // Sort by z-index first (highest first - group on top), then by smallest group
+        // When using full containment, prefer the innermost (smallest) group if multiple groups contain the node
         const target = hitGroups.sort((a, b) => {
           // Primary: Sort by z-index (highest first - group on top)
           const zDiff = (b.zIndex || 0) - (a.zIndex || 0);
           if (zDiff !== 0) return zDiff;
 
-          // Secondary: Calculate actual intersection area with the dropped node
-          const getIntersectionArea = (group: Node) => {
-            const groupWidth = group.width || group.measured?.width || 640;
-            const groupHeight = group.height || group.measured?.height || 420;
-
-            const groupRect = {
-              x: group.position.x,
-              y: group.position.y,
-              width: groupWidth,
-              height: groupHeight,
-            };
-
-            const intersectX = Math.max(
-              0,
-              Math.min(
-                nodeRect.x + nodeRect.width,
-                groupRect.x + groupRect.width
-              ) - Math.max(nodeRect.x, groupRect.x)
-            );
-            const intersectY = Math.max(
-              0,
-              Math.min(
-                nodeRect.y + nodeRect.height,
-                groupRect.y + groupRect.height
-              ) - Math.max(nodeRect.y, groupRect.y)
-            );
-
-            return intersectX * intersectY;
-          };
-
-          const areaA = getIntersectionArea(a);
-          const areaB = getIntersectionArea(b);
-          const areaDiff = areaB - areaA;
-
-          // If intersection areas differ, prefer larger intersection
-          if (Math.abs(areaDiff) > 1) return areaDiff;
-
-          // Tertiary: Only if intersection areas are equal, fall back to group size
-          return (
-            (b.width || 0) * (b.height || 0) - (a.width || 0) * (a.height || 0)
-          );
+          // Secondary: Prefer smallest group (innermost group in case of nested groups)
+          const areaA = (a.width || 0) * (a.height || 0);
+          const areaB = (b.width || 0) * (b.height || 0);
+          return areaA - areaB; // Smaller first
         })[0];
 
         const parent = store.getNode(target.id);
