@@ -3,8 +3,14 @@ import { Flow } from "@/lib/mock-data/flows";
 import { Clock, Trash2, MoreVertical } from "lucide-react";
 import { useState } from "react";
 
+// Extended Flow type to support both mock and real data
+interface ExtendedFlow extends Omit<Flow, 'created' | 'updated' | 'recentlyOpened'> {
+  nodeCount?: number;
+  lastEdited?: Date;
+}
+
 interface FlowCardProps {
-  flow: Flow;
+  flow: ExtendedFlow;
   onClick?: () => void;
   onDelete?: () => void;
 }
@@ -26,7 +32,7 @@ export function FlowCard({ flow, onClick, onDelete }: FlowCardProps) {
     return date.toLocaleDateString();
   };
 
-  const lastEdited = flow.lastEdited instanceof Date ? flow.lastEdited : new Date(flow.lastEdited);
+  const lastEdited = flow.lastEdited instanceof Date ? flow.lastEdited : (flow.lastEdited ? new Date(flow.lastEdited) : new Date());
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
