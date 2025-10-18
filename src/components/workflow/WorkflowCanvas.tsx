@@ -1119,7 +1119,7 @@ function WorkflowCanvasInner() {
 
   if (!workflow) {
     return (
-      <div className="flex items-center justify-center h-full bg-[#F0F9F4]">
+      <div className="flex items-center justify-center h-full bg-[#F5F5F5]">
         <div className="text-center max-w-md">
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center shadow-sm">
             <svg
@@ -1269,6 +1269,8 @@ function WorkflowCanvasInner() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         nodesConnectable={true}
+        edgesFocusable={true}
+        edgesReconnectable={false}
         isValidConnection={isValidConnection}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
@@ -1311,8 +1313,8 @@ function WorkflowCanvasInner() {
         <Background
           gap={16}
           size={2}
-          color="#D0E0D5"
-          style={{ backgroundColor: "#F0F9F4" }}
+          color="#E0E0E0"
+          style={{ backgroundColor: "#F5F5F5" }}
         />
       </ReactFlow>
 

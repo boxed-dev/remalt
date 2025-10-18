@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -24,6 +24,7 @@ export function CustomEdge({
 }: EdgeProps) {
   const deleteEdge = useWorkflowStore((state) => state.deleteEdge);
   const [isHovered, setIsHovered] = useState(false);
+  const edgeRef = useRef<SVGGElement>(null);
 
   // Memoize path calculation for performance and consistency
   const [edgePath, labelX, labelY] = useMemo(() => {
@@ -44,6 +45,16 @@ export function CustomEdge({
     },
     [deleteEdge, id]
   );
+
+  // Show delete button on hover OR when selected
+  const showDeleteButton = isHovered || selected;
+
+  // Debug logging
+  useEffect(() => {
+    if (isHovered) {
+      console.log(`Edge ${id} is hovered`);
+    }
+  }, [isHovered, id]);
 
   // Generate unique ID for animation
   const animationId = `edge-flow-${id}`;
@@ -73,37 +84,56 @@ export function CustomEdge({
         </linearGradient>
       </defs>
 
-      {/* Light green dotted background layer */}
-      <BaseEdge
-        path={edgePath}
-        style={{
-          ...style,
-          strokeWidth: selected ? 3.5 : 2.5,
-          stroke: '#86EFAC',
-          strokeDasharray: '2 6',
-          strokeLinecap: 'round',
-          opacity: 0.7,
+      {/* Wrap all edge paths in a group for better event handling */}
+      <g
+        ref={edgeRef}
+        onMouseEnter={() => {
+          console.log('MOUSE ENTER DETECTED on edge', id);
+          setIsHovered(true);
         }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      />
+        onMouseLeave={() => {
+          console.log('MOUSE LEAVE DETECTED on edge', id);
+          setIsHovered(false);
+        }}
+        style={{ cursor: 'pointer' }}
+      >
+        {/* Invisible wider hit area for better hover detection - FIRST for event capture */}
+        <path
+          d={edgePath}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={20}
+          style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+        />
 
-      {/* Animated dark green dotted layer */}
-      <BaseEdge
-        path={edgePath}
-        markerEnd={markerEnd}
-        style={{
-          ...style,
-          strokeWidth: selected ? 3.5 : 2.5,
-          stroke: selected ? '#047857' : `url(#${animationId})`,
-          strokeDasharray: '2 6',
-          strokeLinecap: 'round',
-          strokeDashoffset: 0,
-          animation: 'dash-flow 1.5s linear infinite',
-        }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      />
+        {/* Light green dotted background layer */}
+        <path
+          d={edgePath}
+          fill="none"
+          stroke="#86EFAC"
+          strokeWidth={selected ? 3.5 : 2.5}
+          strokeDasharray="2 6"
+          strokeLinecap="round"
+          opacity={0.7}
+          style={{ pointerEvents: 'none' }}
+        />
+
+        {/* Animated dark green dotted layer */}
+        <path
+          d={edgePath}
+          fill="none"
+          stroke={selected ? '#047857' : `url(#${animationId})`}
+          strokeWidth={selected ? 3.5 : 2.5}
+          strokeDasharray="2 6"
+          strokeLinecap="round"
+          strokeDashoffset={0}
+          markerEnd={markerEnd}
+          style={{
+            pointerEvents: 'none',
+            animation: 'dash-flow 1.5s linear infinite',
+          }}
+        />
+      </g>
 
       {/* CSS Animation for dash movement */}
       <style>
@@ -119,7 +149,7 @@ export function CustomEdge({
         `}
       </style>
 
-      {(selected || isHovered) && (
+      {showDeleteButton && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -129,11 +159,13 @@ export function CustomEdge({
               zIndex: 1000,
             }}
             className="nodrag nopan"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
           >
             <button
               onClick={handleDelete}
-              className="flex items-center justify-center w-7 h-7 rounded-full bg-white border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-xl"
-              title="Delete edge"
+              className="flex items-center justify-center w-7 h-7 rounded-full bg-white border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-150 shadow-lg hover:shadow-xl hover:scale-110"
+              title="Delete connection"
             >
               <X className="w-4 h-4" strokeWidth={2.5} />
             </button>

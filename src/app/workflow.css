@@ -119,10 +119,7 @@ div[class*="react-flow__node"].react-flow__node-group {
   z-index: 5 !important;
 }
 
-.react-flow__edge,
-.react-flow__edge-path {
-  pointer-events: visibleStroke;
-}
+/* Removed global pointer-events rule to allow custom edges to handle their own interactions */
 
 .react-flow__connection {
   z-index: 6 !important;
