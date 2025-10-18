@@ -777,11 +777,24 @@ function WorkflowCanvasInner() {
       const nodeWidth = node.width || node.measured?.width || 300;
       const nodeHeight = node.height || node.measured?.height || 200;
 
-      // Create a rectangle representing the node's bounds (not just pointer position)
+      // Calculate absolute position of the node
+      // If node has a parent, its position is relative to parent, so convert to absolute
+      let absoluteX = node.position.x;
+      let absoluteY = node.position.y;
+      
+      if (node.parentId) {
+        const parent = reactFlowInstance.getNode(node.parentId);
+        if (parent) {
+          absoluteX = parent.position.x + node.position.x;
+          absoluteY = parent.position.y + node.position.y;
+        }
+      }
+
+      // Create a rectangle representing the node's bounds in absolute coordinates
       // React Flow provides the correct position during drag regardless of extent setting
       const nodeRect = {
-        x: node.position.x,
-        y: node.position.y,
+        x: absoluteX,
+        y: absoluteY,
         width: nodeWidth,
         height: nodeHeight,
       };
@@ -853,13 +866,15 @@ function WorkflowCanvasInner() {
           const isAlreadyChild = current?.parentId === parent.id;
 
           if (isAlreadyChild) {
-            // Node is already a child of this group - position is already relative
-            // No need to recalculate or update anything
+            // Node is already a child of this group AND still within boundaries
+            // Position is already relative and ReactFlow will handle the position update via handleNodesChange
+            // No need to recalculate parent relationship
             console.log(
-              `⏭️ Node "${node.id}" already child of group "${
+              `⏭️ Node "${node.id}" moved within parent group "${
                 (parent.data as any)?.title || "Unnamed"
-              }" - skipping reparenting`
+              }" - keeping parent relationship`
             );
+            // Note: handleNodesChange will save the new position to Zustand store automatically
           } else {
             // Node is being adopted by a new group (or was not in any group)
             // Calculate relative position from absolute position
