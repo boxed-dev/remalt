@@ -94,7 +94,7 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
               {/* New Flow Card */}
               <button
                 onClick={handleNewFlow}
-                className="group border-2 border-dashed border-[#E8ECEF] rounded-xl p-6 hover:border-[#1A1D21] hover:bg-[#FAFBFC] transition-all duration-200 aspect-[4/3] flex flex-col items-center justify-center gap-3"
+                className="group cursor-pointer border-2 border-dashed border-[#E8ECEF] rounded-xl p-6 hover:border-[#1A1D21] hover:bg-[#FAFBFC] transition-all duration-200 aspect-[4/3] flex flex-col items-center justify-center gap-3"
               >
                 <div className="h-12 w-12 rounded-full bg-[#F5F5F7] flex items-center justify-center group-hover:bg-[#1A1D21] transition-all duration-200">
                   <Plus className="h-6 w-6 text-[#9CA3AF] group-hover:text-white transition-all duration-200" />
