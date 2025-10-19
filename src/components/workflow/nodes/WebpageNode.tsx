@@ -479,7 +479,7 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
                     stopPropagation(event);
                     setShowSummary(prev => !prev);
                   }}
-                  className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-medium text-[#1A1D21] hover:bg-[#F3F4F6]"
+                  className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-medium text-[#1A1D21] hover:bg-[#F3F4F6] cursor-pointer"
                 >
                   <span>Scraped summary</span>
                   {showSummary ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -497,14 +497,14 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
                   stopPropagation(event);
                   setIsEditing(true);
                 }}
-                className="rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#6B7280] hover:border-[#06B6D4] hover:text-[#06B6D4]"
+                className="rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#6B7280] hover:border-[#06B6D4] hover:text-[#06B6D4] cursor-pointer"
               >
                 Edit URL
               </button>
               {data.url && (
                 <button
                   onClick={openInNewTab}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21]"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21] cursor-pointer"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                   Open page

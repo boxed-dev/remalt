@@ -252,7 +252,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
                   <button
                     onClick={resetNode}
                     onMouseDown={stopPropagation}
-                    className="mt-2 text-[10px] text-[#F59E0B] hover:underline"
+                    className="mt-2 text-[10px] text-[#F59E0B] hover:underline cursor-pointer"
                   >
                     Try again
                   </button>
@@ -274,7 +274,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
                   <button
                     onClick={resetNode}
                     onMouseDown={stopPropagation}
-                    className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     title="Remove image"
                   >
                     <X className="h-3.5 w-3.5 text-[#6B7280] hover:text-[#EF4444]" />
@@ -301,7 +301,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
                 <button
                   onClick={openFullImage}
                   onMouseDown={stopPropagation}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21] transition-colors"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21] transition-colors cursor-pointer"
                 >
                   <Eye className="h-3.5 w-3.5" />
                   Open
@@ -315,7 +315,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
             <button
               onClick={openUploader}
               onMouseDown={stopPropagation}
-              className="w-full p-3 border border-dashed border-[#E5E7EB] rounded-lg hover:border-[#F59E0B] hover:bg-[#FEF3C7] transition-colors group"
+              className="w-full p-3 border border-dashed border-[#E5E7EB] rounded-lg hover:border-[#F59E0B] hover:bg-[#FEF3C7] transition-colors group cursor-pointer"
             >
               <Upload className="h-6 w-6 text-[#F59E0B] mx-auto mb-1.5" />
               <div className="text-[11px] font-medium text-[#1A1D21] text-center">Upload Image</div>
@@ -327,7 +327,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
                 setUrl('');
               }}
               onMouseDown={stopPropagation}
-              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg hover:border-[#F59E0B] hover:text-[#F59E0B] transition-colors text-center text-[11px] text-[#6B7280]"
+              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg hover:border-[#F59E0B] hover:text-[#F59E0B] transition-colors text-center text-[11px] text-[#6B7280] cursor-pointer"
             >
               Paste URL
             </button>
@@ -358,7 +358,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
               onClick={closeUploader}
               onMouseDown={stopPropagation}
               disabled={isUploading}
-              className="w-full px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               {isUploading ? 'Uploading...' : 'Cancel'}
             </button>
@@ -383,7 +383,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
               <button
                 onClick={() => setMode('choose')}
                 onMouseDown={stopPropagation}
-                className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors"
+                className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors cursor-pointer"
               >
                 Back
               </button>
@@ -391,7 +391,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
                 onClick={handleUrlSave}
                 onMouseDown={stopPropagation}
                 disabled={!url.trim()}
-                className="flex-1 px-3 py-2 text-[11px] bg-[#F59E0B] text-white rounded-lg hover:bg-[#D97706] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 px-3 py-2 text-[11px] bg-[#F59E0B] text-white rounded-lg hover:bg-[#D97706] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 Add URL
               </button>

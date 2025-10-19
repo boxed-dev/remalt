@@ -483,7 +483,7 @@ export const YouTubeNode = memo(({ id, data, parentId }: NodeProps<YouTubeNodeDa
                 stopPropagation(e);
                 setExpandedVideos(!expandedVideos);
               }}
-              className="text-[11px] text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1 font-medium"
+              className="text-[11px] text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1 font-medium cursor-pointer"
             >
               {expandedVideos ? (
                 <>
@@ -610,14 +610,14 @@ export const YouTubeNode = memo(({ id, data, parentId }: NodeProps<YouTubeNodeDa
             stopPropagation(event);
             setIsEditing(true);
           }}
-          className="rounded-md px-2.5 py-1 text-[#475569] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
+          className="rounded-md px-2.5 py-1 text-[#475569] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
         >
           Edit link
         </button>
         {data.url && (
           <button
             onClick={openVideo}
-            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
+            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
           >
             <ExternalLink className="h-3.5 w-3.5 text-[#94A3B8]" />
             Open channel
@@ -626,7 +626,7 @@ export const YouTubeNode = memo(({ id, data, parentId }: NodeProps<YouTubeNodeDa
         {selectedVideosCount > 0 && (
           <button
             onClick={downloadAllTranscripts}
-            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
+            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
           >
             <Download className="h-3.5 w-3.5 text-[#94A3B8]" />
             Export ({selectedVideosCount})
@@ -682,14 +682,14 @@ export const YouTubeNode = memo(({ id, data, parentId }: NodeProps<YouTubeNodeDa
                 stopPropagation(event);
                 setIsEditing(true);
               }}
-              className="rounded-md px-2.5 py-1 text-[#475569] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
+              className="rounded-md px-2.5 py-1 text-[#475569] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
             >
               Edit link
             </button>
             {data.url && (
               <button
                 onClick={openVideo}
-                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
+                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
               >
                 <ExternalLink className="h-3.5 w-3.5 text-[#94A3B8]" />
                 Open video
@@ -698,7 +698,7 @@ export const YouTubeNode = memo(({ id, data, parentId }: NodeProps<YouTubeNodeDa
             {hasTranscript && (
               <button
                 onClick={downloadTranscript}
-                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB]"
+                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
               >
                 <Download className="h-3.5 w-3.5 text-[#94A3B8]" />
                 Export transcript

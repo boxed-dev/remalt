@@ -185,7 +185,7 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
       />
 
       {/* Header - Dark bar with title */}
-      <div className="bg-[#095D40] px-4 py-2.5 flex items-center justify-between rounded-t-2xl cursor-grab active:cursor-grabbing">
+      <div className="bg-[#095D40] px-4 py-2.5 flex items-center justify-between rounded-t-2xl pointer-events-auto">
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <div
             contentEditable={isEditingTitle}
@@ -225,7 +225,7 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
               }
             }}
             className={`text-[13px] font-semibold tracking-wide text-white truncate flex-1 min-w-0 outline-none ${
-              isEditingTitle ? "nodrag cursor-text" : "cursor-pointer"
+              isEditingTitle ? "nodrag cursor-text" : ""
             }`}
             role="textbox"
             aria-label="Group name"

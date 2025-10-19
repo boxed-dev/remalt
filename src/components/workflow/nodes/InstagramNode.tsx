@@ -357,7 +357,7 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-              className="text-[10px] text-gray-500 hover:text-[#E4405F] font-medium"
+              className="text-[10px] text-gray-500 hover:text-[#E4405F] font-medium cursor-pointer"
             >
               Change
             </button>
@@ -365,7 +365,7 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-            className="w-full px-3 py-2 text-[12px] text-left text-gray-500 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#E4405F] hover:text-[#E4405F] transition-colors"
+            className="w-full px-3 py-2 text-[12px] text-left text-gray-500 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#E4405F] hover:text-[#E4405F] transition-colors cursor-pointer"
           >
             Click to add Instagram URL...
           </button>
@@ -445,7 +445,7 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
                                     e.stopPropagation();
                                     setCurrentImageIndex(prev => Math.max(0, prev - 1));
                                   }}
-                                  className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-black/60 hover:bg-black/80 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 z-10"
+                                  className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-black/60 hover:bg-black/80 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 z-10 cursor-pointer"
                                   onMouseDown={stopPropagation}
                                   onTouchStart={stopPropagation}
                                 >
@@ -460,7 +460,7 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
                                     e.stopPropagation();
                                     setCurrentImageIndex(prev => Math.min(data.images!.length - 1, prev + 1));
                                   }}
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-black/60 hover:bg-black/80 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 z-10"
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-black/60 hover:bg-black/80 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 z-10 cursor-pointer"
                                   onMouseDown={stopPropagation}
                                   onTouchStart={stopPropagation}
                                 >
@@ -479,7 +479,7 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
                                     }}
                                     onMouseDown={stopPropagation}
                                     onTouchStart={stopPropagation}
-                                    className={`w-1.5 h-1.5 rounded-full transition-all ${
+                                    className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${
                                       idx === currentImageIndex
                                         ? 'bg-white w-4'
                                         : 'bg-white/50 hover:bg-white/70'

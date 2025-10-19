@@ -241,6 +241,24 @@ div[class*="react-flow__node"].react-flow__node-group {
   z-index: 1000;
 }
 
+/* Group node cursor - ensure grab cursor is visible */
+.react-flow__node-group {
+  cursor: grab !important;
+}
+
+.react-flow__node-group.dragging,
+.react-flow__node-group.dragging-node {
+  cursor: grabbing !important;
+}
+
+/* Override cursor on all children during drag to ensure grabbing cursor shows */
+.react-flow__node-group.dragging *,
+.react-flow__node-group.dragging-node *,
+.react-flow__node-group:active *,
+.react-flow__node-group.selected:active * {
+  cursor: grabbing !important;
+}
+
 /* Node hover (groups handle their own hover state) */
 .react-flow__node:hover:not(.react-flow__node-group) {
   filter: brightness(0.98);

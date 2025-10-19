@@ -215,7 +215,7 @@ export const LinkedInNode = memo(({ id, data, parentId }: NodeProps<LinkedInNode
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-              className="text-[10px] text-gray-500 hover:text-[#0A66C2] font-medium"
+              className="text-[10px] text-gray-500 hover:text-[#0A66C2] font-medium cursor-pointer"
             >
               Change
             </button>
@@ -223,7 +223,7 @@ export const LinkedInNode = memo(({ id, data, parentId }: NodeProps<LinkedInNode
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-            className="w-full px-3 py-2 text-[12px] text-left text-gray-500 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#0A66C2] hover:text-[#0A66C2] transition-colors"
+            className="w-full px-3 py-2 text-[12px] text-left text-gray-500 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#0A66C2] hover:text-[#0A66C2] transition-colors cursor-pointer"
           >
             Click to add LinkedIn post URL...
           </button>
@@ -258,7 +258,7 @@ export const LinkedInNode = memo(({ id, data, parentId }: NodeProps<LinkedInNode
                         e.stopPropagation();
                         setIsContentExpanded(!isContentExpanded);
                       }}
-                      className="mt-2 text-[10px] text-[#0A66C2] hover:underline font-medium"
+                      className="mt-2 text-[10px] text-[#0A66C2] hover:underline font-medium cursor-pointer"
                     >
                       {isContentExpanded ? 'Show less' : 'Show more'}
                     </button>

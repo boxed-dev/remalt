@@ -295,7 +295,7 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
                       window.open(pdfUrl, '_blank');
                     }}
                     onMouseDown={stopPropagation}
-                    className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-white"
+                    className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-white cursor-pointer"
                     title="Open PDF in new tab"
                   >
                     <ExternalLink className="h-3 w-3 text-[#1A1D21]" />
@@ -320,7 +320,7 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
               <button
                 onClick={downloadParsedText}
                 onMouseDown={stopPropagation}
-                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#E5E7EB] px-3 py-2 text-[11px] text-[#374151] hover:border-[#1A1D21] hover:bg-[#F9FAFB] transition-colors"
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#E5E7EB] px-3 py-2 text-[11px] text-[#374151] hover:border-[#1A1D21] hover:bg-[#F9FAFB] transition-colors cursor-pointer"
               >
                 <Download className="h-3.5 w-3.5" />
                 Export parsed text
@@ -332,7 +332,7 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
             <button
               onClick={openUploader}
               onMouseDown={stopPropagation}
-              className="w-full p-3 border border-dashed border-[#E5E7EB] rounded-lg hover:border-[#EF4444] hover:bg-[#FEF2F2] transition-colors group"
+              className="w-full p-3 border border-dashed border-[#E5E7EB] rounded-lg hover:border-[#EF4444] hover:bg-[#FEF2F2] transition-colors group cursor-pointer"
             >
               <Upload className="h-6 w-6 text-[#EF4444] mx-auto mb-1.5" />
               <div className="text-[11px] font-medium text-[#1A1D21] text-center">Upload PDF</div>
@@ -341,7 +341,7 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
             <button
               onClick={() => setMode('url')}
               onMouseDown={stopPropagation}
-              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg hover:border-[#EF4444] hover:text-[#EF4444] transition-colors text-center text-[11px] text-[#6B7280]"
+              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg hover:border-[#EF4444] hover:text-[#EF4444] transition-colors text-center text-[11px] text-[#6B7280] cursor-pointer"
             >
               Paste URL
             </button>
@@ -370,7 +370,7 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
               onClick={closeUploader}
               onMouseDown={stopPropagation}
               disabled={isUploading}
-              className="w-full px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               {isUploading ? 'Uploading...' : 'Cancel'}
             </button>
@@ -394,7 +394,7 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
               <button
                 onClick={() => setMode('choose')}
                 onMouseDown={stopPropagation}
-                className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors"
+                className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors cursor-pointer"
               >
                 Back
               </button>
@@ -402,7 +402,7 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
                 onClick={handleUrlSave}
                 onMouseDown={stopPropagation}
                 disabled={!url.trim()}
-                className="flex-1 px-3 py-2 text-[11px] bg-[#EF4444] text-white rounded-lg hover:bg-[#DC2626] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 px-3 py-2 text-[11px] bg-[#EF4444] text-white rounded-lg hover:bg-[#DC2626] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 Add URL
               </button>
