@@ -1287,6 +1287,7 @@ function WorkflowCanvasInner() {
       data-lenis-prevent
       data-lenis-prevent-wheel
       data-lenis-prevent-touch
+      data-testid="workflow-canvas"
     >
       <style jsx global>{`
         .react-flow__pane {

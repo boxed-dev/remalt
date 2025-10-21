@@ -10,6 +10,7 @@ import { useWorkflowStore } from "@/lib/stores/workflow-store";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useWorkflowPersistence } from "@/hooks/use-workflow-persistence";
+import { usePageVisibility } from "@/hooks/use-page-visibility";
 import { createClient } from "@/lib/supabase/client";
 import { getWorkflow } from "@/lib/supabase/workflows";
 import { Loader2 } from "lucide-react";
@@ -19,12 +20,15 @@ export default function WorkflowEditorPage() {
   const router = useRouter();
   const workflowId = params.id as string;
   const { user, loading: userLoading } = useCurrentUser();
+  const isPageVisible = usePageVisibility();
 
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   // Refs to prevent re-render loops and duplicate workflow creation
   const workflowCreatedRef = useRef(false);
   const hasNavigatedFromNewRef = useRef(false);
+  // FIGMA-STYLE: Track actual loaded workflow ID to prevent reloading on URL change
+  const loadedWorkflowIdRef = useRef<string | null>(null);
 
   const workflow = useWorkflowStore((state) => state.workflow);
   const createWorkflow = useWorkflowStore((state) => state.createWorkflow);
@@ -54,11 +58,23 @@ export default function WorkflowEditorPage() {
     userId: user?.id || null,
     workflowId: workflowId, // Pass current route ID for validation
     onFirstSave: (savedWorkflow) => {
-      // FIGMA-LIKE: Only navigate to the permanent URL after first successful save
+      // FIGMA-STYLE: Silent URL update without page reload
+      // This changes the URL from /flows/new to /flows/{id} seamlessly
       if (workflowId === "new" && !hasNavigatedFromNewRef.current) {
-        console.log("✅ First save complete, navigating to:", savedWorkflow.id);
+        console.log("✅ First save complete, silently updating URL to:", savedWorkflow.id);
         hasNavigatedFromNewRef.current = true;
-        router.replace(`/flows/${savedWorkflow.id}`, { scroll: false });
+        loadedWorkflowIdRef.current = savedWorkflow.id;
+        
+        // Use History API for completely silent URL update (Figma/Linear approach)
+        // This updates the browser URL bar without ANY navigation events
+        const newUrl = `/flows/${savedWorkflow.id}`;
+        window.history.replaceState(
+          { ...window.history.state, as: newUrl, url: newUrl },
+          '',
+          newUrl
+        );
+        
+        console.log("🎯 URL silently updated - no page reload");
       }
     },
   });
@@ -67,6 +83,13 @@ export default function WorkflowEditorPage() {
   useEffect(() => {
     async function loadWorkflowData() {
       if (userLoading || !user) return;
+
+      // FIGMA-STYLE: Skip reload if we're already displaying this workflow
+      // This prevents the jarring reload when URL changes from /new to /id
+      if (loadedWorkflowIdRef.current === workflowId) {
+        console.log("🎯 Already loaded workflow, skipping reload:", workflowId);
+        return;
+      }
 
       // CRITICAL: Clear workflow store at the start to prevent cross-contamination
       // This ensures clean state when switching between workflows
@@ -79,6 +102,7 @@ export default function WorkflowEditorPage() {
         if (!workflowCreatedRef.current) {
           console.log("📝 Creating new workflow (stays on /new until saved)");
           workflowCreatedRef.current = true;
+          loadedWorkflowIdRef.current = "new";
           createWorkflow("Untitled Workflow", "A new workflow");
         }
         setLoadingWorkflow(false);
@@ -95,6 +119,7 @@ export default function WorkflowEditorPage() {
 
         if (workflowData) {
           console.log("📖 Loading workflow:", workflowData.name);
+          loadedWorkflowIdRef.current = workflowId;
           loadWorkflow(workflowData);
         } else {
           setLoadError("Workflow not found");
@@ -111,11 +136,14 @@ export default function WorkflowEditorPage() {
 
     loadWorkflowData();
     
-    // Cleanup function: Reset guards when workflowId changes
+    // Cleanup function: Reset guards when navigating to a different workflow
     return () => {
-      // Reset creation guards
-      workflowCreatedRef.current = false;
-      hasNavigatedFromNewRef.current = false;
+      // Only reset if we're truly switching to a different workflow
+      if (workflowId !== loadedWorkflowIdRef.current) {
+        workflowCreatedRef.current = false;
+        hasNavigatedFromNewRef.current = false;
+        loadedWorkflowIdRef.current = null;
+      }
     };
   }, [workflowId, user, userLoading, createWorkflow, loadWorkflow, clearWorkflow]);
 
