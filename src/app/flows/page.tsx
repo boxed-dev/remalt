@@ -5,8 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserWorkflowsSummary } from "@/lib/supabase/workflows";
 import { redirect } from "next/navigation";
 
-// Force dynamic rendering to ensure fresh data
-export const dynamic = 'force-dynamic';
+// FIXED: Remove force-dynamic to prevent unnecessary refreshes on tab switching
+// Data freshness is now handled by client-side Supabase realtime subscriptions
+export const revalidate = 60; // Cache for 60 seconds to improve performance
 
 async function FlowsContent() {
   // Get authenticated user and workflows in parallel

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { FlowCard } from "@/components/flows/flow-card";
@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { deleteWorkflow, type WorkflowSummary } from "@/lib/supabase/workflows";
 import { toast } from "sonner";
+import { usePageVisibility } from "@/hooks/use-page-visibility";
 
 interface FlowsClientProps {
   initialWorkflows: WorkflowSummary[];
@@ -17,6 +18,7 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
   const router = useRouter();
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>(initialWorkflows);
   const [searchQuery, setSearchQuery] = useState("");
+  const isPageVisible = usePageVisibility();
 
   const filteredFlows = useMemo(() => {
     let filtered = workflows;
@@ -44,20 +46,77 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
       const supabase = createClient();
       await deleteWorkflow(supabase, flowId);
 
-      // Remove from local state
+      // Remove from local state (optimistic update)
       setWorkflows(workflows.filter(w => w.id !== flowId));
       toast.success('Workflow deleted successfully');
 
-      // Refresh the page data to ensure list is up to date
-      router.refresh();
+      // FIXED: Remove router.refresh() to prevent unnecessary page reload
+      // Local state update is sufficient for immediate UI feedback
     } catch (error) {
       console.error('Failed to delete workflow:', error);
       toast.error('Failed to delete workflow. Please try again.');
     }
   };
 
+  // PROFESSIONAL: Subscribe to real-time workflow changes
+  // This ensures data stays fresh without manual refreshes
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Only subscribe when page is visible to save resources
+    if (!isPageVisible) return;
+
+    const channel = supabase
+      .channel('workflows-list-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'workflows',
+        },
+        async (payload) => {
+          console.log('📡 Workflow change detected:', payload.eventType);
+
+          // Refetch workflows to get updated list
+          const supabase = createClient();
+          const { data: updatedWorkflows } = await supabase
+            .from('workflows')
+            .select(`
+              id,
+              name,
+              description,
+              nodes,
+              created_at,
+              updated_at,
+              metadata
+            `)
+            .order('updated_at', { ascending: false });
+
+          if (updatedWorkflows) {
+            // Transform to WorkflowSummary format
+            const summaries: WorkflowSummary[] = updatedWorkflows.map(w => ({
+              id: w.id,
+              name: w.name,
+              description: w.description || undefined,
+              nodeCount: Array.isArray(w.nodes) ? w.nodes.length : 0,
+              createdAt: w.created_at,
+              updatedAt: w.updated_at,
+              metadata: w.metadata || undefined,
+            }));
+            setWorkflows(summaries);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isPageVisible]);
+
   return (
-    <div className="min-h-screen bg-[#FAFBFC]">
+    <div className="min-h-screen bg-[#FAFBFC]" data-testid="flows-list">
       {/* Main Content */}
       <main className="min-h-screen">
         <div className="max-w-7xl mx-auto px-8 py-8">
@@ -71,6 +130,7 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#1A1D21] text-sm bg-white transition-all duration-150"
+                data-testid="search-input"
                 style={{
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif'
                 }}
