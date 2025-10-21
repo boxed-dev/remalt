@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import {
   Command,
   CommandEmpty,
@@ -18,10 +18,13 @@ interface ShortcutItem {
   searchTerms?: string
 }
 
+// Detect if user is on Mac
+const isMac = typeof window !== 'undefined' ? navigator.platform.toUpperCase().indexOf('MAC') >= 0 : false
+
 const generalShortcuts: ShortcutItem[] = [
-  { label: "Boards Menu", keys: "⌘K", searchTerms: "command k menu boards" },
-  { label: "Undo change", keys: "⌘Z", searchTerms: "undo" },
-  { label: "Redo change", keys: "⌘⇧Z", searchTerms: "redo" },
+  { label: "Boards Menu", keys: "Cmd/Ctrl+K", searchTerms: "command k menu boards" },
+  { label: "Undo change", keys: "Cmd/Ctrl+Z", searchTerms: "undo" },
+  { label: "Redo change", keys: "Cmd/Ctrl+Shift+Z", searchTerms: "redo" },
   { label: "Zoom In Board", keys: "=", searchTerms: "zoom in plus" },
   { label: "Zoom Out Board", keys: "-", searchTerms: "zoom out minus" },
   { label: "Fit View", keys: "1", searchTerms: "fit view reset" },
@@ -32,20 +35,20 @@ const addBlockShortcuts: ShortcutItem[] = [
   { label: "Social media", keys: "S", searchTerms: "social media instagram linkedin" },
   { label: "Audio recording", keys: "R", searchTerms: "audio recording voice" },
   { label: "Image", keys: "I", searchTerms: "image photo picture" },
-  { label: "Text", keys: "T", searchTerms: "text note" },
   { label: "Annotation", keys: "A", searchTerms: "annotation connector" },
   { label: "Website", keys: "W", searchTerms: "website webpage url" },
+  { label: "Mindmap", keys: "M", searchTerms: "mindmap mind map" },
   { label: "Document", keys: "D", searchTerms: "document pdf file" },
   { label: "Group", keys: "G", searchTerms: "group nodes" },
 ]
 
 const advancedShortcuts: ShortcutItem[] = [
-  { label: "Save workflow", keys: "⌘S", searchTerms: "save" },
-  { label: "Copy nodes", keys: "⌘C", searchTerms: "copy" },
-  { label: "Paste nodes", keys: "⌘V", searchTerms: "paste" },
-  { label: "Duplicate node", keys: "⌘D", searchTerms: "duplicate" },
+  { label: "Save workflow", keys: "Cmd/Ctrl+S", searchTerms: "save" },
+  { label: "Copy nodes", keys: "Cmd/Ctrl+C", searchTerms: "copy" },
+  { label: "Paste nodes", keys: "Cmd/Ctrl+V", searchTerms: "paste" },
+  { label: "Duplicate node", keys: "Cmd/Ctrl+D", searchTerms: "duplicate" },
   { label: "Clear selection", keys: "Esc", searchTerms: "clear escape deselect" },
-  { label: "Ungroup nodes", keys: "⌘⇧G", searchTerms: "ungroup" },
+  { label: "Ungroup nodes", keys: "Cmd/Ctrl+Shift+G", searchTerms: "ungroup" },
   { label: "Quick add menu", keys: "/", searchTerms: "quick add menu" },
   { label: "Keyboard shortcuts", keys: "?", searchTerms: "shortcuts help" },
   { label: "Pan canvas (hold)", keys: "Space", searchTerms: "pan move canvas space" },
@@ -59,6 +62,11 @@ interface KeyboardShortcutsModalProps {
 }
 
 export function KeyboardShortcutsModal({ open, onOpenChange }: KeyboardShortcutsModalProps) {
+  // Replace Cmd/Ctrl with platform-specific key
+  const formatKeys = (keys: string) => {
+    return keys.replace(/Cmd\/Ctrl/g, isMac ? 'Cmd' : 'Ctrl')
+  }
+
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       // Toggle with ? key
@@ -101,7 +109,7 @@ export function KeyboardShortcutsModal({ open, onOpenChange }: KeyboardShortcuts
               <h2 className="text-base font-semibold text-gray-900">Keyboard Shortcuts</h2>
               <button
                 onClick={() => onOpenChange(false)}
-                className="h-7 w-7 rounded-md hover:bg-gray-100 flex items-center justify-center transition-colors group"
+                className="h-7 w-7 rounded-md hover:bg-gray-100 flex items-center justify-center transition-colors group cursor-pointer"
               >
                 <span className="text-gray-400 group-hover:text-gray-600 text-xl leading-none">×</span>
               </button>
@@ -119,13 +127,13 @@ export function KeyboardShortcutsModal({ open, onOpenChange }: KeyboardShortcuts
                   <CommandItem key={index} keywords={[shortcut.searchTerms || shortcut.label]}>
                     <span className="flex-1">{shortcut.label}</span>
                     <CommandShortcut className="flex items-center gap-1">
-                      {shortcut.keys.split('+').map((key, i) => (
-                        <kbd
-                          key={i}
-                          className="inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-gray-200 bg-gray-50 px-1.5 font-mono text-[10px] font-medium text-gray-700 shadow-sm"
-                        >
-                          {key}
-                        </kbd>
+                      {formatKeys(shortcut.keys).split('+').map((key, i, arr) => (
+                        <span key={i} className="flex items-center gap-1">
+                          <kbd className="inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-gray-200 bg-gray-50 px-1.5 font-mono text-[10px] font-medium text-gray-700 shadow-sm">
+                            {key}
+                          </kbd>
+                          {i < arr.length - 1 && <span className="text-gray-400 text-[10px]">+</span>}
+                        </span>
                       ))}
                     </CommandShortcut>
                   </CommandItem>
@@ -154,13 +162,13 @@ export function KeyboardShortcutsModal({ open, onOpenChange }: KeyboardShortcuts
                   <CommandItem key={index} keywords={[shortcut.searchTerms || shortcut.label]}>
                     <span className="flex-1">{shortcut.label}</span>
                     <CommandShortcut className="flex items-center gap-1">
-                      {shortcut.keys.split('+').map((key, i) => (
-                        <kbd
-                          key={i}
-                          className="inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-gray-200 bg-gray-50 px-1.5 font-mono text-[10px] font-medium text-gray-700 shadow-sm"
-                        >
-                          {key}
-                        </kbd>
+                      {formatKeys(shortcut.keys).split('+').map((key, i, arr) => (
+                        <span key={i} className="flex items-center gap-1">
+                          <kbd className="inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-gray-200 bg-gray-50 px-1.5 font-mono text-[10px] font-medium text-gray-700 shadow-sm">
+                            {key}
+                          </kbd>
+                          {i < arr.length - 1 && <span className="text-gray-400 text-[10px]">+</span>}
+                        </span>
                       ))}
                     </CommandShortcut>
                   </CommandItem>

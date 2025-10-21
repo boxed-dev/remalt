@@ -1,5 +1,5 @@
 import type { NodeType } from '@/types/workflow';
-import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Type, Lightbulb, FileCode, Globe, MessageSquare, Link } from 'lucide-react';
+import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Lightbulb, FileCode, Globe, MessageSquare, Link, Type } from 'lucide-react';
 import { Folder } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -16,6 +16,16 @@ export interface NodeTypeMetadata {
 }
 
 export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
+  text: {
+    type: 'text',
+    label: 'Rich Text',
+    description: 'Notion-style editor with markdown and slash commands',
+    category: 'content',
+    color: '#6B7280',
+    icon: Type,
+    defaultWidth: 600,
+    defaultHeight: 400,
+  },
   pdf: {
     type: 'pdf',
     label: 'PDF / Document',
@@ -75,16 +85,6 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     icon: ImageIcon,
     defaultWidth: 480,
     defaultHeight: 420,
-  },
-  text: {
-    type: 'text',
-    label: 'Text / Note',
-    description: 'Rich text editor for ideas and content',
-    category: 'content',
-    color: '#095D40',
-    icon: Type,
-    defaultWidth: 480,
-    defaultHeight: 240,
   },
   mindmap: {
     type: 'mindmap',

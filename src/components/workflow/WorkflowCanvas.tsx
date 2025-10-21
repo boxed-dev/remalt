@@ -210,6 +210,7 @@ function WorkflowCanvasInner() {
   const duplicateNode = useWorkflowStore((state) => state.duplicateNode);
   const alignNodes = useWorkflowStore((state) => state.alignNodes);
   const distributeNodes = useWorkflowStore((state) => state.distributeNodes);
+  const setActiveNode = useWorkflowStore((state) => state.setActiveNode);
 
   // Convert workflow nodes/edges to React Flow format
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -227,7 +228,10 @@ function WorkflowCanvasInner() {
     };
   }, [workflowViewport]);
 
-  // Sync workflow nodes to React Flow (memoized for immediate rendering)
+  // FIXED: Optimize mapped nodes calculation
+  // Only recalculate when workflowNodes array reference changes
+  // Note: Zustand creates new array refs, but useMemo already handles this efficiently
+  // The real optimization comes from stable callbacks and reduced re-renders elsewhere
   const mappedNodes = useMemo(() => {
     // CRITICAL: Sort nodes so parent (group) nodes come before child nodes
     // React Flow requires parent nodes to exist before child nodes reference them
@@ -294,14 +298,17 @@ function WorkflowCanvasInner() {
     }));
   }, [workflowEdges]);
 
+  // FIXED: Remove setNodes/setEdges from dependencies - React guarantees they're stable
   // Apply mapped data to React Flow state
   useEffect(() => {
     setNodes(mappedNodes);
-  }, [mappedNodes, setNodes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mappedNodes]);
 
   useEffect(() => {
     setEdges(mappedEdges);
-  }, [mappedEdges, setEdges]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mappedEdges]);
 
   // FIXED: Add proper debouncing (500ms) to prevent excessive viewport updates
   const viewportDebounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -343,6 +350,8 @@ function WorkflowCanvasInner() {
     };
   }, []);
 
+  // FIXED: Remove unstable useReactFlow functions from dependencies
+  // getViewport and setViewport are stable but cause unnecessary re-runs
   useEffect(() => {
     if (!workflowViewport) {
       return;
@@ -360,9 +369,11 @@ function WorkflowCanvasInner() {
       });
       hasAppliedStoredViewport.current = true;
     }
-  }, [getViewport, setViewport, workflowViewport]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflowViewport]);
 
-  // Handle node changes (position, selection, etc.)
+  // FIXED: Remove workflowNodes from dependencies to prevent constant recreation
+  // Access nodes directly from store inside the callback instead
   const handleNodesChange: OnNodesChange = useCallback(
     (changes) => {
       onNodesChange(changes);
@@ -373,10 +384,12 @@ function WorkflowCanvasInner() {
           updateNodePosition(change.id, change.position);
 
           // If this is a group node, also update all child positions
-          const node = workflowNodes.find((n) => n.id === change.id);
+          // Access current nodes from store instead of closure
+          const currentNodes = useWorkflowStore.getState().workflow?.nodes ?? [];
+          const node = currentNodes.find((n) => n.id === change.id);
           if (node?.type === "group") {
             // Get all child nodes
-            const children = workflowNodes.filter(
+            const children = currentNodes.filter(
               (n) => n.parentId === change.id
             );
             // Update each child's position in the store (they're already in relative coordinates)
@@ -411,20 +424,22 @@ function WorkflowCanvasInner() {
       deleteNode,
       selectNode,
       updateNode,
-      workflowNodes,
     ]
   );
 
-  // Handle edge changes
-  const handleEdgesChange: OnEdgesChange = (changes) => {
-    onEdgesChange(changes);
+  // FIXED: Memoize handleEdgesChange to prevent new function reference on every render
+  const handleEdgesChange: OnEdgesChange = useCallback(
+    (changes) => {
+      onEdgesChange(changes);
 
-    changes.forEach((change) => {
-      if (change.type === "remove") {
-        deleteEdge(change.id);
-      }
-    });
-  };
+      changes.forEach((change) => {
+        if (change.type === "remove") {
+          deleteEdge(change.id);
+        }
+      });
+    },
+    [onEdgesChange, deleteEdge]
+  );
 
   // Handle new connections
   const onConnect = useCallback(
@@ -462,18 +477,23 @@ function WorkflowCanvasInner() {
   // Handle pane click (deselect all and close context menus)
   const onPaneClick = useCallback(() => {
     clearSelection();
+    setActiveNode(null);
     setContextMenuPosition(null);
     setNodeContextMenu(null);
     setSelectionContextMenu(null);
-  }, [clearSelection]);
+  }, [clearSelection, setActiveNode]);
 
-  // Handle pane context menu (right-click on canvas)
+  // FIXED: Access selectedNodes from store instead of using as dependency
+  // This prevents callback recreation on every selection change
   const onPaneContextMenu = useCallback(
     (event: MouseEvent | React.MouseEvent) => {
       event.preventDefault();
 
+      // Access current selected nodes from store instead of closure
+      const currentSelectedNodes = useWorkflowStore.getState().selectedNodes;
+
       // If 2+ nodes are selected, show selection context menu
-      if (selectedNodes.length >= 2) {
+      if (currentSelectedNodes.length >= 2) {
         setContextMenuPosition(null);
         setNodeContextMenu(null);
         setSelectionContextMenu({
@@ -490,7 +510,7 @@ function WorkflowCanvasInner() {
         });
       }
     },
-    [selectedNodes]
+    []
   );
 
   // Handle node context menu (right-click on node)
@@ -1117,6 +1137,20 @@ function WorkflowCanvasInner() {
     };
   }, [quickAddMenuOpen]);
 
+  // ESC key to deactivate all nodes
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveNode(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleEsc);
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, [setActiveNode]);
+
   if (!workflow) {
     return (
       <div className="flex items-center justify-center h-full bg-[#F5F5F5]">
@@ -1330,15 +1364,6 @@ function WorkflowCanvasInner() {
             addNode(type as NodeType, position);
           }
         }}
-        onAddNote={() => {
-          if (contextMenuPosition) {
-            const position = screenToFlowPosition({
-              x: contextMenuPosition.x,
-              y: contextMenuPosition.y,
-            });
-            addNode("text", position);
-          }
-        }}
         onRunWorkflow={() => {
           // Future: Run workflow functionality
           console.log("Run workflow");
@@ -1387,17 +1412,6 @@ function WorkflowCanvasInner() {
         }}
         onAddToGroup={() => {
           // Group functionality removed
-        }}
-        onAddNote={() => {
-          const node = workflowNodes.find(
-            (n) => n.id === nodeContextMenu?.nodeId
-          );
-          if (node) {
-            addNode("text", {
-              x: node.position.x + 50,
-              y: node.position.y + 50,
-            });
-          }
         }}
         onHelp={() => {
           // Open help in new tab

@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react';
 import {
   Plus,
-  StickyNote,
   Play,
   Copy,
   Download,
@@ -15,7 +14,6 @@ interface PanelContextMenuProps {
   position: { x: number; y: number } | null;
   onClose: () => void;
   onAddNode: (type: string) => void;
-  onAddNote: () => void;
   onRunWorkflow: () => void;
   onPaste: () => void;
   onExport: () => void;
@@ -28,7 +26,6 @@ export function PanelContextMenu({
   position,
   onClose,
   onAddNode,
-  onAddNote,
   onRunWorkflow,
   onPaste,
   onExport,
@@ -70,14 +67,6 @@ export function PanelContextMenu({
         onClose();
       },
       hasSubmenu: true,
-    },
-    {
-      icon: <StickyNote className="h-4 w-4" />,
-      label: 'Add Note',
-      onClick: () => {
-        onAddNote();
-        onClose();
-      },
     },
     {
       icon: <Copy className="h-4 w-4" />,

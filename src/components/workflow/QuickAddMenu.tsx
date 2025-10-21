@@ -17,7 +17,6 @@ const NODE_TYPES: NodeType[] = [
   'pdf',
   'voice',
   'image',
-  'text',
   'mindmap',
   'template',
   'chat',
@@ -193,29 +192,6 @@ export function QuickAddMenu({
             </button>
           ))
         )}
-      </div>
-
-      <div className="px-3 py-2 border-t border-[#D4AF7F]/20 text-xs text-[#6B7280] flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded bg-[#E8ECEF] text-[#6B7280] font-mono text-[10px]">
-              ↑↓
-            </kbd>
-            Navigate
-          </span>
-          <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded bg-[#E8ECEF] text-[#6B7280] font-mono text-[10px]">
-              ↵
-            </kbd>
-            Select
-          </span>
-        </div>
-        <span className="flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded bg-[#E8ECEF] text-[#6B7280] font-mono text-[10px]">
-            Esc
-          </kbd>
-          Close
-        </span>
       </div>
     </div>
   );

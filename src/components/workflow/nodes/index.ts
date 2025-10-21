@@ -1,11 +1,11 @@
 import type { NodeTypes } from '@xyflow/react';
+import { TextNode } from './TextNode';
 import { PDFNode } from './PDFNode';
 import { VoiceNode } from './VoiceNode';
 import { YouTubeNode } from './YouTubeNode';
 import { InstagramNode } from './InstagramNode';
 import { LinkedInNode } from './LinkedInNode';
 import { ImageNode } from './ImageNode';
-import { TextNode } from './TextNode';
 import { MindMapNode } from './MindMapNode';
 import { TemplateNode } from './TemplateNode';
 import { WebpageNode } from './WebpageNode';
@@ -14,13 +14,13 @@ import { ConnectorNode } from './ConnectorNode';
 import { GroupNode } from './GroupNode';
 
 export const nodeTypes: NodeTypes = {
+  text: TextNode,
   pdf: PDFNode,
   voice: VoiceNode,
   youtube: YouTubeNode,
   instagram: InstagramNode,
   linkedin: LinkedInNode,
   image: ImageNode,
-  text: TextNode,
   mindmap: MindMapNode,
   template: TemplateNode,
   webpage: WebpageNode,
@@ -30,13 +30,13 @@ export const nodeTypes: NodeTypes = {
 };
 
 export {
+  TextNode,
   PDFNode,
   VoiceNode,
   YouTubeNode,
   InstagramNode,
   LinkedInNode,
   ImageNode,
-  TextNode,
   MindMapNode,
   TemplateNode,
   WebpageNode,

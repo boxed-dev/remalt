@@ -132,33 +132,6 @@ function safeGetInstructions(data: any): string | undefined {
 }
 
 /**
- * Convert BlockNote JSON format to plain text
- */
-function blockNoteToPlainText(content: string | undefined): string {
-  if (!content) return '';
-
-  try {
-    const blocks = JSON.parse(content);
-    if (!Array.isArray(blocks)) return content;
-
-    return blocks
-      .map((block: any) => {
-        if (block.content && Array.isArray(block.content)) {
-          return block.content
-            .map((item: any) => item.text || '')
-            .join('');
-        }
-        return '';
-      })
-      .filter(Boolean)
-      .join('\n');
-  } catch {
-    // If not JSON, return as-is (backward compatibility)
-    return content;
-  }
-}
-
-/**
  * Build context for a chat node from its linked nodes
  */
 export function buildChatContext(
@@ -221,10 +194,9 @@ export function buildChatContext(
     switch (node.type) {
       case 'text': {
         const textData = node.data as TextNodeData;
-        const plainText = blockNoteToPlainText(textData.content);
-        if (plainText && plainText.trim()) {
+        if (textData.plainText && textData.plainText.trim()) {
           context.textContext.push({
-            content: plainText,
+            content: textData.plainText,
             aiInstructions: safeGetInstructions(textData),
           });
         }
@@ -428,8 +400,7 @@ function extractNodeContext(node: WorkflowNode): string | null {
   switch (node.type) {
     case 'text': {
       const data = node.data as TextNodeData;
-      const plainText = blockNoteToPlainText(data.content);
-      return plainText?.trim() || null;
+      return data.plainText || null;
     }
     case 'youtube': {
       const data = node.data as YouTubeNodeData;

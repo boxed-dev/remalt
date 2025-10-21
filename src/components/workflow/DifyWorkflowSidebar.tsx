@@ -126,8 +126,8 @@ export function DifyWorkflowSidebar() {
   return (
     <>
       <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 flex items-center pointer-events-none">
-        {/* Sidebar with scroll */}
-        <aside className="bg-white rounded-xl shadow-lg border border-gray-200/80 overflow-y-auto py-1 max-h-[calc(100vh-120px)] pointer-events-auto w-12">
+        {/* Sidebar without scroll */}
+        <aside className="bg-white rounded-xl shadow-lg border border-gray-200/80 overflow-hidden py-1 pointer-events-auto w-12">
           <div className="flex flex-col">
             {/* Social Media Compact 2x2 Grid in Collapsed View - At the top */}
             {NODES.some(node => node.subcategory === 'social') && (

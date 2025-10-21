@@ -156,7 +156,6 @@ export default function WorkflowEditorPage() {
     s: () => addNode("template", { x: 100, y: 100 }),
     r: () => addNode("voice", { x: 100, y: 100 }),
     i: () => addNode("image", { x: 100, y: 100 }),
-    t: () => addNode("text", { x: 100, y: 100 }),
     a: () => addNode("connector", { x: 100, y: 100 }),
     w: () => addNode("webpage", { x: 100, y: 100 }),
     d: () => addNode("pdf", { x: 100, y: 100 }),

@@ -5,7 +5,6 @@ import {
   Copy,
   Layers,
   Trash2,
-  StickyNote,
   HelpCircle,
   FolderPlus,
 } from 'lucide-react';
@@ -18,7 +17,6 @@ interface NodeContextMenuProps {
   onDuplicate: (nodeId: string) => void;
   onDelete: (nodeId: string) => void;
   onAddToGroup: (nodeId: string) => void;
-  onAddNote: () => void;
   onHelp: () => void;
 }
 
@@ -30,7 +28,6 @@ export function NodeContextMenu({
   onDuplicate,
   onDelete,
   onAddToGroup,
-  onAddNote,
   onHelp,
 }: NodeContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -96,14 +93,6 @@ export function NodeContextMenu({
         onClose();
       },
       hasSubmenu: true,
-    },
-    {
-      icon: <StickyNote className="h-4 w-4" />,
-      label: 'Add Note',
-      onClick: () => {
-        onAddNote();
-        onClose();
-      },
     },
     { type: 'divider' as const },
     {

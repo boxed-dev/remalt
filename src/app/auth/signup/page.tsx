@@ -70,18 +70,21 @@ export default function SignUpPage() {
 
     try {
       const supabase = createClient();
-      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+      console.log('[Google SignUp] Starting OAuth flow...');
+
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-        },
       });
 
       if (signInError) {
+        console.error('[Google SignUp] OAuth error:', signInError);
         setError(signInError.message);
         setLoading(false);
+      } else {
+        console.log('[Google SignUp] OAuth initiated successfully');
       }
     } catch (err: any) {
+      console.error('[Google SignUp] Exception:', err);
       setError(err.message || 'An unexpected error occurred');
       setLoading(false);
     }
@@ -95,8 +98,11 @@ export default function SignUpPage() {
       const supabase = createClient();
       console.log('[LinkedIn SignUp] Starting OAuth flow...');
 
-      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'linkedin_oidc',
+        options: {
+          scopes: 'openid email profile',
+        },
       });
 
       if (signInError) {

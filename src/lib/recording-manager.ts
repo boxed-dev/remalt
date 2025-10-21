@@ -106,8 +106,8 @@ class RecordingManager {
    * Start recording with real-time transcription
    */
   async startRecording(): Promise<void> {
-    // Prevent multiple recordings
-    if (this.session && this.session.state !== 'idle') {
+    // Prevent multiple recordings - session should be null when ready for new recording
+    if (this.session !== null) {
       throw new Error('Recording already in progress');
     }
 
@@ -180,11 +180,18 @@ class RecordingManager {
     } catch (error) {
       console.error('Failed to start recording:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to access microphone';
-      this.session!.state = 'error';
-      this.session!.error = errorMessage;
+
+      if (this.session) {
+        this.session.state = 'error';
+        this.session.error = errorMessage;
+      }
+
       this.emit('state-changed', 'error');
       this.emit('error', errorMessage);
       this.cleanup();
+
+      // Reset session to null after error to allow new recordings
+      this.session = null;
     }
   }
 
@@ -332,29 +339,39 @@ class RecordingManager {
       throw new Error('No active recording to stop');
     }
 
-    this.session.state = 'processing';
-    this.emit('state-changed', 'processing');
+    try {
+      this.session.state = 'processing';
+      this.emit('state-changed', 'processing');
 
-    // Stop MediaRecorder
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
-    }
-
-    // Close Deepgram connection gracefully
-    if (this.deepgramConnection) {
-      // Capture reference before clearing
-      const connection = this.deepgramConnection;
-      this.deepgramConnection = null;
-
-      // Wait a bit for final transcripts
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Finish the connection
-      try {
-        connection.finish();
-      } catch (error) {
-        console.error('[Deepgram] Error closing connection:', error);
+      // Stop MediaRecorder
+      if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+        this.mediaRecorder.stop();
       }
+
+      // Close Deepgram connection gracefully
+      if (this.deepgramConnection) {
+        // Capture reference before clearing
+        const connection = this.deepgramConnection;
+        this.deepgramConnection = null;
+
+        // Wait a bit for final transcripts
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Finish the connection
+        try {
+          connection.finish();
+        } catch (error) {
+          console.error('[Deepgram] Error closing connection:', error);
+        }
+      }
+    } catch (error) {
+      console.error('[RecordingManager] Error stopping recording:', error);
+      // Clean up and reset session on error
+      this.cleanup();
+      this.session = null;
+      this.emit('state-changed', 'error');
+      this.emit('error', 'Failed to stop recording');
+      throw error;
     }
   }
 
@@ -384,8 +401,7 @@ class RecordingManager {
         duration,
       });
 
-      // Reset session
-      this.session.state = 'idle';
+      // Emit idle state before resetting session
       this.emit('state-changed', 'idle');
 
     } catch (error) {
@@ -396,6 +412,8 @@ class RecordingManager {
       this.emit('error', 'Failed to process recording');
     } finally {
       this.cleanup();
+      // Always reset session to null after completion (success or error)
+      this.session = null;
     }
   }
 
@@ -404,6 +422,11 @@ class RecordingManager {
    */
   async cancelRecording(): Promise<void> {
     if (!this.session) return;
+
+    // Remove onstop handler to prevent finalizeRecording from being called
+    if (this.mediaRecorder) {
+      this.mediaRecorder.onstop = null;
+    }
 
     // Stop everything
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {

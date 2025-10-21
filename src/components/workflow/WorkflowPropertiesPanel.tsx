@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { X, Trash2 } from 'lucide-react';
 import type {
   WorkflowNode,
-  TextNodeData,
   YouTubeNodeData,
   ChatNodeData,
 } from '@/types/workflow';
@@ -76,9 +75,6 @@ export function WorkflowPropertiesPanel() {
       {/* Content - Scrollable */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
         {/* Node-specific properties */}
-        {selectedNode.type === 'text' && (
-          <TextNodeProperties nodeId={selectedNode.id} data={selectedNode.data as TextNodeData} />
-        )}
         {selectedNode.type === 'youtube' && (
           <YouTubeNodeProperties nodeId={selectedNode.id} data={selectedNode.data as YouTubeNodeData} />
         )}
@@ -100,38 +96,6 @@ export function WorkflowPropertiesPanel() {
         </Button>
       </div>
     </aside>
-  );
-}
-
-// Text Node Properties
-function TextNodeProperties({ nodeId, data }: { nodeId: string; data: TextNodeData }) {
-  const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-[13px] font-medium text-[#1A1D21] mb-2">Content Type</label>
-        <select
-          value={data.contentType}
-          onChange={(e) => updateNodeData(nodeId, { contentType: e.target.value as 'plain' | 'markdown' | 'html' })}
-          className="w-full px-3 py-2 text-[13px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] bg-white"
-        >
-          <option value="plain">Plain Text</option>
-          <option value="markdown">Markdown</option>
-          <option value="html">HTML</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-[13px] font-medium text-[#1A1D21] mb-2">Text Content</label>
-        <textarea
-          value={data.content}
-          onChange={(e) => updateNodeData(nodeId, { content: e.target.value })}
-          placeholder="Enter your text here..."
-          className="w-full px-3 py-2 text-[13px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] bg-white min-h-[120px] resize-y"
-        />
-      </div>
-    </div>
   );
 }
 

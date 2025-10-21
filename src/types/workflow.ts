@@ -31,13 +31,13 @@ export interface Viewport {
 // NODES
 // ============================================
 export type NodeType =
+  | 'text'
   | 'pdf'
   | 'voice'
   | 'image'
   | 'youtube'
   | 'instagram'
   | 'linkedin'
-  | 'text'
   | 'mindmap'
   | 'template'
   | 'webpage'
@@ -269,11 +269,6 @@ export interface LinkedInNodeData extends BaseNodeData {
   analysisError?: string;
 }
 
-// Text Node
-export interface TextNodeData extends BaseNodeData {
-  content: string; // BlockNote JSON format as string
-}
-
 // Mind Map / Idea Node
 export interface MindMapNodeData extends BaseNodeData {
   concept: string;
@@ -282,6 +277,14 @@ export interface MindMapNodeData extends BaseNodeData {
   icon?: string;
   tags?: string[];
   connections?: string[]; // IDs of related nodes
+}
+
+// Text / Rich Content Node
+export interface TextNodeData extends BaseNodeData {
+  content: string; // JSON stringified editor content (TipTap/Novel format)
+  plainText?: string; // Plain text version for context
+  wordCount?: number;
+  lastEditedAt?: string;
 }
 
 // Template / Workflow Node (Generated Content)
@@ -348,13 +351,13 @@ export interface GroupNodeData extends BaseNodeData {
 
 // Union type for all node data
 export type NodeData =
+  | TextNodeData
   | PDFNodeData
   | VoiceNodeData
   | YouTubeNodeData
   | InstagramNodeData
   | LinkedInNodeData
   | ImageNodeData
-  | TextNodeData
   | MindMapNodeData
   | TemplateNodeData
   | WebpageNodeData

@@ -25,6 +25,7 @@ interface WorkflowStore {
   selectedNodes: string[];
   selectedEdges: string[];
   clipboard: WorkflowNode[];
+  activeNodeId: string | null;
 
   // History State
   history: Workflow[];
@@ -99,6 +100,9 @@ interface WorkflowStore {
   // Alignment Actions
   alignNodes: (nodeIds: string[], direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
   distributeNodes: (nodeIds: string[], direction: 'horizontal' | 'vertical') => void;
+
+  // Activation Actions
+  setActiveNode: (id: string | null) => void;
 }
 
 const createDefaultWorkflow = (name: string, description?: string): Workflow => ({
@@ -120,6 +124,21 @@ const createDefaultWorkflow = (name: string, description?: string): Workflow => 
 const createDefaultNodeData = (type: NodeType): NodeData => {
   const baseData = { type };
   switch (type) {
+    case 'text':
+      return {
+        ...baseData,
+        content: JSON.stringify({
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              content: [],
+            },
+          ],
+        }),
+        plainText: '',
+        wordCount: 0,
+      } as NodeData;
     case 'pdf':
       return {
         ...baseData,
@@ -152,11 +171,6 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
         ...baseData,
         fetchStatus: 'idle',
         analysisStatus: 'idle',
-      } as NodeData;
-    case 'text':
-      return {
-        ...baseData,
-        content: '', // BlockNote JSON will be stored here
       } as NodeData;
     case 'mindmap':
       return {
@@ -206,6 +220,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
     selectedNodes: [],
     selectedEdges: [],
     clipboard: [],
+    activeNodeId: null,
     history: [],
     historyIndex: -1,
     isSaving: false,
@@ -226,6 +241,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
         state.workflow = workflow;
         state.selectedNodes = [];
         state.selectedEdges = [];
+        state.activeNodeId = null;
       });
     },
 
@@ -250,6 +266,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
         state.selectedNodes = [];
         state.selectedEdges = [];
         state.clipboard = [];
+        state.activeNodeId = null;
         state.isSaving = false;
         state.saveError = null;
         state.lastSaved = null;
@@ -376,6 +393,10 @@ export const useWorkflowStore = create<WorkflowStore>()(
             (e) => e.source !== id && e.target !== id
           );
           state.selectedNodes = state.selectedNodes.filter((nId) => nId !== id);
+          // Deactivate if deleting the active node
+          if (state.activeNodeId === id) {
+            state.activeNodeId = null;
+          }
           removeNodeIdsFromGroups(state.workflow.nodes, [id]);
           state.workflow.updatedAt = new Date().toISOString();
         }
@@ -413,6 +434,10 @@ export const useWorkflowStore = create<WorkflowStore>()(
             (e) => !ids.includes(e.source) && !ids.includes(e.target)
           );
           state.selectedNodes = state.selectedNodes.filter((nId) => !ids.includes(nId));
+          // Deactivate if deleting the active node
+          if (state.activeNodeId && ids.includes(state.activeNodeId)) {
+            state.activeNodeId = null;
+          }
           removeNodeIdsFromGroups(state.workflow.nodes, ids);
           state.workflow.updatedAt = new Date().toISOString();
         }
@@ -786,6 +811,13 @@ export const useWorkflowStore = create<WorkflowStore>()(
         }
 
         state.workflow.updatedAt = new Date().toISOString();
+      });
+    },
+
+    // Activation Actions
+    setActiveNode: (id) => {
+      set((state) => {
+        state.activeNodeId = id;
       });
     },
   }))

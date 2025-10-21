@@ -56,18 +56,21 @@ function SignInForm() {
 
     try {
       const supabase = createClient();
-      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+      console.log('[Google SignIn] Starting OAuth flow...');
+
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-        },
       });
 
       if (signInError) {
+        console.error('[Google SignIn] OAuth error:', signInError);
         setError(signInError.message);
         setLoading(false);
+      } else {
+        console.log('[Google SignIn] OAuth initiated successfully');
       }
     } catch (err: any) {
+      console.error('[Google SignIn] Exception:', err);
       setError(err.message || 'An unexpected error occurred');
       setLoading(false);
     }
@@ -81,8 +84,11 @@ function SignInForm() {
       const supabase = createClient();
       console.log('[LinkedIn SignIn] Starting OAuth flow...');
 
-      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'linkedin_oidc',
+        options: {
+          scopes: 'openid email profile',
+        },
       });
 
       if (signInError) {
