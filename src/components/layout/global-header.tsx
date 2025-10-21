@@ -39,7 +39,8 @@ export function GlobalHeader() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push('/auth/signin');
-    router.refresh();
+    // FIXED: Remove router.refresh() - Next.js will handle this automatically
+    // Prevents jarring refresh when switching tabs after sign out
   };
 
   // Show skeleton while loading or not mounted to prevent layout shift
