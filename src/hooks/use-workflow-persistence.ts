@@ -6,6 +6,7 @@ import { WorkflowSchema } from '@/lib/schemas/workflow-schema';
 import type { Workflow } from '@/types/workflow';
 import { ZodError } from 'zod';
 import { toast } from 'sonner';
+import { usePageVisibility } from './use-page-visibility';
 
 // Global save lock to prevent concurrent saves of the same workflow
 // Using both a promise map and a simple boolean lock for synchronous checking
@@ -66,6 +67,7 @@ export function useWorkflowPersistence({
 }: UseWorkflowPersistenceOptions) {
   const workflow = useWorkflowStore((state) => state.workflow);
   const setSaveStatus = useWorkflowStore((state) => state.setSaveStatus);
+  const isPageVisible = usePageVisibility();
 
   const [debouncedWorkflow] = useDebounce(workflow, autoSaveDelay);
   const isInitialMount = useRef(true);
@@ -236,6 +238,12 @@ export function useWorkflowPersistence({
 
   // Auto-save effect
   useEffect(() => {
+    // PROFESSIONAL: Don't auto-save when tab is hidden to prevent wasted resources
+    if (!isPageVisible) {
+      console.log("⏭️ Skipping auto-save: tab is hidden");
+      return;
+    }
+
     // CRITICAL: Check if component is still mounted (prevent saves from unmounted instances)
     if (!isMountedRef.current) {
       console.log("⏭️ Skipping auto-save: component unmounted");
@@ -297,7 +305,7 @@ export function useWorkflowPersistence({
 
     // Auto-save the workflow
     saveWorkflow();
-  }, [debouncedWorkflow, autoSave, userId, saveWorkflow]);
+  }, [debouncedWorkflow, autoSave, userId, saveWorkflow, isPageVisible]);
 
   // Track current workflow ID to detect changes
   useEffect(() => {
