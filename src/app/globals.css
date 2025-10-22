@@ -262,17 +262,17 @@
     opacity: 1 !important;
   }
 
-  /* Selected node styling - dark green border with smooth corners */
-  .react-flow__node.selected {
+  /* Selected node styling - dark green border only */
+  .react-flow__node.selected:not(.react-flow__node-group) {
     outline: none !important;
   }
 
-  .react-flow__node.selected > div {
-    box-shadow: 0 0 0 3px #10875D, 0 0 0 9px rgba(16, 135, 93, 0.15), 0 6px 20px rgba(16, 135, 93, 0.15) !important;
+  .react-flow__node.selected:not(.react-flow__node-group) > div {
+    box-shadow: 0 0 0 3px #10875D !important;
     transition: box-shadow 0.2s ease-out !important;
   }
 
-  /* Ensure group nodes don't get double styling */
+  /* Ensure group nodes don't get styling */
   .react-flow__node-group.selected > div {
     box-shadow: none !important;
   }

@@ -80,11 +80,7 @@ export function BaseNode({
     <div
       className={`min-w-[280px] rounded-2xl bg-white transition-all duration-200 ${
         allowOverflow ? 'relative' : 'overflow-hidden relative'
-      } ${
-        isActive
-          ? 'border-2 border-[#3B82F6] shadow-xl ring-2 ring-[#3B82F6]/20'
-          : 'border-2 border-[#E8ECEF] hover:border-[#D1D5DB] shadow-md hover:shadow-xl'
-      }`}
+      } border-2 border-[#E8ECEF] hover:border-[#D1D5DB] shadow-md hover:shadow-xl`}
     >
       {/* Activation overlay for inactive nodes - blocks interaction until activated */}
       {!isActive && (

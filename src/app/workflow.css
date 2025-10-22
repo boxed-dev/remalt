@@ -33,11 +33,9 @@ div[class*="react-flow__node"].react-flow__node-group {
   will-change: transform;
 }
 
-/* Selected nodes - Enhanced with ring and glow (except groups which handle their own styling) */
+/* Selected nodes - Styling handled in globals.css (except groups which handle their own styling) */
 .react-flow__node.selected:not(.react-flow__node-group) {
-  box-shadow: 0 0 0 3px #095d40, 0 6px 20px rgba(9, 93, 64, 0.25),
-    0 0 40px rgba(9, 93, 64, 0.15);
-  animation: selection-ring 2s ease-in-out infinite;
+  /* Selection styling is applied to the inner div in globals.css */
 }
 
 /* Group nodes - Clean unibody design with internal styling */
@@ -78,17 +76,7 @@ div[class*="react-flow__node"].react-flow__node-group {
   outline: none !important;
 }
 
-@keyframes selection-ring {
-  0%,
-  100% {
-    box-shadow: 0 0 0 3px #095d40, 0 6px 20px rgba(9, 93, 64, 0.25),
-      0 0 40px rgba(9, 93, 64, 0.15);
-  }
-  50% {
-    box-shadow: 0 0 0 3px #095d40, 0 8px 24px rgba(9, 93, 64, 0.3),
-      0 0 50px rgba(9, 93, 64, 0.2);
-  }
-}
+/* Selection ring animation removed - handled in globals.css */
 
 /* Node entrance animation - Only on first appearance */
 @keyframes node-entrance {
