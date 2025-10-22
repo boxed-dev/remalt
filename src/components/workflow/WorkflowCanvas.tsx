@@ -385,7 +385,8 @@ function WorkflowCanvasInner() {
 
           // If this is a group node, also update all child positions
           // Access current nodes from store instead of closure
-          const currentNodes = useWorkflowStore.getState().workflow?.nodes ?? [];
+          const currentNodes =
+            useWorkflowStore.getState().workflow?.nodes ?? [];
           const node = currentNodes.find((n) => n.id === change.id);
           if (node?.type === "group") {
             // Get all child nodes
@@ -418,13 +419,7 @@ function WorkflowCanvasInner() {
         }
       });
     },
-    [
-      onNodesChange,
-      updateNodePosition,
-      deleteNode,
-      selectNode,
-      updateNode,
-    ]
+    [onNodesChange, updateNodePosition, deleteNode, selectNode, updateNode]
   );
 
   // FIXED: Memoize handleEdgesChange to prevent new function reference on every render
@@ -638,7 +633,7 @@ function WorkflowCanvasInner() {
       // If node has a parent, its position is relative to parent, so convert to absolute
       let absoluteX = point.x;
       let absoluteY = point.y;
-      
+
       if (draggedNode.parentId) {
         const parent = reactFlowInstance.getNode(draggedNode.parentId);
         if (parent) {
@@ -801,7 +796,7 @@ function WorkflowCanvasInner() {
       // If node has a parent, its position is relative to parent, so convert to absolute
       let absoluteX = node.position.x;
       let absoluteY = node.position.y;
-      
+
       if (node.parentId) {
         const parent = reactFlowInstance.getNode(node.parentId);
         if (parent) {

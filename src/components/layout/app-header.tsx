@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { LogOut, User } from 'lucide-react';
-import { useCurrentUser } from '@/hooks/use-current-user';
-import { createClient } from '@/lib/supabase/client';
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { LogOut, User } from "lucide-react";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { createClient } from "@/lib/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +21,7 @@ export function AppHeader() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push('/auth/signin');
+    router.push("/auth/signin");
     // FIXED: Remove router.refresh() - Next.js will handle this automatically
     // Prevents jarring refresh when switching tabs after sign out
   };
@@ -30,7 +30,7 @@ export function AppHeader() {
     <header
       className="sticky top-0 z-50 w-full border-b border-[#E8ECEF] bg-white/80 backdrop-blur-xl"
       style={{
-        boxShadow: '0 1px 0 rgba(0, 0, 0, 0.03)'
+        boxShadow: "0 1px 0 rgba(0, 0, 0, 0.03)",
       }}
     >
       <div className="flex h-16 items-center justify-between px-6">
@@ -60,8 +60,9 @@ export function AppHeader() {
           <span
             className="text-[17px] font-semibold text-[#1A1D21]"
             style={{
-              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif',
-              letterSpacing: '-0.02em'
+              fontFamily:
+                '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif',
+              letterSpacing: "-0.02em",
             }}
           >
             Remalt
@@ -91,7 +92,8 @@ export function AppHeader() {
               <button
                 className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#F5F5F7] rounded-lg transition-all"
                 style={{
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif'
+                  fontFamily:
+                    '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif',
                 }}
               >
                 <div className="w-8 h-8 bg-gradient-to-br from-[#007AFF] to-[#0051D5] rounded-full flex items-center justify-center">
@@ -99,7 +101,9 @@ export function AppHeader() {
                 </div>
                 <div className="hidden sm:block text-left">
                   <div className="text-[13px] font-medium text-[#1A1D21]">
-                    {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+                    {user?.user_metadata?.full_name ||
+                      user?.email?.split("@")[0] ||
+                      "User"}
                   </div>
                   <div className="text-[11px] text-[#9CA3AF]">
                     {user?.email}

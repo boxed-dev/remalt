@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { usePathname, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { LogOut, User, Menu, X } from 'lucide-react';
-import { useCurrentUser } from '@/hooks/use-current-user';
-import { createClient } from '@/lib/supabase/client';
-import { useState, useEffect } from 'react';
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { LogOut, User, Menu, X } from "lucide-react";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +29,7 @@ export function GlobalHeader() {
   }, []);
 
   // Don't show header on auth pages or workflow editor
-  const isAuthPage = pathname?.startsWith('/auth/');
+  const isAuthPage = pathname?.startsWith("/auth/");
   const isWorkflowEditor = pathname?.match(/^\/flows\/[^/]+$/);
 
   if (isAuthPage || isWorkflowEditor) {
@@ -38,7 +38,7 @@ export function GlobalHeader() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push('/auth/signin');
+    router.push("/auth/signin");
     // FIXED: Remove router.refresh() - Next.js will handle this automatically
     // Prevents jarring refresh when switching tabs after sign out
   };
@@ -67,7 +67,7 @@ export function GlobalHeader() {
       <div className="h-14 px-4 flex items-center justify-between">
         {/* Logo */}
         <Link
-          href={user ? '/flows' : '/'}
+          href={user ? "/flows" : "/"}
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#095D40] to-[#0a7350] flex items-center justify-center shadow-sm">
@@ -86,9 +86,9 @@ export function GlobalHeader() {
                 <Link
                   href="/flows"
                   className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors ${
-                    pathname === '/flows'
-                      ? 'text-[#095D40] bg-[#095D40]/10'
-                      : 'text-[#6B7280] hover:text-[#095D40] hover:bg-[#D4AF7F]/10'
+                    pathname === "/flows"
+                      ? "text-[#095D40] bg-[#095D40]/10"
+                      : "text-[#6B7280] hover:text-[#095D40] hover:bg-[#D4AF7F]/10"
                   }`}
                 >
                   Flows
@@ -96,9 +96,9 @@ export function GlobalHeader() {
                 <Link
                   href="/pricing"
                   className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors ${
-                    pathname === '/pricing'
-                      ? 'text-[#095D40] bg-[#095D40]/10'
-                      : 'text-[#6B7280] hover:text-[#095D40] hover:bg-[#D4AF7F]/10'
+                    pathname === "/pricing"
+                      ? "text-[#095D40] bg-[#095D40]/10"
+                      : "text-[#6B7280] hover:text-[#095D40] hover:bg-[#D4AF7F]/10"
                   }`}
                 >
                   Pricing
@@ -134,14 +134,16 @@ export function GlobalHeader() {
                     <User className="h-3.5 w-3.5 text-white" />
                   </div>
                   <span className="hidden sm:inline text-[13px] font-medium text-[#333333] max-w-[120px] truncate">
-                    {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+                    {user?.user_metadata?.full_name ||
+                      user?.email?.split("@")[0] ||
+                      "User"}
                   </span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuLabel className="text-[12px]">
                   <div className="font-medium text-[#333333]">
-                    {user?.user_metadata?.full_name || 'Account'}
+                    {user?.user_metadata?.full_name || "Account"}
                   </div>
                   <div className="font-normal text-[#6B7280] truncate">
                     {user?.email}

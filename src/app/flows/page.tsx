@@ -13,10 +13,12 @@ async function FlowsContent() {
   // Get authenticated user and workflows in parallel
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/auth/signin');
+    redirect("/auth/signin");
   }
 
   // Fetch workflow summaries (optimized query)
