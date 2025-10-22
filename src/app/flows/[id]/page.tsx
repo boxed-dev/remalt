@@ -61,19 +61,22 @@ export default function WorkflowEditorPage() {
       // FIGMA-STYLE: Silent URL update without page reload
       // This changes the URL from /flows/new to /flows/{id} seamlessly
       if (workflowId === "new" && !hasNavigatedFromNewRef.current) {
-        console.log("✅ First save complete, silently updating URL to:", savedWorkflow.id);
+        console.log(
+          "✅ First save complete, silently updating URL to:",
+          savedWorkflow.id
+        );
         hasNavigatedFromNewRef.current = true;
         loadedWorkflowIdRef.current = savedWorkflow.id;
-        
+
         // Use History API for completely silent URL update (Figma/Linear approach)
         // This updates the browser URL bar without ANY navigation events
         const newUrl = `/flows/${savedWorkflow.id}`;
         window.history.replaceState(
           { ...window.history.state, as: newUrl, url: newUrl },
-          '',
+          "",
           newUrl
         );
-        
+
         console.log("🎯 URL silently updated - no page reload");
       }
     },
@@ -100,6 +103,52 @@ export default function WorkflowEditorPage() {
       if (workflowId === "new") {
         // CRITICAL: Only create workflow once using ref guard
         if (!workflowCreatedRef.current) {
+          // RECOVERY: Check if there's a recent unsaved workflow in the database
+          // This handles the case where user added nodes, switched tabs, save completed,
+          // but then they navigated back to /flows/new
+          try {
+            const supabase = createClient();
+            const { data: recentWorkflows } = await supabase
+              .from("workflows")
+              .select("*")
+              .eq("user_id", user.id)
+              .eq("name", "Untitled Workflow")
+              .order("created_at", { ascending: false })
+              .limit(1);
+
+            // If there's a very recent workflow (< 30 seconds old), load it instead
+            if (recentWorkflows && recentWorkflows.length > 0) {
+              const recentWorkflow = recentWorkflows[0];
+              const createdAt = new Date(recentWorkflow.created_at);
+              const now = new Date();
+              const ageInSeconds = (now.getTime() - createdAt.getTime()) / 1000;
+
+              if (ageInSeconds < 30) {
+                console.log(
+                  "🔄 Found recent unsaved workflow, redirecting to:",
+                  recentWorkflow.id
+                );
+                // Redirect to the actual workflow instead of staying on /new
+                window.history.replaceState(
+                  {
+                    ...window.history.state,
+                    as: `/flows/${recentWorkflow.id}`,
+                    url: `/flows/${recentWorkflow.id}`,
+                  },
+                  "",
+                  `/flows/${recentWorkflow.id}`
+                );
+                // Force a re-render to load the correct workflow
+                router.push(`/flows/${recentWorkflow.id}`);
+                setLoadingWorkflow(false);
+                return;
+              }
+            }
+          } catch (error) {
+            console.error("Failed to check for recent workflows:", error);
+            // Continue with normal flow if check fails
+          }
+
           console.log("📝 Creating new workflow (stays on /new until saved)");
           workflowCreatedRef.current = true;
           loadedWorkflowIdRef.current = "new";
@@ -135,7 +184,7 @@ export default function WorkflowEditorPage() {
     }
 
     loadWorkflowData();
-    
+
     // Cleanup function: Reset guards when navigating to a different workflow
     return () => {
       // Only reset if we're truly switching to a different workflow
@@ -145,7 +194,14 @@ export default function WorkflowEditorPage() {
         loadedWorkflowIdRef.current = null;
       }
     };
-  }, [workflowId, user, userLoading, createWorkflow, loadWorkflow, clearWorkflow]);
+  }, [
+    workflowId,
+    user,
+    userLoading,
+    createWorkflow,
+    loadWorkflow,
+    clearWorkflow,
+  ]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({

@@ -1,12 +1,12 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { useDebounce } from 'use-debounce';
-import { createClient } from '@/lib/supabase/client';
-import { useWorkflowStore } from '@/lib/stores/workflow-store';
-import { WorkflowSchema } from '@/lib/schemas/workflow-schema';
-import type { Workflow } from '@/types/workflow';
-import { ZodError } from 'zod';
-import { toast } from 'sonner';
-import { usePageVisibility } from './use-page-visibility';
+import { useEffect, useRef, useCallback } from "react";
+import { useDebounce } from "use-debounce";
+import { createClient } from "@/lib/supabase/client";
+import { useWorkflowStore } from "@/lib/stores/workflow-store";
+import { WorkflowSchema } from "@/lib/schemas/workflow-schema";
+import type { Workflow } from "@/types/workflow";
+import { ZodError } from "zod";
+import { toast } from "sonner";
+import { usePageVisibility } from "./use-page-visibility";
 
 // Global save lock to prevent concurrent saves of the same workflow
 // Using both a promise map and a simple boolean lock for synchronous checking
@@ -15,7 +15,7 @@ const saveLocks = new Map<string, boolean>();
 
 // Hash-based workflow comparison for performance
 function hashWorkflow(workflow: Workflow | null): string {
-  if (!workflow) return '';
+  if (!workflow) return "";
   return `${workflow.id}-${workflow.nodes.length}-${workflow.edges.length}-${workflow.updatedAt}`;
 }
 
@@ -27,7 +27,7 @@ function isWorkflowEmpty(workflow: Workflow | null): boolean {
   // 2. Custom name (user renamed it)
   // 3. Custom description (user added description)
   // 4. Modified viewport (user panned/zoomed)
-  
+
   const hasStructure = workflow.nodes.length > 0 || workflow.edges.length > 0;
 
   // Ignore default description "A new workflow" when checking if workflow is empty
@@ -47,7 +47,12 @@ function isWorkflowEmpty(workflow: Workflow | null): boolean {
 
   // IMPROVED: Only consider empty if it has NO content AND NO customization
   // This ensures we save as soon as user makes ANY meaningful change
-  return !hasStructure && !hasCustomDescription && !hasCustomName && !hasModifiedViewport;
+  return (
+    !hasStructure &&
+    !hasCustomDescription &&
+    !hasCustomName &&
+    !hasModifiedViewport
+  );
 }
 
 interface UseWorkflowPersistenceOptions {
@@ -77,29 +82,35 @@ export function useWorkflowPersistence({
   const currentWorkflowIdRef = useRef<string | null>(workflowId);
 
   // Manual save function
-  const saveWorkflow = useCallback(async (retries = 3): Promise<void> => {
-    if (!workflow || !userId) {
-      console.log('⏭️ Skipping save: no workflow or userId', {
-        hasWorkflow: !!workflow,
-        userId
-      });
-      // Show toast if userId is missing (session expired)
-      if (!userId && workflow) {
-        toast.error('Session expired. Please sign in again to save your work.');
+  const saveWorkflow = useCallback(
+    async (retries = 3): Promise<void> => {
+      if (!workflow || !userId) {
+        console.log("⏭️ Skipping save: no workflow or userId", {
+          hasWorkflow: !!workflow,
+          userId,
+        });
+        // Show toast if userId is missing (session expired)
+        if (!userId && workflow) {
+          toast.error(
+            "Session expired. Please sign in again to save your work."
+          );
+        }
+        return;
       }
-      return;
-    }
 
       const workflowId = workflow.id;
 
-    // ATOMIC LOCK ACQUISITION - Check and set in one operation
-    if (saveLocks.get(workflowId)) {
-      console.log('⏭️ Skipping save: save already in progress for workflow', workflowId);
-      return activeSaves.get(workflowId);
-    }
+      // ATOMIC LOCK ACQUISITION - Check and set in one operation
+      if (saveLocks.get(workflowId)) {
+        console.log(
+          "⏭️ Skipping save: save already in progress for workflow",
+          workflowId
+        );
+        return activeSaves.get(workflowId);
+      }
 
-    // Immediately acquire lock before any async operations
-    saveLocks.set(workflowId, true);
+      // Immediately acquire lock before any async operations
+      saveLocks.set(workflowId, true);
 
       console.log(
         "🔄 Starting save for workflow:",
@@ -163,13 +174,15 @@ export function useWorkflowPersistence({
             throw new Error("Save verification failed: ID mismatch");
           }
 
-        // Critical: Node count mismatch indicates data loss
-        if (data.nodes.length !== workflowToPersist.nodes.length) {
-          const errorMsg = `Node count mismatch: expected ${workflowToPersist.nodes.length}, got ${data.nodes.length}`;
-          console.error('❌', errorMsg);
-          toast.error('Save verification failed. Your data may not have been saved correctly.');
-          throw new Error(errorMsg);
-        }
+          // Critical: Node count mismatch indicates data loss
+          if (data.nodes.length !== workflowToPersist.nodes.length) {
+            const errorMsg = `Node count mismatch: expected ${workflowToPersist.nodes.length}, got ${data.nodes.length}`;
+            console.error("❌", errorMsg);
+            toast.error(
+              "Save verification failed. Your data may not have been saved correctly."
+            );
+            throw new Error(errorMsg);
+          }
 
           lastSavedWorkflow.current = workflow;
           setSaveStatus(false, null, new Date().toISOString());
@@ -180,53 +193,71 @@ export function useWorkflowPersistence({
             onFirstSave(workflow);
           }
 
-        console.log('✅ Workflow saved and verified:', workflow.name, 'at', new Date().toLocaleTimeString());
-      } catch (error: unknown) {
-        if (retries > 0) {
-          console.warn(`⚠️ Save failed, retrying... (${retries} attempts left)`);
-          // Clean up locks before retry
+          console.log(
+            "✅ Workflow saved and verified:",
+            workflow.name,
+            "at",
+            new Date().toLocaleTimeString()
+          );
+        } catch (error: unknown) {
+          if (retries > 0) {
+            console.warn(
+              `⚠️ Save failed, retrying... (${retries} attempts left)`
+            );
+            // Clean up locks before retry
+            activeSaves.delete(workflowId);
+            saveLocks.delete(workflowId);
+
+            // FIXED: Properly await retry with Promise wrapper
+            return new Promise<void>((resolve) => {
+              setTimeout(async () => {
+                try {
+                  await saveWorkflow(retries - 1);
+                  resolve();
+                } catch (retryError) {
+                  // Error will be handled in final catch below
+                  throw retryError;
+                }
+              }, 2000);
+            });
+          } else {
+            // Final retry failed - show user-facing errors
+            if (error instanceof ZodError) {
+              const errorDetails = error.issues.map((issue) => ({
+                path: issue.path.join("."),
+                message: issue.message,
+                code: issue.code,
+              }));
+              console.error(
+                "❌ Validation failed after retries:",
+                errorDetails
+              );
+              toast.error("Failed to save workflow: Invalid data structure");
+              setSaveStatus(false, "Data validation failed.", null);
+            } else if (error instanceof Error) {
+              console.error("❌ Save failed after retries:", error);
+              toast.error(`Failed to save workflow: ${error.message}`);
+              setSaveStatus(
+                false,
+                error.message || "Failed to save workflow",
+                null
+              );
+            } else {
+              console.error("❌ Unknown save error:", error);
+              toast.error("Failed to save workflow: Unknown error");
+              setSaveStatus(
+                false,
+                "An unknown error occurred while saving.",
+                null
+              );
+            }
+          }
+        } finally {
+          // Clean up the active save lock and promise
           activeSaves.delete(workflowId);
           saveLocks.delete(workflowId);
-
-          // FIXED: Properly await retry with Promise wrapper
-          return new Promise<void>((resolve) => {
-            setTimeout(async () => {
-              try {
-                await saveWorkflow(retries - 1);
-                resolve();
-              } catch (retryError) {
-                // Error will be handled in final catch below
-                throw retryError;
-              }
-            }, 2000);
-          });
-        } else {
-          // Final retry failed - show user-facing errors
-          if (error instanceof ZodError) {
-            const errorDetails = error.issues.map(issue => ({
-              path: issue.path.join('.'),
-              message: issue.message,
-              code: issue.code,
-            }));
-            console.error('❌ Validation failed after retries:', errorDetails);
-            toast.error('Failed to save workflow: Invalid data structure');
-            setSaveStatus(false, 'Data validation failed.', null);
-          } else if (error instanceof Error) {
-            console.error('❌ Save failed after retries:', error);
-            toast.error(`Failed to save workflow: ${error.message}`);
-            setSaveStatus(false, error.message || 'Failed to save workflow', null);
-          } else {
-            console.error('❌ Unknown save error:', error);
-            toast.error('Failed to save workflow: Unknown error');
-            setSaveStatus(false, 'An unknown error occurred while saving.', null);
-          }
         }
-      } finally {
-        // Clean up the active save lock and promise
-        activeSaves.delete(workflowId);
-        saveLocks.delete(workflowId);
-      }
-    })();
+      })();
 
       // Register this save as active
       activeSaves.set(workflowId, savePromise);
@@ -235,6 +266,43 @@ export function useWorkflowPersistence({
     },
     [workflow, userId, setSaveStatus]
   );
+
+  // CRITICAL FIX: Save immediately when page becomes hidden (user switching tabs)
+  // This ensures unsaved work is persisted before the tab is hidden
+  useEffect(() => {
+    if (!isPageVisible && workflow && !isWorkflowEmpty(workflow)) {
+      console.log("💾 Tab becoming hidden - triggering immediate save");
+      saveWorkflow();
+    }
+  }, [isPageVisible, workflow, saveWorkflow]);
+
+  // EMERGENCY SAVE: Trigger save on beforeunload to catch page refreshes/closes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!workflow || isWorkflowEmpty(workflow)) return;
+
+      // Check if there are unsaved changes
+      if (lastSavedWorkflow.current && workflow) {
+        const currentHash = hashWorkflow(workflow);
+        const savedHash = hashWorkflow(lastSavedWorkflow.current);
+        
+        if (currentHash !== savedHash) {
+          console.log("⚠️ Unsaved changes detected - triggering emergency save");
+          
+          // Trigger save (non-blocking, best effort)
+          saveWorkflow();
+
+          // Show browser warning about unsaved changes
+          e.preventDefault();
+          e.returnValue = "";
+          return "";
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [workflow, saveWorkflow]);
 
   // Auto-save effect
   useEffect(() => {
@@ -271,7 +339,11 @@ export function useWorkflowPersistence({
     }
 
     // CRITICAL: Verify workflow ID matches current route to prevent cross-contamination
-    if (workflowId && workflowId !== "new" && debouncedWorkflow.id !== workflowId) {
+    if (
+      workflowId &&
+      workflowId !== "new" &&
+      debouncedWorkflow.id !== workflowId
+    ) {
       console.log("⏭️ Skipping auto-save: workflow ID mismatch", {
         routeId: workflowId,
         workflowId: debouncedWorkflow.id,
