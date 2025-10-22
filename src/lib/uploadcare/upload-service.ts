@@ -34,6 +34,7 @@ export interface UploadStatus {
   size?: number;
   mime_type?: string;
   error?: string;
+  original_file_url?: string; // Full CDN URL with project-specific subdomain
 }
 
 export interface UploadResult {
@@ -140,10 +141,29 @@ export async function waitForUploadCompletion(
         throw new Error('Upload succeeded but no UUID returned');
       }
 
+      let cdnUrl = status.original_file_url || getCdnUrl(status.uuid, status.filename);
+
+      // Explicitly store the file permanently and get the correct CDN URL
+      try {
+        const storeResult = await storeFile(status.uuid);
+        console.log(`[UploadCare] File ${status.uuid} stored permanently`);
+        
+        // Use the CDN URL from the file info API if available
+        if (storeResult.cdnUrl) {
+          cdnUrl = storeResult.cdnUrl;
+          console.log(`[UploadCare] Using CDN URL from file info: ${cdnUrl}`);
+        }
+      } catch (error) {
+        console.error(`[UploadCare] Failed to store file ${status.uuid}:`, error);
+        // Continue with the fallback URL
+      }
+      
+      console.log(`[UploadCare] Final CDN URL for ${status.uuid}: ${cdnUrl}`);
+
       return {
         uuid: status.uuid,
         filename: status.filename || 'file',
-        cdnUrl: getCdnUrl(status.uuid, status.filename),
+        cdnUrl,
         size: status.size,
         mimeType: status.mime_type,
         isImage: status.is_image,
@@ -176,6 +196,56 @@ export async function uploadAndWait(
 ): Promise<UploadResult> {
   const { token } = await uploadFromUrl(params);
   return waitForUploadCompletion(token, waitOptions);
+}
+
+/**
+ * Explicitly store a file permanently (required after from_url upload)
+ * Uses REST API which requires both public and secret keys
+ * Returns the file info including the correct CDN URL
+ */
+export async function storeFile(uuid: string): Promise<{ cdnUrl?: string }> {
+  const publicKey = process.env.UPLOADCARE_PUBLIC_KEY;
+  const secretKey = process.env.UPLOADCARE_SECRET_KEY;
+  
+  if (!publicKey || !secretKey) {
+    throw new Error('UploadCare public and secret keys required for file storage');
+  }
+
+  const REST_API_BASE = 'https://api.uploadcare.com';
+  
+  // First, store the file
+  const storeResponse = await fetch(`${REST_API_BASE}/files/${uuid}/storage/`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Uploadcare.Simple ${publicKey}:${secretKey}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!storeResponse.ok) {
+    const errorText = await storeResponse.text();
+    throw new Error(`Failed to store file: ${storeResponse.status} - ${errorText}`);
+  }
+  
+  console.log(`[UploadCare] File ${uuid} stored permanently via REST API`);
+  
+  // Now get the file info to retrieve the correct CDN URL
+  const infoResponse = await fetch(`${REST_API_BASE}/files/${uuid}/`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Uploadcare.Simple ${publicKey}:${secretKey}`,
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (infoResponse.ok) {
+    const fileInfo = await infoResponse.json() as any;
+    console.log(`[UploadCare] File info for ${uuid}:`, fileInfo);
+    // The API should return original_file_url with the correct CDN subdomain
+    return { cdnUrl: fileInfo.original_file_url };
+  }
+  
+  return {};
 }
 
 /**
