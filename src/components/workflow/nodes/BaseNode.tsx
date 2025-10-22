@@ -87,7 +87,6 @@ export function BaseNode({
         <div
           onClick={handleActivationClick}
           className="absolute inset-0 z-10 cursor-pointer rounded-2xl"
-          title="Click to activate and interact"
         />
       )}
 

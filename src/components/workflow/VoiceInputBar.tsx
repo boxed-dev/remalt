@@ -12,6 +12,7 @@ interface VoiceInputBarProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
   voiceMode?: 'append' | 'replace';
   showAddButton?: boolean;
   onAddClick?: () => void;
+  showRecordingHint?: boolean;
 }
 
 /**
@@ -25,6 +26,7 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
     voiceMode = 'replace',
     showAddButton = true,
     onAddClick,
+    showRecordingHint = true,
     disabled,
     placeholder = 'Ask anything',
     className,
@@ -372,7 +374,7 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
         )}
 
         {/* Recording hint */}
-        {isRecording && (
+        {showRecordingHint && isRecording && (
           <div className="absolute top-full mt-2 left-0 right-0 text-center">
             <span className="text-[11px] text-[#6B7280]">
               Press ESC to cancel · Click mic or check to finish

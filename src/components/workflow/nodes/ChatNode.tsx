@@ -460,6 +460,7 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
             disabled={isLoading}
             voiceMode="replace"
             showAddButton={false}
+            showRecordingHint={false}
           />
         </div>
       </div>
