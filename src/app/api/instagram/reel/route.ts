@@ -333,25 +333,26 @@ async function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: st
     url: requestedUrl,
     reelCode: item.shortCode,
 
-    // Primary media URLs (UploadCare first, original as fallback)
+    // Primary media URLs: Try UploadCare first for permanent storage, with automatic fallback to Instagram
+    // The frontend component will detect Uploadcare 404s and gracefully fall back to original URLs
     videoUrl: uploadcareCdnUrl && isVideo ? uploadcareCdnUrl : videoUrl,
-    thumbnail: optimizedThumbnail || uploadcareCdnUrl || uploadcareThumbnailUrl || thumbnail,
+    thumbnail: uploadcareThumbnailUrl || optimizedThumbnail || thumbnail,
     thumbnailFallback,
     images: uploadcareImages || allImages,
 
-    // UploadCare backup info
+    // UploadCare backup info (for permanent storage)
     uploadcare: {
       status: backupStatus,
       primaryCdnUrl: uploadcareCdnUrl,
       primaryUuid: uploadcareUuid,
-      thumbnailCdnUrl: uploadcareThumbnailUrl,
+      thumbnailCdnUrl: uploadcareThumbnailUrl || optimizedThumbnail,
       thumbnailUuid: uploadcareThumbnailUuid,
       carouselUrls: uploadcareImages,
       carouselUuids: uploadcareImageUuids,
       errors: uploadErrors.length > 0 ? uploadErrors : undefined,
     },
 
-    // Original URLs (for fallback/reference)
+    // Original URLs (for automatic fallback when Uploadcare fails)
     originalVideoUrl: videoUrl,
     originalThumbnail: thumbnail,
     originalImages: allImages,

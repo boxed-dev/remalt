@@ -90,14 +90,17 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
     return url;
   }, []);
 
-  // Prefer UploadCare CDN URL for permanent storage, fallback to Instagram CDN
-  // For videos: use uploadcareThumbnailUrl (permanent thumbnail image)
-  // For images: use uploadcareCdnUrl (permanent image)
+  // Smart thumbnail selection: Try Uploadcare first (permanent), fallback to Instagram (temporary)
+  // This gives us permanent storage benefits while ensuring previews always work
   const [thumbnailSrc, setThumbnailSrc] = useState(() => {
-    if (data.isVideo) {
-      return data.uploadcareThumbnailUrl || getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || '';
+    // Try Uploadcare URLs first for permanent storage benefits
+    const uploadcareUrl = data.isVideo ? data.uploadcareThumbnailUrl : data.uploadcareCdnUrl;
+    if (uploadcareUrl) {
+      // We'll validate this loads correctly, with fallback to Instagram
+      return uploadcareUrl;
     }
-    return data.uploadcareCdnUrl || getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || '';
+    // Fallback to original Instagram URL
+    return getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || '';
   });
   const inputRef = useRef<HTMLInputElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
@@ -131,12 +134,13 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
   }, [data.url, url, isEditing]);
 
   useEffect(() => {
-    // Prefer UploadCare CDN URL for permanent storage
-    // For videos: use uploadcareThumbnailUrl (permanent thumbnail image)
-    // For images: use uploadcareCdnUrl (permanent image)
-    const nextThumbnail = data.isVideo
-      ? (data.uploadcareThumbnailUrl || getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || '')
-      : (data.uploadcareCdnUrl || getProxiedThumbnail(data.thumbnail) || data.thumbnailFallback || '');
+    // Smart thumbnail selection: Try Uploadcare first (permanent), fallback to Instagram (temporary)
+    const uploadcareUrl = data.isVideo ? data.uploadcareThumbnailUrl : data.uploadcareCdnUrl;
+    const instagramUrl = getProxiedThumbnail(data.thumbnail);
+    const fallbackUrl = data.thumbnailFallback || '';
+    
+    // Priority: Uploadcare (permanent) > Instagram (temporary) > Fallback
+    const nextThumbnail = uploadcareUrl || instagramUrl || fallbackUrl;
     setThumbnailSrc(nextThumbnail);
   }, [data.isVideo, data.uploadcareCdnUrl, data.uploadcareThumbnailUrl, data.thumbnail, data.thumbnailFallback, getProxiedThumbnail]);
 
@@ -403,18 +407,25 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
                         const target = e.target as HTMLImageElement;
                         console.log('[InstagramNode] Image load failed:', target.src);
 
-                        // Try thumbnailFallback if not already tried
-                        if (data.thumbnailFallback && target.src !== data.thumbnailFallback) {
+                        // Smart fallback chain: Uploadcare → Instagram → Microlink
+                        // 1. If Uploadcare failed, try original Instagram URL (data.originalThumbnail)
+                        if (target.src.includes('ucarecdn.com') && data.originalThumbnail) {
+                          const instagramUrl = getProxiedThumbnail(data.originalThumbnail);
+                          console.log('[InstagramNode] Uploadcare failed, trying Instagram URL:', instagramUrl);
+                          target.src = instagramUrl;
+                        }
+                        // 2. If Instagram failed, try thumbnailFallback
+                        else if (data.thumbnailFallback && target.src !== data.thumbnailFallback) {
                           console.log('[InstagramNode] Trying thumbnailFallback:', data.thumbnailFallback);
                           target.src = data.thumbnailFallback;
                         }
-                        // Try Microlink as last resort
+                        // 3. Try Microlink as last resort
                         else if (data.url && !target.src.includes('microlink.io')) {
                           const microlinkUrl = `https://image.microlink.io/${encodeURIComponent(data.url)}`;
                           console.log('[InstagramNode] Trying Microlink fallback:', microlinkUrl);
                           target.src = microlinkUrl;
                         }
-                        // All fallbacks failed - show placeholder
+                        // 4. All fallbacks failed - show placeholder
                         else {
                           console.error('[InstagramNode] All thumbnail sources failed');
                           target.style.display = 'none';
