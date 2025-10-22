@@ -28,6 +28,7 @@ import type {
   WebpageNodeData,
   YouTubeNodeData,
   InstagramNodeData,
+  LinkedInNodeData,
   PDFNodeData,
   ImageNodeData,
   VoiceNodeData,
@@ -114,6 +115,17 @@ function mapUrlToNode(url: URL): UrlNodeMapping {
     return {
       type: "instagram",
       data: { url: normalizedUrl } satisfies Partial<InstagramNodeData>,
+    };
+  }
+
+  // LinkedIn posts detection
+  if (
+    host.includes("linkedin.com") &&
+    (pathname.includes("/posts/") || pathname.includes("/feed/update/"))
+  ) {
+    return {
+      type: "linkedin",
+      data: { url: normalizedUrl } satisfies Partial<LinkedInNodeData>,
     };
   }
 
