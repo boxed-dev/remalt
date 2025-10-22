@@ -31,11 +31,13 @@ python3 transcript_api.py
 - **Language**: TypeScript (strict mode)
 - **Styling**: Tailwind CSS v4
 - **UI Components**: shadcn/ui (New York style)
-- **State Management**: Zustand with Immer middleware
+- **Rich Text Editing**: Novel (Notion-style editor), BlockNote with shadcn styling
+- **State Management**: Zustand with Immer middleware and persist
 - **Workflow Canvas**: @xyflow/react v12
 - **Authentication**: Supabase Auth with SSR support (Email + Google OAuth)
 - **Database**: Supabase PostgreSQL with Row Level Security
 - **AI Services**: Google Generative AI (Gemini 2.5 Flash/Pro), Deepgram SDK
+- **Media Storage**: Uploadcare CDN for permanent file storage
 - **Layout**: ELK.js for automatic graph layout
 
 ### Project Structure
@@ -92,6 +94,7 @@ src/
 NEXT_PUBLIC_SUPABASE_URL=           # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=      # Supabase anonymous key
 GEMINI_API_KEY=                     # Google Gemini API key
+NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY=  # Uploadcare public key for CDN uploads
 
 # Optional
 DEEPGRAM_API_KEY=                   # Voice transcription
@@ -320,12 +323,21 @@ Chat nodes automatically detect and use context from ALL connected node types:
 
 ### Node Inline Editing
 Most nodes support inline editing without properties panel:
-- Text nodes: Click to edit with inline editor
-- Voice nodes: Record directly in node with modern UI
-- Image nodes: Upload via URL or file selection
+- Text nodes: Novel editor (Notion-style) with slash commands, markdown shortcuts, and AI-powered features
+- Voice nodes: Record directly in node with modern UI and live transcription
+- Image nodes: Upload via URL or file selection with Uploadcare CDN storage
 - YouTube nodes: Paste URL for automatic transcript extraction
 - Instagram nodes: Paste URL for automatic reel data extraction
+- PDF nodes: Upload via Uploadcare for permanent storage
 - Group nodes: Toggle group chat inline
+
+### Rich Text Editing with Novel
+Text nodes use Novel editor for Notion-style editing experience:
+- **Slash Commands**: Type `/` to access formatting and content blocks
+- **Markdown Shortcuts**: Support for standard markdown syntax (**, *, #, etc.)
+- **Inline Formatting**: Bold, italic, code, links via keyboard shortcuts
+- **Block Types**: Headings, lists, code blocks, quotes
+- **AI Instructions**: Every node supports optional AI instructions for context-aware processing
 
 ## Important Implementation Details
 
@@ -383,8 +395,57 @@ YouTube transcription requires Python API server:
 - Endpoints: `/api/transcribe` (POST), `/health` (GET), `/api/clear-cache` (POST)
 - Production mode auto-detected via `RAILWAY_ENVIRONMENT` env var
 
+### Uploadcare Media Storage
+Permanent media storage handled via Uploadcare CDN:
+- **Service Location**: [upload-service.ts](src/lib/uploadcare/upload-service.ts)
+- **Upload Methods**: From URL (`uploadFromUrl`) with automatic status polling
+- **Storage Options**: Temporary (0), Permanent (1), Auto
+- **Features**: Duplicate detection, metadata support, project-specific CDN URLs
+- **Used By**: PDF nodes, Image nodes, Instagram video storage
+- **CDN Format**: `https://ucarecdn.com/{uuid}/{filename}`
+- **Upload Flow**: Upload from URL → Poll status → Get permanent CDN URL
+
+### Next.js Configuration
+Key configuration in [next.config.ts](next.config.ts):
+- **Image Domains**: YouTube thumbnails, Microlink, Uploadcare CDN
+- **Transpiled Packages**: `@uploadcare/react-uploader`, `@blocknote/*`, `@deepgram/sdk`
+- **Webpack Config**: Excludes Node.js-only modules (`ws`, `utf-8-validate`, `bufferutil`) from browser bundle
+- **Build Settings**: ESLint and TypeScript errors ignored during builds (set `ignoreDuringBuilds: true`)
+
 ## Testing & Quality
 - No test framework currently configured
 - ESLint for code quality
 - TypeScript strict mode enabled
 - Build-time type checking (set to ignore in production builds via next.config.ts)
+
+## Important UI/UX Patterns
+
+### Keyboard Shortcuts
+Global shortcuts managed via [use-keyboard-shortcuts.ts](src/hooks/use-keyboard-shortcuts.ts):
+- `Cmd/Ctrl+S`: Manual save trigger
+- `Cmd/Ctrl+Z`: Undo workflow changes
+- `Cmd/Ctrl+Shift+Z`: Redo workflow changes
+- `Cmd/Ctrl+C`: Copy selected nodes
+- `Cmd/Ctrl+V`: Paste copied nodes
+- `Delete/Backspace`: Delete selected nodes
+- Access shortcuts modal via `?` key
+
+### Quick Add Menu
+Canvas interaction for rapid node creation:
+- Right-click on canvas → Quick Add Menu ([QuickAddMenu.tsx](src/components/workflow/QuickAddMenu.tsx))
+- Categorized by node type (Media, Content, AI, Structure)
+- Visual icons and descriptions for each node type
+- Instant node placement at cursor position
+
+### Context Menus
+Three context menu types:
+1. **Node Context Menu** ([NodeContextMenu.tsx](src/components/workflow/NodeContextMenu.tsx)): Right-click node for duplicate, delete, copy
+2. **Panel Context Menu** ([PanelContextMenu.tsx](src/components/workflow/PanelContextMenu.tsx)): Right-click canvas for add, paste, layout
+3. **Selection Context Menu** ([SelectionContextMenu.tsx](src/components/workflow/SelectionContextMenu.tsx)): Multi-select actions
+
+### Save Status Indicator
+Real-time save feedback via [SaveStatusIndicator.tsx](src/components/workflow/SaveStatusIndicator.tsx):
+- Shows "Saving...", "Saved", or error states
+- Displays last saved timestamp
+- Updates automatically with auto-save
+- Manual trigger via Cmd/Ctrl+S

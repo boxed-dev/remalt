@@ -1,6 +1,6 @@
 'use client';
 
-import { Hand, MousePointer, ArrowRight, Undo2, Redo2 } from 'lucide-react';
+import { Hand, MousePointer, Undo2, Redo2 } from 'lucide-react';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { cn } from '@/lib/utils';
 
@@ -41,16 +41,6 @@ export function DifyFloatingToolbar() {
           title="Hand tool (H)"
         >
           <Hand className="h-4 w-4" />
-        </button>
-
-        <div className="w-px h-5 bg-gray-200 mx-1" />
-
-        {/* Arrow / Connection tool */}
-        <button
-          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors text-gray-700"
-          title="Connect nodes"
-        >
-          <ArrowRight className="h-4 w-4" />
         </button>
 
         <div className="w-px h-5 bg-gray-200 mx-1" />
