@@ -727,7 +727,7 @@ export const YouTubeNode = memo(({ id, data, parentId }: NodeProps<YouTubeNodeDa
       icon={isChannel ? <Users className="h-3.5 w-3.5 text-red-600" /> : <Youtube className="h-3.5 w-3.5 text-red-600" />}
       iconBg="bg-red-100"
       showTargetHandle={false}
-      allowOverflow={isChannel}
+      allowOverflow={true}
       parentId={parentId}
     >
       {isChannel ? renderChannelView() : renderVideoView()}
