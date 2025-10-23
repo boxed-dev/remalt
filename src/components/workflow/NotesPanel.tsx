@@ -1,9 +1,9 @@
 "use client";
 
-import { useCreateBlockNote } from '@blocknote/react';
-import { BlockNoteView } from '@blocknote/mantine';
-import '@blocknote/mantine/style.css';
-import '@blocknote/core/fonts/inter.css';
+import { useCreateBlockNote, SuggestionMenuController, getDefaultReactSlashMenuItems } from "@blocknote/react";
+import { BlockNoteView } from "@blocknote/mantine";
+import "@blocknote/mantine/style.css";
+import "@blocknote/core/fonts/inter.css";
 import type { Block } from '@blocknote/core';
 import { useEffect, useState, useRef } from 'react';
 import { X, FileText } from 'lucide-react';
@@ -165,7 +165,26 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
                 editor={editor}
                 theme="light"
                 data-theming-css-variables-demo
-              />
+              >
+                <SuggestionMenuController
+                  triggerCharacter={"/"}
+                  getItems={async (query) => {
+                    const items = getDefaultReactSlashMenuItems(editor);
+                    const filteredItems = items.filter((item) => {
+                      const title = item.title.toLowerCase();
+                      return !["image", "video", "audio", "file"].includes(title);
+                    });
+                    // Filter by query
+                    if (!query) return filteredItems;
+                    const lowerQuery = query.toLowerCase();
+                    return filteredItems.filter((item) => 
+                      item.title.toLowerCase().includes(lowerQuery) ||
+                      item.subtext?.toLowerCase().includes(lowerQuery) ||
+                      item.aliases?.some(alias => alias.toLowerCase().includes(lowerQuery))
+                    );
+                  }}
+                />
+              </BlockNoteView>
             </div>
           )}
         </div>
@@ -179,6 +198,46 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
 
           .bn-editor {
             padding: 0;
+          }
+
+          /* HIDE: Plus button (add block button) by hiding the add-block-button */
+          .bn-side-menu button[data-test="addBlock"],
+          .bn-side-menu .bn-add-block-button,
+          button[aria-label*="Add block"],
+          button[title*="Add block"] {
+            display: none !important;
+          }
+
+          /* SHOW: Drag handles with proper centering */
+          .bn-drag-handle-menu {
+            position: absolute !important;
+            left: -28px !important;
+            top: 0 !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            opacity: 0;
+            transition: opacity 0.2s;
+          }
+
+          .bn-block-outer:hover .bn-drag-handle-menu {
+            opacity: 1;
+          }
+
+          /* Drag handle button styling */
+          .bn-drag-handle-button,
+          button[data-test="dragHandle"],
+          button[aria-label*="Drag"],
+          button[title*="Drag"] {
+            cursor: grab !important;
+            padding: 4px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          .bn-drag-handle-button:active {
+            cursor: grabbing !important;
           }
 
           /* Heading styles */
@@ -234,6 +293,8 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
             border-radius: 0.5rem;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             border: 1px solid #e5e7eb;
+            max-height: 400px;
+            overflow-y: auto;
           }
 
           .bn-suggestion-menu-item {
@@ -241,28 +302,8 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
             font-size: 0.875rem;
           }
 
-          .bn-suggestion-menu-item[data-selected] {
+          .bn-suggestion-menu-item[data-selected="true"] {
             background: #f3f4f6;
-          }
-
-          /* Drag handle styling */
-          .bn-drag-handle {
-            opacity: 0;
-            transition: opacity 0.2s;
-          }
-
-          .bn-block-outer:hover .bn-drag-handle {
-            opacity: 1;
-          }
-
-          /* Side menu button */
-          .bn-side-menu-button {
-            opacity: 0;
-            transition: opacity 0.2s;
-          }
-
-          .bn-block-outer:hover .bn-side-menu-button {
-            opacity: 1;
           }
 
           /* Formatting toolbar */
