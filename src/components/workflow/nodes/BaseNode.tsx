@@ -1,4 +1,4 @@
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, useReactFlow } from '@xyflow/react';
 import type { ReactNode, CSSProperties } from 'react';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 
@@ -24,8 +24,10 @@ interface BaseNodeProps {
   // NEW: Multiple handles support
   sourceHandles?: HandleConfig[];
   targetHandles?: HandleConfig[];
-  // NEW: Parent group detection for hiding handles
+  // NEW: Parent group detection for hiding handles  
+  // Support both parentId (current) and parentNode (legacy) for React Flow compatibility
   parentId?: string | null;
+  parentNode?: string | null;
 }
 
 export function BaseNode({
@@ -36,17 +38,24 @@ export function BaseNode({
   children,
   showSourceHandle = true,
   showTargetHandle = false, // Changed default to false - most nodes only need source handle
-  allowOverflow = false,
+  allowOverflow = true, // Changed to true to allow handles to extend outside node boundary
   sourceHandlePosition = Position.Right,
   targetHandlePosition = Position.Left,
   sourceHandles,
   targetHandles,
   parentId,
+  parentNode,
 }: BaseNodeProps) {
   // Node activation system
   const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
   const setActiveNode = useWorkflowStore((state) => state.setActiveNode);
   const isActive = activeNodeId === id;
+  
+  // Get the actual parentId from React Flow's internal state
+  // This is more reliable than relying on props which may not be passed correctly
+  const { getNode } = useReactFlow();
+  const node = getNode(id);
+  const actualParentId = node?.parentId || parentId || parentNode;
 
   const handleActivationClick = (e: React.MouseEvent) => {
     if (!isActive) {
@@ -73,7 +82,8 @@ export function BaseNode({
   };
 
   // Hide handles when node is inside a group
-  const isChildOfGroup = !!parentId;
+  // Use actualParentId from React Flow's getNode() for reliable parent detection
+  const isChildOfGroup = !!actualParentId;
   const shouldShowSourceHandle = showSourceHandle && !isChildOfGroup;
   const shouldShowTargetHandle = showTargetHandle && !isChildOfGroup;
   return (
