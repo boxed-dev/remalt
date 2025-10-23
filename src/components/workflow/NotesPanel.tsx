@@ -1,16 +1,11 @@
 'use client';
 
-import {
-  useCreateBlockNote,
-  SuggestionMenuController,
-  getDefaultReactSlashMenuItems,
-} from "@blocknote/react";
+import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
-import "@blocknote/core/fonts/inter.css";
 import type { Block } from "@blocknote/core";
 import { useEffect, useState, useRef } from "react";
-import { X, FileText } from "lucide-react";
+import { X, FileText, Loader2 } from "lucide-react";
 import { useNotesStore } from "@/lib/stores/notes-store";
 
 interface NotesPanelProps {
@@ -40,75 +35,26 @@ export function NotesPanel({
   const isWorkflowSaving = isSaving[workflowId] || false;
   const isWorkflowLoading = isLoading[workflowId] || false;
 
-  // Initialize editor with StarterKit and extensions
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        },
-      }),
-      Placeholder.configure({
-        placeholder: 'Start typing your notes or type "/" for commands...',
-        emptyEditorClass: 'is-editor-empty',
-      }),
-      Typography,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          target: '_blank',
-          rel: 'noopener noreferrer',
-          class: 'text-primary underline hover:no-underline cursor-pointer',
-        },
-      }),
-      TextStyle,
-      Color,
-      Underline,
-      TaskList.configure({
-        HTMLAttributes: {
-          class: 'not-prose pl-0',
-        },
-      }),
-      TaskItem.configure({
-        HTMLAttributes: {
-          class: 'flex items-start',
-        },
-        nested: true,
-      }),
-      SlashCommandExtension,
-    ],
-    content: '',
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[200px] px-4 py-3',
-      },
-    },
-    onUpdate: ({ editor }) => {
-      if (!isInitializingRef.current) {
-        const json = editor.getJSON();
-        const jsonString = JSON.stringify(json);
-
-        // Only update if content actually changed
-        if (jsonString !== lastSavedContent.current) {
-          updateContent(workflowId, jsonString);
-          debouncedSave();
-        }
-      }
-    },
+  // Initialize BlockNote editor
+  const editor = useCreateBlockNote({
+    initialContent: undefined,
   });
 
   // Debounced save function (1 second)
-  const debouncedSave = useDebouncedCallback(
-    async () => {
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debouncedSave = async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
       if (workflowId !== 'new' && editor && !isInitializingRef.current) {
-        const json = editor.getJSON();
-        const jsonString = JSON.stringify(json);
-        lastSavedContent.current = jsonString;
-        await saveNotes(workflowId, userId, jsonString);
+        const blocks = await editor.blocksToFullHTML();
+        lastSavedContent.current = blocks;
+        await saveNotes(workflowId, userId, blocks);
       }
-    },
-    1000
-  );
+    }, 1000);
+  };
 
   // Load notes when panel opens or workflow changes
   useEffect(() => {
@@ -187,9 +133,12 @@ export function NotesPanel({
     });
 
     return () => {
-      debouncedSave.cancel();
+      unsubscribe();
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
     };
-  }, [debouncedSave]);
+  }, [editor, isEditorReady, workflowId, userId, updateContent, saveNotes]);
 
   if (!isOpen) return null;
 
@@ -201,8 +150,8 @@ export function NotesPanel({
         onClick={onClose}
       />
 
-      {/* Sidebar Panel */}
-      <div className="fixed right-0 top-0 h-full w-[480px] bg-white shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-200">
+      {/* Sidebar Panel - Full height */}
+      <div className="fixed right-0 top-0 h-screen w-[480px] bg-white shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
@@ -223,65 +172,85 @@ export function NotesPanel({
         {/* Save Status */}
         <div className="px-6 py-2 border-b border-gray-200 bg-gray-50">
           <div className="text-xs text-gray-500">
-            {currentSaving ? "Saving..." : "Saved"}
+            {isWorkflowSaving ? "Saving..." : "Saved"}
           </div>
+        </div>
 
-          {/* Toolbar */}
-          {editor && isEditorReady && (
-            <TiptapToolbar editor={editor} />
-          )}
-
-          {/* Editor */}
-          <div className="flex-1 overflow-y-auto">
-            {isWorkflowLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <EditorContent
+        {/* Editor - Full height with proper padding */}
+        <div className="flex-1 overflow-y-auto bg-white">
+          {isWorkflowLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="h-full">
+              <BlockNoteView
                 editor={editor}
                 theme="light"
                 data-theming-css-variables-demo
-              >
-                <SuggestionMenuController
-                  triggerCharacter={"/"}
-                  getItems={async (query) => {
-                    const items = getDefaultReactSlashMenuItems(editor);
-                    const filteredItems = items.filter((item) => {
-                      const title = item.title.toLowerCase();
-                      return !["image", "video", "audio", "file"].includes(
-                        title
-                      );
-                    });
-                    // Filter by query
-                    if (!query) return filteredItems;
-                    const lowerQuery = query.toLowerCase();
-                    return filteredItems.filter(
-                      (item) =>
-                        item.title.toLowerCase().includes(lowerQuery) ||
-                        item.subtext?.toLowerCase().includes(lowerQuery) ||
-                        item.aliases?.some((alias) =>
-                          alias.toLowerCase().includes(lowerQuery)
-                        )
-                    );
-                  }}
-                />
-              </BlockNoteView>
+              />
             </div>
           )}
         </div>
+      </div>
 
-        {/* Custom Styles for BlockNote Editor */}
-        <style jsx global>{`
+      {/* Custom Styles for BlockNote Editor */}
+      <style jsx global>{`
           /* BlockNote custom styling */
           .bn-container {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+            font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
               sans-serif;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
           }
 
           .bn-editor {
-            padding: 0;
+            padding: 24px;
+            flex: 1;
+            overflow-y: auto;
           }
+
+          /* Style the default formatting toolbar */
+          .bn-formatting-toolbar {
+            background: white !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+            padding: 4px !important;
+          }
+
+          .bn-formatting-toolbar button {
+            border-radius: 6px !important;
+            padding: 6px !important;
+            margin: 2px !important;
+            transition: all 0.15s ease !important;
+          }
+
+          .bn-formatting-toolbar button:hover {
+            background: #f3f4f6 !important;
+          }
+
+          .bn-formatting-toolbar button[data-selected="true"] {
+            background: #eff6ff !important;
+            color: #2563eb !important;
+          }
+
+          /* Style the slash menu if it appears */
+          .bn-slash-menu {
+            background: white !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 8px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+            padding: 8px !important;
+          }
+
+          /* Remove keyboard shortcuts from all menus */
+          .bn-menu-item kbd,
+          .bn-menu-item [class*="shortcut"] {
+            display: none !important;
+          }
+
 
           /* HIDE: Plus button (add block button) and drag handle buttons */
           .bn-side-menu,
@@ -297,13 +266,15 @@ export function NotesPanel({
             display: none !important;
           }
 
-          /* Heading styles */
+          /* Heading styles with Geist optimization */
           .bn-block-content h1 {
             font-size: 1.875rem;
             font-weight: 700;
             line-height: 1.3;
             color: #111827;
             margin: 1rem 0 0.5rem;
+            letter-spacing: -0.033em;
+            font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1, 'ss01' 1, 'ss02' 1;
           }
 
           .bn-block-content h2 {
@@ -312,6 +283,8 @@ export function NotesPanel({
             line-height: 1.3;
             color: #1f2937;
             margin: 0.875rem 0 0.5rem;
+            letter-spacing: -0.028em;
+            font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1, 'ss01' 1;
           }
 
           .bn-block-content h3 {
@@ -320,14 +293,18 @@ export function NotesPanel({
             line-height: 1.3;
             color: #374151;
             margin: 0.75rem 0 0.375rem;
+            letter-spacing: -0.021em;
+            font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
           }
 
-          /* Paragraph styles - Reduced spacing */
+          /* Paragraph styles - Optimized with Geist */
           .bn-block-content p {
             font-size: 0.9375rem;
-            line-height: 1.4;
-            color: #4b5563;
-            margin-bottom: 0.25rem;
+            line-height: 1.5;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.011em;
+            font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
           }
 
           /* List styles - Reduced spacing */
@@ -420,8 +397,7 @@ export function NotesPanel({
           .bn-editor > .bn-block-outer:first-child p {
             margin-top: 0;
           }
-        `}</style>
-      </div>
+      `}</style>
     </>
   );
 }
