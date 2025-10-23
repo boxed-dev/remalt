@@ -306,7 +306,7 @@ export default function WorkflowEditorPage() {
           <button
             onClick={() => router.push("/flows")}
             className="px-6 py-2.5 bg-[#095D40] text-white rounded-lg font-medium text-[14px] hover:bg-[#074030] transition-all"
-            className="px-6 py-2.5 bg-[#095D40] text-white rounded-lg font-medium text-[14px] hover:bg-[#074030] transition-all"
+
           >
             Back to Flows
           </button>
