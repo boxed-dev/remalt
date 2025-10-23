@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  transpilePackages: ['@uploadcare/react-uploader', '@blocknote/core', '@blocknote/react', '@blocknote/shadcn', '@deepgram/sdk'],
+  transpilePackages: ['@uploadcare/react-uploader', '@deepgram/sdk'],
   webpack: (config, { isServer }) => {
     // Exclude Node.js-only modules from browser bundle
     if (!isServer) {

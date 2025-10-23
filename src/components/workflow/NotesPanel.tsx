@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   useCreateBlockNote,
@@ -32,15 +32,85 @@ export function NotesPanel({
     undefined
   );
   const [isEditorReady, setIsEditorReady] = useState(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializingRef = useRef(false);
+  const lastSavedContent = useRef<string>('');
 
-  // Create BlockNote editor
-  const editor = useCreateBlockNote({
-    initialContent: initialBlocks,
+  // Get content for this workflow
+  const workflowContent = content[workflowId] || '';
+  const isWorkflowSaving = isSaving[workflowId] || false;
+  const isWorkflowLoading = isLoading[workflowId] || false;
+
+  // Initialize editor with StarterKit and extensions
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
+      }),
+      Placeholder.configure({
+        placeholder: 'Start typing your notes or type "/" for commands...',
+        emptyEditorClass: 'is-editor-empty',
+      }),
+      Typography,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          class: 'text-primary underline hover:no-underline cursor-pointer',
+        },
+      }),
+      TextStyle,
+      Color,
+      Underline,
+      TaskList.configure({
+        HTMLAttributes: {
+          class: 'not-prose pl-0',
+        },
+      }),
+      TaskItem.configure({
+        HTMLAttributes: {
+          class: 'flex items-start',
+        },
+        nested: true,
+      }),
+      SlashCommandExtension,
+    ],
+    content: '',
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[200px] px-4 py-3',
+      },
+    },
+    onUpdate: ({ editor }) => {
+      if (!isInitializingRef.current) {
+        const json = editor.getJSON();
+        const jsonString = JSON.stringify(json);
+
+        // Only update if content actually changed
+        if (jsonString !== lastSavedContent.current) {
+          updateContent(workflowId, jsonString);
+          debouncedSave();
+        }
+      }
+    },
   });
 
-  // Load notes when panel opens or workflowId changes
+  // Debounced save function (1 second)
+  const debouncedSave = useDebouncedCallback(
+    async () => {
+      if (workflowId !== 'new' && editor && !isInitializingRef.current) {
+        const json = editor.getJSON();
+        const jsonString = JSON.stringify(json);
+        lastSavedContent.current = jsonString;
+        await saveNotes(workflowId, userId, jsonString);
+      }
+    },
+    1000
+  );
+
+  // Load notes when panel opens or workflow changes
   useEffect(() => {
     if (isOpen && workflowId && userId) {
       console.log("[NotesPanel] Loading notes for workflow:", workflowId);
@@ -48,7 +118,7 @@ export function NotesPanel({
     }
   }, [isOpen, workflowId, userId, loadNotes]);
 
-  // Parse content from store and update editor (only on initial load)
+  // Update editor content when data changes
   useEffect(() => {
     if (!editor || !isOpen || isEditorReady) return;
 
@@ -84,9 +154,9 @@ export function NotesPanel({
         isInitializingRef.current = false;
       }, 100);
     }
-  }, [content, workflowId, editor, isOpen, isEditorReady]);
+  }, [editor, workflowContent]);
 
-  // Setup onChange listener for editor (only after editor is ready)
+  // Cleanup on unmount
   useEffect(() => {
     if (!editor || !isEditorReady) return;
 
@@ -117,17 +187,9 @@ export function NotesPanel({
     });
 
     return () => {
-      // Cleanup timeout on unmount
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      // Unsubscribe from editor changes
-      unsubscribe();
+      debouncedSave.cancel();
     };
-  }, [editor, workflowId, userId, isEditorReady, updateContent, saveNotes]);
-
-  const currentLoading = isLoading[workflowId] || false;
-  const currentSaving = isSaving[workflowId] || false;
+  }, [debouncedSave]);
 
   if (!isOpen) return null;
 
@@ -163,17 +225,20 @@ export function NotesPanel({
           <div className="text-xs text-gray-500">
             {currentSaving ? "Saving..." : "Saved"}
           </div>
-        </div>
 
-        {/* Editor Content */}
-        <div className="flex-1 overflow-y-auto bg-white">
-          {currentLoading || !isEditorReady ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-sm text-gray-500">Loading notes...</div>
-            </div>
-          ) : (
-            <div className="px-4 py-4">
-              <BlockNoteView
+          {/* Toolbar */}
+          {editor && isEditorReady && (
+            <TiptapToolbar editor={editor} />
+          )}
+
+          {/* Editor */}
+          <div className="flex-1 overflow-y-auto">
+            {isWorkflowLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <EditorContent
                 editor={editor}
                 theme="light"
                 data-theming-css-variables-demo
