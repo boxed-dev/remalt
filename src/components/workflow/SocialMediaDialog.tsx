@@ -45,8 +45,8 @@ const platformConfig = {
   linkedin: {
     name: 'LinkedIn',
     icon: LinkedinLogo,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50 hover:bg-blue-100',
+    color: 'text-[#095D40]',
+    bgColor: 'bg-[#095D40]/10 hover:bg-[#095D40]/20',
     placeholder: 'https://www.linkedin.com/posts/...',
   },
   youtube: {
@@ -132,8 +132,8 @@ export function SocialMediaDialog({ open, onOpenChange, onAddNode }: SocialMedia
               onClick={() => handlePlatformSelect('linkedin')}
               className={`p-3 rounded-xl transition-all ${
                 detectedPlatform === 'linkedin'
-                  ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-200'
-                  : 'text-gray-400 hover:text-blue-500 hover:bg-gray-50'
+                  ? 'bg-[#095D40]/10 text-[#095D40] ring-2 ring-[#095D40]/30'
+                  : 'text-gray-400 hover:text-[#095D40] hover:bg-gray-50'
               }`}
               title="LinkedIn"
             >

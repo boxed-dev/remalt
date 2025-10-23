@@ -14,7 +14,7 @@ export function FlowSidebar() {
         title="Flows"
         className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
           pathname === "/flows" || pathname?.startsWith("/flows/")
-            ? "bg-blue-100 text-blue-600"
+            ? "bg-[#D4AF7F]/20 text-[#095D40]"
             : "hover:bg-gray-100 text-gray-700"
         }`}
       >

@@ -97,7 +97,7 @@ div[class*="react-flow__node"].react-flow__node-group {
 
 /* Edge path */
 .react-flow__edge-path {
-  stroke: #9ca3af;
+  stroke: #6B7280;
   stroke-width: 3.5;
   stroke-linecap: round;
 }
@@ -114,12 +114,12 @@ div[class*="react-flow__node"].react-flow__node-group {
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #095d40;
+  stroke: #095D40;
   stroke-width: 4.5;
 }
 
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke: #6b7280;
+  stroke: #333333;
   stroke-width: 4;
 }
 
@@ -157,7 +157,7 @@ div[class*="react-flow__node"].react-flow__node-group {
 }
 
 .react-flow__controls-button:hover svg {
-  fill: #095d40;
+  fill: #095D40;
 }
 
 /* Attribution */
@@ -168,12 +168,12 @@ div[class*="react-flow__node"].react-flow__node-group {
 /* Selection */
 .react-flow__selection {
   background: rgba(9, 93, 64, 0.08);
-  border: 1.5px solid #095d40;
+  border: 1.5px solid #095D40;
 }
 
 /* Connection line - Enhanced with animation */
 .react-flow__connectionline {
-  stroke: #095d40;
+  stroke: #095D40;
   stroke-width: 4;
   stroke-linecap: round;
   filter: drop-shadow(0 2px 4px rgba(9, 93, 64, 0.3));
@@ -280,7 +280,7 @@ div[class*="react-flow__node"].react-flow__node-group {
 .react-flow__handle:hover {
   opacity: 1 !important;
   transform: scale(1.5);
-  border-color: #095d40 !important;
+  border-color: #095D40 !important;
   border-width: 3px !important;
   box-shadow: 0 0 0 4px rgba(9, 93, 64, 0.15), 0 0 12px rgba(9, 93, 64, 0.3),
     0 4px 8px rgba(0, 0, 0, 0.1) !important;
@@ -338,7 +338,7 @@ div[class*="react-flow__node"].react-flow__node-group {
   opacity: 1;
   transform: translateZ(0) scale(2);
   box-shadow: 0 0 0 8px rgba(9, 93, 64, 0.3), 0 0 25px rgba(9, 93, 64, 0.5);
-  border-color: #095d40 !important;
+  border-color: #095D40 !important;
 }
 
 /* Source handle (where connection starts) */
@@ -408,7 +408,7 @@ div[class*="react-flow__node"].react-flow__node-group {
 }
 
 .chat-scrollbar::-webkit-scrollbar-thumb {
-  background: #9ca3af;
+  background: #D4AF7F;
   border-radius: 8px;
   border: 2px solid transparent;
   background-clip: padding-box;
@@ -416,14 +416,14 @@ div[class*="react-flow__node"].react-flow__node-group {
 }
 
 .chat-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: #095D40;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 .chat-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #9ca3af rgba(0, 0, 0, 0.02);
+  scrollbar-color: #D4AF7F rgba(0, 0, 0, 0.02);
 }
 
 /* Loading pulse animation */

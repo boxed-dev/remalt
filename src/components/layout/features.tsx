@@ -1,81 +1,216 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { MessageSquare, Workflow, Library, Zap, Brain, Users } from "lucide-react";
+'use client';
+
+import {
+  Sparkles,
+  Layers,
+  Zap,
+  Globe,
+  MessageSquare,
+  FileText,
+  Mic,
+  Image,
+  Youtube
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 const features = [
   {
-    icon: MessageSquare,
-    title: "AI Chat Interface",
-    description: "Intuitive chat interface for seamless AI interactions and prompt testing.",
+    title: "Just Drag & Drop",
+    description: "No code. No complexity. Build powerful AI workflows in minutes, not months.",
+    icon: Layers,
+    color: "text-[#095D40]",
+    bgColor: "bg-[#095D40]/10",
   },
   {
-    icon: Library,
-    title: "Prompt Collections",
-    description: "Curated library of proven prompts for different use cases and industries.",
+    title: "AI That Understands",
+    description: "Connect GPT-4, Claude, and Gemini. Your AI arsenal, unified.",
+    icon: Sparkles,
+    color: "text-[#D4AF7F]",
+    bgColor: "bg-[#D4AF7F]/10",
   },
   {
-    icon: Workflow,
-    title: "Visual Workflow Builder",
-    description: "Drag-and-drop interface to create complex AI automation workflows.",
-  },
-  {
+    title: "Real-Time Magic",
+    description: "Watch your workflows come alive. Instant results, infinite possibilities.",
     icon: Zap,
-    title: "One-Click Automation",
-    description: "Deploy and run your AI workflows with a single click.",
-  },
-  {
-    icon: Brain,
-    title: "Smart Optimization",
-    description: "AI-powered suggestions to improve your workflow performance.",
-  },
-  {
-    icon: Users,
-    title: "Team Collaboration",
-    description: "Share and collaborate on workflows with your team members.",
+    color: "text-[#095D40]",
+    bgColor: "bg-[#095D40]/10",
   },
 ];
 
+const nodeTypes = [
+  { icon: Youtube, label: "YouTube", color: "#095D40" },
+  { icon: FileText, label: "PDFs", color: "#D4AF7F" },
+  { icon: Mic, label: "Voice", color: "#095D40" },
+  { icon: Image, label: "Images", color: "#D4AF7F" },
+  { icon: Globe, label: "Web", color: "#095D40" },
+  { icon: MessageSquare, label: "Chat", color: "#D4AF7F" },
+];
+
 export function Features() {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className="py-20 lg:py-32 bg-white">
+    <section ref={sectionRef} className="py-24 lg:py-32 bg-white" id="features">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-gray-900 mb-6">
-            Everything you need to
+        {/* Section Header */}
+        <div className="text-center mb-20">
+          <h2 className={`text-4xl sm:text-5xl lg:text-6xl font-bold text-[#333333] mb-6 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
+            Everything you need.
             <br />
-            <span className="bg-gradient-to-r from-[#095D40] to-[#D4AF7F] bg-clip-text text-transparent">
-              automate with AI
-            </span>
+            <span className="text-[#095D40]">Nothing you don't.</span>
           </h2>
-          <p className="text-lg sm:text-xl text-gray-600 leading-relaxed">
-            Powerful tools designed for modern teams who want to harness
-            the full potential of artificial intelligence.
+          <p className={`text-xl text-[#6B7280] max-w-3xl mx-auto ${isVisible ? 'animate-fade-in-delay' : 'opacity-0'}`}>
+            Stop wrestling with complicated tools. Start creating with intuitive simplicity.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <Card
-                key={index}
-                className="border-0 shadow-sm hover:shadow-lg transition-all duration-300 group cursor-pointer"
+        {/* Main Features Grid */}
+        <div className="grid md:grid-cols-3 gap-8 mb-24">
+          {features.map((feature, index) => (
+            <div
+              key={feature.title}
+              className={`group p-8 rounded-2xl border border-[#E8ECEF] hover:border-[#095D40]/30 hover:shadow-xl transition-all duration-300 ${
+                isVisible ? `animate-slide-up-${index}` : 'opacity-0'
+              }`}
+            >
+              <div className={`w-14 h-14 ${feature.bgColor} rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                <feature.icon className={`w-7 h-7 ${feature.color}`} />
+              </div>
+              <h3 className="text-2xl font-bold text-[#333333] mb-3">
+                {feature.title}
+              </h3>
+              <p className="text-[#6B7280] text-lg leading-relaxed">
+                {feature.description}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Connect Everything Section */}
+        <div className={`bg-gradient-to-br from-[#095D40]/5 to-[#D4AF7F]/5 rounded-3xl p-12 lg:p-16 ${isVisible ? 'animate-fade-in-slow' : 'opacity-0'}`}>
+          <div className="text-center mb-12">
+            <h3 className="text-3xl sm:text-4xl font-bold text-[#333333] mb-4">
+              Connect Everything
+            </h3>
+            <p className="text-xl text-[#6B7280] max-w-2xl mx-auto">
+              From social media to documents, from voice to vision. One canvas, infinite connections.
+            </p>
+          </div>
+
+          {/* Animated Node Grid */}
+          <div className="flex flex-wrap justify-center gap-4">
+            {nodeTypes.map((node, index) => (
+              <div
+                key={node.label}
+                className={`group cursor-pointer ${isVisible ? `animate-pop-${index}` : 'opacity-0'}`}
               >
-                <CardContent className="p-8 text-center">
-                  <div className="mb-6 mx-auto w-16 h-16 bg-gradient-to-br from-[#095D40]/10 to-[#D4AF7F]/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Icon className="w-8 h-8 text-[#095D40]" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    {feature.description}
+                <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                  <node.icon
+                    className="w-10 h-10 mb-3 mx-auto"
+                    style={{ color: node.color }}
+                  />
+                  <p className="text-sm font-medium text-[#333333] text-center">
+                    {node.label}
                   </p>
-                </CardContent>
-              </Card>
-            );
-          })}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes fade-in-slow {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(40px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes pop {
+          from {
+            opacity: 0;
+            transform: scale(0.5);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.8s ease-out forwards;
+        }
+
+        .animate-fade-in-delay {
+          animation: fade-in 0.8s ease-out 0.2s forwards;
+          opacity: 0;
+        }
+
+        .animate-fade-in-slow {
+          animation: fade-in-slow 1s ease-out 0.4s forwards;
+          opacity: 0;
+        }
+
+        .animate-slide-up-0 {
+          animation: slide-up 0.6s ease-out forwards;
+        }
+
+        .animate-slide-up-1 {
+          animation: slide-up 0.6s ease-out 0.1s forwards;
+          opacity: 0;
+        }
+
+        .animate-slide-up-2 {
+          animation: slide-up 0.6s ease-out 0.2s forwards;
+          opacity: 0;
+        }
+
+        .animate-pop-0 { animation: pop 0.4s ease-out 0.6s forwards; opacity: 0; }
+        .animate-pop-1 { animation: pop 0.4s ease-out 0.7s forwards; opacity: 0; }
+        .animate-pop-2 { animation: pop 0.4s ease-out 0.8s forwards; opacity: 0; }
+        .animate-pop-3 { animation: pop 0.4s ease-out 0.9s forwards; opacity: 0; }
+        .animate-pop-4 { animation: pop 0.4s ease-out 1s forwards; opacity: 0; }
+        .animate-pop-5 { animation: pop 0.4s ease-out 1.1s forwards; opacity: 0; }
+      `}</style>
     </section>
   );
 }

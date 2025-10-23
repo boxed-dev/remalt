@@ -266,7 +266,7 @@ export function NovelEditor({
           }),
           TiptapLink.configure({
             HTMLAttributes: {
-              class: 'text-blue-600 underline underline-offset-2 hover:text-blue-700 cursor-pointer',
+              class: 'text-[#095D40] underline underline-offset-2 hover:text-[#074030] cursor-pointer',
             },
             openOnClick: false,
           }),

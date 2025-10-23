@@ -482,7 +482,7 @@ export const YouTubeNode = memo(
         case "loading":
           return (
             <div className="flex items-center gap-1 text-[10px] text-[#475569] font-medium">
-              <Loader2 className="h-3 w-3 animate-spin text-[#2563EB]" />
+              <Loader2 className="h-3 w-3 animate-spin text-[#095D40]" />
               <span>Fetching transcript...</span>
             </div>
           );
@@ -554,7 +554,7 @@ export const YouTubeNode = memo(
         {/* Loading/Error States */}
         {data.channelLoadStatus === "loading" && (
           <div className="flex items-center gap-2 text-[12px] text-[#475569] py-4">
-            <Loader2 className="h-4 w-4 animate-spin text-[#2563EB]" />
+            <Loader2 className="h-4 w-4 animate-spin text-[#095D40]" />
             <span>Loading channel videos...</span>
           </div>
         )}
@@ -578,7 +578,7 @@ export const YouTubeNode = memo(
                   stopPropagation(e);
                   setExpandedVideos(!expandedVideos);
                 }}
-                className="text-[11px] text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1 font-medium cursor-pointer"
+                className="text-[11px] text-[#095D40] hover:text-[#074030] flex items-center gap-1 font-medium cursor-pointer"
               >
                 {expandedVideos ? (
                   <>
@@ -640,7 +640,7 @@ export const YouTubeNode = memo(
                     relative rounded-lg border p-2.5 cursor-pointer transition-all flex-shrink-0
                     ${
                       video.selected
-                        ? "border-[#2563EB] bg-[#EFF6FF] shadow-sm"
+                        ? "border-[#095D40] bg-[#095D40]/5 shadow-sm"
                         : "border-[#E5E7EB] bg-white hover:border-[#94A3B8]"
                     }
                   `}
@@ -688,7 +688,7 @@ export const YouTubeNode = memo(
                       </div>
                       {video.selected && (
                         <div className="absolute top-2 right-2 bg-white rounded-full p-0.5 shadow-sm">
-                          <CheckCircle2 className="h-4 w-4 text-[#2563EB]" />
+                          <CheckCircle2 className="h-4 w-4 text-[#095D40]" />
                         </div>
                       )}
                     </div>
