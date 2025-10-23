@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { FileText } from "lucide-react";
 import { WorkflowCanvas } from "@/components/workflow/WorkflowCanvas";
 import { DifyWorkflowHeader } from "@/components/workflow/DifyWorkflowHeader";
 import { DifyWorkflowSidebar } from "@/components/workflow/DifyWorkflowSidebar";
