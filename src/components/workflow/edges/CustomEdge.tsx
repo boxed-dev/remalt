@@ -5,6 +5,7 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getSmoothStepPath,
+  useViewport,
   type EdgeProps,
 } from '@xyflow/react';
 import { X } from 'lucide-react';
@@ -25,6 +26,45 @@ export function CustomEdge({
   const deleteEdge = useWorkflowStore((state) => state.deleteEdge);
   const [isHovered, setIsHovered] = useState(false);
   const edgeRef = useRef<SVGGElement>(null);
+  const { zoom } = useViewport();
+
+  // Calculate dynamic stroke width based on zoom level
+  // This ensures edges remain visible at all zoom levels
+  const calculateStrokeWidth = useCallback((baseWidth: number) => {
+    // Inverse relationship with zoom: as zoom decreases (zoom out), stroke increases
+    // Using a smooth logarithmic scale for better visual continuity
+    const minZoom = 0.1;
+    const maxZoom = 2;
+
+    // Clamp zoom to reasonable bounds
+    const clampedZoom = Math.max(minZoom, Math.min(maxZoom, zoom));
+
+    // Calculate scale factor - increases as zoom decreases
+    // At zoom 1.0 (100%), scaleFactor = 1
+    // At zoom 0.5 (50%), scaleFactor ≈ 1.4
+    // At zoom 0.25 (25%), scaleFactor ≈ 2
+    // At zoom 0.1 (10%), scaleFactor ≈ 3
+    const scaleFactor = Math.pow(1 / clampedZoom, 0.5);
+
+    // Apply scale with reasonable bounds
+    const minWidth = baseWidth;
+    const maxWidth = baseWidth * 4; // Maximum 4x the base width
+
+    const scaledWidth = baseWidth * scaleFactor;
+    return Math.max(minWidth, Math.min(maxWidth, scaledWidth));
+  }, [zoom]);
+
+  // Calculate dynamic dash pattern based on zoom level
+  const calculateDashArray = useCallback(() => {
+    const baseDash = 2;
+    const baseGap = 6;
+    const scaleFactor = Math.pow(1 / Math.max(0.1, Math.min(2, zoom)), 0.5);
+
+    const scaledDash = baseDash * scaleFactor;
+    const scaledGap = baseGap * scaleFactor;
+
+    return `${scaledDash} ${scaledGap}`;
+  }, [zoom]);
 
   // Memoize path calculation for performance and consistency
   const [edgePath, labelX, labelY] = useMemo(() => {
@@ -102,7 +142,7 @@ export function CustomEdge({
           d={edgePath}
           fill="none"
           stroke="transparent"
-          strokeWidth={20}
+          strokeWidth={calculateStrokeWidth(20)}
           style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
         />
 
@@ -111,11 +151,14 @@ export function CustomEdge({
           d={edgePath}
           fill="none"
           stroke="#86EFAC"
-          strokeWidth={selected ? 3.5 : 2.5}
-          strokeDasharray="2 6"
+          strokeWidth={calculateStrokeWidth(selected ? 3.5 : 2.5)}
+          strokeDasharray={calculateDashArray()}
           strokeLinecap="round"
           opacity={0.7}
-          style={{ pointerEvents: 'none' }}
+          style={{
+            pointerEvents: 'none',
+            transition: 'stroke-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), stroke-dasharray 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
         />
 
         {/* Animated dark green dotted layer */}
@@ -123,14 +166,15 @@ export function CustomEdge({
           d={edgePath}
           fill="none"
           stroke={selected ? '#047857' : `url(#${animationId})`}
-          strokeWidth={selected ? 3.5 : 2.5}
-          strokeDasharray="2 6"
+          strokeWidth={calculateStrokeWidth(selected ? 3.5 : 2.5)}
+          strokeDasharray={calculateDashArray()}
           strokeLinecap="round"
           strokeDashoffset={0}
           markerEnd={markerEnd}
           style={{
             pointerEvents: 'none',
             animation: 'dash-flow 1.5s linear infinite',
+            transition: 'stroke-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), stroke-dasharray 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         />
       </g>
@@ -143,7 +187,7 @@ export function CustomEdge({
               stroke-dashoffset: 0;
             }
             to {
-              stroke-dashoffset: -8;
+              stroke-dashoffset: ${-1 * (2 + 6) * Math.pow(1 / Math.max(0.1, Math.min(2, zoom)), 0.5)};
             }
           }
         `}
