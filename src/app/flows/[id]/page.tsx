@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getWorkflow } from "@/lib/supabase/workflows";
 import { LoadingScreen } from "@/components/ui/loading";
 import { FileText } from "lucide-react";
+import { Loader2, FileText } from "lucide-react";
 
 export default function WorkflowEditorPage() {
   const params = useParams();
