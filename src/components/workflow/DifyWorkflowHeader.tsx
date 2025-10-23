@@ -1,22 +1,24 @@
-'use client';
+"use client";
 
-import { ChevronLeft, MoreHorizontal, Pencil } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useWorkflowStore } from '@/lib/stores/workflow-store';
-import { useState, useRef, useEffect } from 'react';
-import { SaveStatusIndicator } from './SaveStatusIndicator';
-import { toast } from 'sonner';
+import { ChevronLeft, MoreHorizontal, Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useWorkflowStore } from "@/lib/stores/workflow-store";
+import { useState, useRef, useEffect } from "react";
+import { SaveStatusIndicator } from "./SaveStatusIndicator";
+import { toast } from "sonner";
 
 export function DifyWorkflowHeader() {
   const router = useRouter();
   const workflow = useWorkflowStore((state) => state.workflow);
-  const updateWorkflowMetadata = useWorkflowStore((state) => state.updateWorkflowMetadata);
+  const updateWorkflowMetadata = useWorkflowStore(
+    (state) => state.updateWorkflowMetadata
+  );
 
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState('');
+  const [editedName, setEditedName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const workflowName = workflow?.name || 'New workflow';
+  const workflowName = workflow?.name || "New workflow";
 
   useEffect(() => {
     if (isEditingName && inputRef.current) {
@@ -35,18 +37,18 @@ export function DifyWorkflowHeader() {
 
     // FIXED: Validate workflow name
     if (!trimmedName) {
-      toast.error('Workflow name cannot be empty');
+      toast.error("Workflow name cannot be empty");
       return;
     }
 
     if (trimmedName.length > 100) {
-      toast.error('Workflow name is too long (max 100 characters)');
+      toast.error("Workflow name is too long (max 100 characters)");
       return;
     }
 
     if (trimmedName !== workflowName) {
       updateWorkflowMetadata({ name: trimmedName });
-      toast.success('Workflow name updated');
+      toast.success("Workflow name updated");
     }
 
     setIsEditingName(false);
@@ -54,13 +56,13 @@ export function DifyWorkflowHeader() {
 
   const handleCancelEdit = () => {
     setIsEditingName(false);
-    setEditedName('');
+    setEditedName("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSaveName();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       handleCancelEdit();
     }
   };
@@ -70,7 +72,7 @@ export function DifyWorkflowHeader() {
       {/* Left section - Back button and title */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => router.push('/flows')}
+          onClick={() => router.push("/flows")}
           className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
           title="Back to flows"
         >
@@ -92,7 +94,9 @@ export function DifyWorkflowHeader() {
             </div>
           ) : (
             <>
-              <h1 className="text-[15px] font-semibold text-gray-900">{workflowName}</h1>
+              <h1 className="text-[15px] font-semibold text-gray-900">
+                {workflowName}
+              </h1>
               <button
                 onClick={handleStartEdit}
                 className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"

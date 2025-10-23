@@ -194,7 +194,9 @@ export async function updateWorkflow(
 }
 
 /**
- * Delete a workflow
+ * Delete a workflow (and associated notes via CASCADE)
+ * Note: workflow_notes has ON DELETE CASCADE foreign key,
+ * so notes are automatically deleted when workflow is deleted
  */
 export async function deleteWorkflow(supabase: SupabaseClient, id: string): Promise<void> {
   const { error } = await supabase
@@ -206,6 +208,9 @@ export async function deleteWorkflow(supabase: SupabaseClient, id: string): Prom
     console.error('Error deleting workflow:', error);
     throw new Error(error.message);
   }
+
+  // Notes are automatically deleted via CASCADE foreign key constraint
+  console.log('✅ Workflow and associated notes deleted:', id);
 }
 
 /**
