@@ -239,6 +239,20 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
     link.click();
   };
 
+  const extractAudioDuration = useCallback(async (audioUrl: string): Promise<number | undefined> => {
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      audio.addEventListener('loadedmetadata', () => {
+        resolve(audio.duration);
+      });
+      audio.addEventListener('error', () => {
+        console.error('[VoiceNode] Failed to load audio metadata');
+        resolve(undefined);
+      });
+      audio.src = audioUrl;
+    });
+  }, []);
+
   const handleUploaderChange = useCallback(({ allEntries }: { allEntries?: Array<{ status: string; cdnUrl?: string; uuid?: string; name?: string; size?: number }> }) => {
     console.log('[VoiceNode] Uploader change event:', allEntries);
 
@@ -249,14 +263,18 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
       setIsUploading(false);
       setMode('idle');
 
-      updateNodeData(id, {
-        uploadcareCdnUrl: firstCompleted.cdnUrl,
-        uploadcareUuid: firstCompleted.uuid,
-        uploadSource: 'uploadcare',
-        transcriptStatus: 'transcribing',
-        transcriptError: undefined,
-        audioUrl: undefined,
-      } as Partial<VoiceNodeData>);
+      // Extract audio duration
+      extractAudioDuration(firstCompleted.cdnUrl).then((duration) => {
+        updateNodeData(id, {
+          uploadcareCdnUrl: firstCompleted.cdnUrl,
+          uploadcareUuid: firstCompleted.uuid,
+          uploadSource: 'uploadcare',
+          transcriptStatus: 'transcribing',
+          transcriptError: undefined,
+          audioUrl: undefined,
+          duration: duration,
+        } as Partial<VoiceNodeData>);
+      });
 
       // Trigger transcription with Uploadcare URL
       void triggerTranscription(firstCompleted.cdnUrl);
@@ -266,7 +284,7 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
         uploadStatus: 'uploading',
       } as Partial<VoiceNodeData>);
     }
-  }, [id, updateNodeData]);
+  }, [id, updateNodeData, extractAudioDuration]);
 
   const triggerTranscription = async (audioUrl: string) => {
     try {
@@ -375,10 +393,11 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
                     height: recordingState === 'recording'
                       ? `${Math.random() * 60 + 10}%`
                       : '20%',
-                    animation: recordingState === 'recording'
-                      ? `waveform ${0.5 + Math.random() * 0.5}s ease-in-out infinite`
-                      : 'none',
-                    animationDelay: `${i * 0.05}s`,
+                    animationName: recordingState === 'recording' ? 'waveform' : 'none',
+                    animationDuration: recordingState === 'recording' ? `${0.5 + Math.random() * 0.5}s` : undefined,
+                    animationTimingFunction: recordingState === 'recording' ? 'ease-in-out' : undefined,
+                    animationIterationCount: recordingState === 'recording' ? 'infinite' : undefined,
+                    animationDelay: recordingState === 'recording' ? `${i * 0.05}s` : undefined,
                   }}
                 />
               ))}
@@ -482,9 +501,19 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
               )}
               <audio
                 controls
+                preload="metadata"
                 className="h-8 w-full"
                 onPointerDown={stopPropagation}
                 onTouchStart={stopPropagation}
+                onLoadedMetadata={(e) => {
+                  const audioElement = e.currentTarget;
+                  if (audioElement.duration && audioElement.duration !== Infinity && !data.duration) {
+                    // Update duration if we don't have it stored yet
+                    updateNodeData(id, {
+                      duration: audioElement.duration,
+                    } as Partial<VoiceNodeData>);
+                  }
+                }}
               >
                 <source src={data.uploadcareCdnUrl || data.audioUrl!} type="audio/webm" />
                 <source src={data.uploadcareCdnUrl || data.audioUrl!} type="audio/mpeg" />
