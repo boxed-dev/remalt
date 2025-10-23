@@ -1,11 +1,20 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Hand, MousePointer2, Undo2, Redo2, ZoomIn, ZoomOut, Maximize2, Keyboard } from 'lucide-react';
-import { useReactFlow } from '@xyflow/react';
-import { useWorkflowStore } from '@/lib/stores/workflow-store';
-import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import {
+  Hand,
+  MousePointer2,
+  Undo2,
+  Redo2,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Keyboard,
+} from "lucide-react";
+import { useReactFlow } from "@xyflow/react";
+import { useWorkflowStore } from "@/lib/stores/workflow-store";
+import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
+import { cn } from "@/lib/utils";
 
 export function DifyCanvasToolbar() {
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -21,13 +30,13 @@ export function DifyCanvasToolbar() {
     <>
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 flex items-center divide-x divide-gray-200">
-          {/* Hand/Pointer tools */}
-          <div className="flex items-center px-1 py-1">
+          {/* Hand/Pointer tools - Hidden but keeping functionality for keyboard shortcuts */}
+          <div className="hidden">
             <button
-              onClick={() => setControlMode('pointer')}
+              onClick={() => setControlMode("pointer")}
               className={cn(
                 "p-2 rounded transition-colors",
-                controlMode === 'pointer'
+                controlMode === "pointer"
                   ? "bg-[#095D40] text-white"
                   : "text-gray-700 hover:bg-gray-100"
               )}
@@ -36,10 +45,10 @@ export function DifyCanvasToolbar() {
               <MousePointer2 className="h-4 w-4" />
             </button>
             <button
-              onClick={() => setControlMode('hand')}
+              onClick={() => setControlMode("hand")}
               className={cn(
                 "p-2 rounded transition-colors",
-                controlMode === 'hand'
+                controlMode === "hand"
                   ? "bg-[#095D40] text-white"
                   : "text-gray-700 hover:bg-gray-100"
               )}
@@ -108,7 +117,10 @@ export function DifyCanvasToolbar() {
       </div>
 
       {/* Keyboard Shortcuts Modal */}
-      <KeyboardShortcutsModal open={showShortcuts} onOpenChange={setShowShortcuts} />
+      <KeyboardShortcutsModal
+        open={showShortcuts}
+        onOpenChange={setShowShortcuts}
+      />
     </>
   );
 }

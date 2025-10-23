@@ -253,9 +253,9 @@ export default function WorkflowEditorPage() {
     "1": () => {
       // Will be handled by ReactFlow controls
     },
-    // Control mode shortcuts
-    v: () => setControlMode("pointer"),
-    h: () => setControlMode("hand"),
+    // Control mode shortcuts - Disabled to lock canvas to hand mode
+    // v: () => setControlMode("pointer"),
+    // h: () => setControlMode("hand"),
   });
 
   // Loading states

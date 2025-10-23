@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { immer } from 'zustand/middleware/immer';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
+import { persist } from "zustand/middleware";
 import type {
   Workflow,
   WorkflowNode,
@@ -9,10 +9,10 @@ import type {
   NodeType,
   Position,
   Viewport,
-} from '@/types/workflow';
+} from "@/types/workflow";
 
 function deepClone<T>(value: T): T {
-  if (typeof globalThis.structuredClone === 'function') {
+  if (typeof globalThis.structuredClone === "function") {
     return globalThis.structuredClone(value);
   }
 
@@ -37,7 +37,7 @@ interface WorkflowStore {
   lastSaved: string | null;
 
   // Canvas Control State
-  controlMode: 'pointer' | 'hand';
+  controlMode: "pointer" | "hand";
   snapToGrid: boolean;
 
   // Workflow Actions
@@ -49,10 +49,18 @@ interface WorkflowStore {
 
   // Persistence Actions
   saveWorkflow: () => Promise<void>;
-  setSaveStatus: (isSaving: boolean, error?: string | null, lastSaved?: string | null) => void;
+  setSaveStatus: (
+    isSaving: boolean,
+    error?: string | null,
+    lastSaved?: string | null
+  ) => void;
 
   // Node Actions
-  addNode: (type: NodeType, position: Position, data?: Partial<NodeData>) => WorkflowNode;
+  addNode: (
+    type: NodeType,
+    position: Position,
+    data?: Partial<NodeData>
+  ) => WorkflowNode;
   updateNode: (id: string, updates: Partial<WorkflowNode>) => void;
   updateNodeData: (id: string, data: Partial<NodeData>) => void;
   updateNodePosition: (id: string, position: Position) => void;
@@ -61,7 +69,12 @@ interface WorkflowStore {
   duplicateNode: (id: string) => void;
 
   // Edge Actions
-  addEdge: (source: string, target: string, sourceHandle?: string, targetHandle?: string) => void;
+  addEdge: (
+    source: string,
+    target: string,
+    sourceHandle?: string,
+    targetHandle?: string
+  ) => void;
   updateEdge: (id: string, updates: Partial<WorkflowEdge>) => void;
   deleteEdge: (id: string) => void;
   deleteEdges: (ids: string[]) => void;
@@ -84,7 +97,11 @@ interface WorkflowStore {
   getConnectedNodes: (nodeId: string) => WorkflowNode[];
 
   // Recording Actions
-  createNodeFromRecording: (audioBlob: Blob, transcript: string, duration: number) => WorkflowNode;
+  createNodeFromRecording: (
+    audioBlob: Blob,
+    transcript: string,
+    duration: number
+  ) => WorkflowNode;
 
   // History Actions
   undo: () => void;
@@ -94,18 +111,27 @@ interface WorkflowStore {
   pushHistory: () => void;
 
   // Canvas Control Actions
-  setControlMode: (mode: 'pointer' | 'hand') => void;
+  setControlMode: (mode: "pointer" | "hand") => void;
   toggleSnapToGrid: () => void;
 
   // Alignment Actions
-  alignNodes: (nodeIds: string[], direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
-  distributeNodes: (nodeIds: string[], direction: 'horizontal' | 'vertical') => void;
+  alignNodes: (
+    nodeIds: string[],
+    direction: "left" | "center" | "right" | "top" | "middle" | "bottom"
+  ) => void;
+  distributeNodes: (
+    nodeIds: string[],
+    direction: "horizontal" | "vertical"
+  ) => void;
 
   // Activation Actions
   setActiveNode: (id: string | null) => void;
 }
 
-const createDefaultWorkflow = (name: string, description?: string): Workflow => ({
+const createDefaultWorkflow = (
+  name: string,
+  description?: string
+): Workflow => ({
   id: crypto.randomUUID(),
   name,
   description,
@@ -113,7 +139,7 @@ const createDefaultWorkflow = (name: string, description?: string): Workflow => 
   edges: [],
   viewport: { x: 0, y: 0, zoom: 1 },
   metadata: {
-    version: '1.0.0',
+    version: "1.0.0",
     tags: [],
     isPublic: false,
   },
@@ -124,86 +150,86 @@ const createDefaultWorkflow = (name: string, description?: string): Workflow => 
 const createDefaultNodeData = (type: NodeType): NodeData => {
   const baseData = { type };
   switch (type) {
-    case 'text':
+    case "text":
       return {
         ...baseData,
         content: JSON.stringify({
-          type: 'doc',
+          type: "doc",
           content: [
             {
-              type: 'paragraph',
+              type: "paragraph",
               content: [],
             },
           ],
         }),
-        plainText: '',
+        plainText: "",
         wordCount: 0,
       } as NodeData;
-    case 'pdf':
+    case "pdf":
       return {
         ...baseData,
-        parseStatus: 'idle',
+        parseStatus: "idle",
       } as NodeData;
-    case 'voice':
+    case "voice":
       return {
         ...baseData,
-        transcriptStatus: 'idle',
-        uploadStatus: 'idle',
+        transcriptStatus: "idle",
+        uploadStatus: "idle",
       } as NodeData;
-    case 'image':
+    case "image":
       return {
         ...baseData,
-        analysisStatus: 'idle',
+        analysisStatus: "idle",
       } as NodeData;
-    case 'youtube':
+    case "youtube":
       return {
         ...baseData,
-        mode: 'video',
-        transcriptStatus: 'unavailable',
+        mode: "video",
+        transcriptStatus: "unavailable",
       } as NodeData;
-    case 'instagram':
+    case "instagram":
       return {
         ...baseData,
-        fetchStatus: 'idle',
+        fetchStatus: "idle",
       } as NodeData;
-    case 'linkedin':
+    case "linkedin":
       return {
         ...baseData,
-        fetchStatus: 'idle',
-        analysisStatus: 'idle',
+        fetchStatus: "idle",
+        analysisStatus: "idle",
       } as NodeData;
-    case 'mindmap':
+    case "mindmap":
       return {
         ...baseData,
-        concept: '',
+        concept: "",
         tags: [],
       } as NodeData;
-    case 'template':
+    case "template":
       return {
         ...baseData,
-        templateType: 'custom',
-        generationStatus: 'idle',
+        templateType: "custom",
+        generationStatus: "idle",
       } as NodeData;
-    case 'webpage':
+    case "webpage":
       return {
         ...baseData,
-        url: '',
-        scrapeStatus: 'idle',
+        url: "",
+        scrapeStatus: "idle",
       } as NodeData;
-    case 'chat':
+    case "chat":
       return {
         ...baseData,
         messages: [],
         linkedNodes: [],
-        model: 'gemini-2.5-flash',
+        model: "gemini-2.5-flash",
         contextWindow: [],
       } as NodeData;
-    case 'connector':
+    case "connector":
       return {
         ...baseData,
-        relationshipType: 'workflow',
+        relationshipType: "workflow",
       } as NodeData;
-    case 'group':
+    case "group":
       return {
         ...baseData,
         title: undefined,
@@ -226,7 +252,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
     isSaving: false,
     saveError: null,
     lastSaved: null,
-    controlMode: 'pointer',
+    controlMode: "hand",
     snapToGrid: false,
 
     // Workflow Actions
@@ -293,7 +319,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
       } catch (error: unknown) {
         set((state) => {
           state.isSaving = false;
-          state.saveError = error instanceof Error ? error.message : 'Failed to save workflow';
+          state.saveError =
+            error instanceof Error ? error.message : "Failed to save workflow";
         });
       }
     },
@@ -319,8 +346,11 @@ export const useWorkflowStore = create<WorkflowStore>()(
         position,
         data: { ...createDefaultNodeData(type), ...data },
         // sensible defaults for group sizing so it's visible and usable immediately
-        style: type === 'group' ? { width: 640, height: 420, backgroundColor: '#F7F7F7' } : undefined,
-        zIndex: type === 'group' ? 1 : 2,
+        style:
+          type === "group"
+            ? { width: 640, height: 420, backgroundColor: "#F7F7F7" }
+            : undefined,
+        zIndex: type === "group" ? 1 : 2,
       };
 
       set((state) => {
@@ -373,8 +403,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
       set((state) => {
         if (state.workflow) {
           // If deleting a group, detach its children to top-level
-          const nodeToDelete = state.workflow.nodes.find(n => n.id === id);
-          if (nodeToDelete?.type === 'group') {
+          const nodeToDelete = state.workflow.nodes.find((n) => n.id === id);
+          if (nodeToDelete?.type === "group") {
             state.workflow.nodes.forEach((n) => {
               if (n.parentId === id) {
                 n.parentId = null;
@@ -388,7 +418,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
             });
           }
 
-          state.workflow.nodes = state.workflow.nodes.filter((n) => n.id !== id);
+          state.workflow.nodes = state.workflow.nodes.filter(
+            (n) => n.id !== id
+          );
           state.workflow.edges = state.workflow.edges.filter(
             (e) => e.source !== id && e.target !== id
           );
@@ -411,12 +443,16 @@ export const useWorkflowStore = create<WorkflowStore>()(
         if (state.workflow) {
           // For any groups being deleted, detach their children
           const groupsBeingDeleted = new Set(
-            state.workflow.nodes.filter(n => ids.includes(n.id) && n.type === 'group').map(n => n.id)
+            state.workflow.nodes
+              .filter((n) => ids.includes(n.id) && n.type === "group")
+              .map((n) => n.id)
           );
           if (groupsBeingDeleted.size > 0) {
             state.workflow.nodes.forEach((n) => {
               if (n.parentId && groupsBeingDeleted.has(n.parentId)) {
-                const parent = state.workflow!.nodes.find(p => p.id === n.parentId);
+                const parent = state.workflow!.nodes.find(
+                  (p) => p.id === n.parentId
+                );
                 if (parent) {
                   n.parentId = null;
                   n.position = {
@@ -429,11 +465,15 @@ export const useWorkflowStore = create<WorkflowStore>()(
             });
           }
 
-          state.workflow.nodes = state.workflow.nodes.filter((n) => !ids.includes(n.id));
+          state.workflow.nodes = state.workflow.nodes.filter(
+            (n) => !ids.includes(n.id)
+          );
           state.workflow.edges = state.workflow.edges.filter(
             (e) => !ids.includes(e.source) && !ids.includes(e.target)
           );
-          state.selectedNodes = state.selectedNodes.filter((nId) => !ids.includes(nId));
+          state.selectedNodes = state.selectedNodes.filter(
+            (nId) => !ids.includes(nId)
+          );
           // Deactivate if deleting the active node
           if (state.activeNodeId && ids.includes(state.activeNodeId)) {
             state.activeNodeId = null;
@@ -470,7 +510,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
         target,
         sourceHandle,
         targetHandle,
-        type: 'smoothstep',
+        type: "smoothstep",
       };
 
       set((state) => {
@@ -496,7 +536,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
     deleteEdge: (id) => {
       set((state) => {
         if (state.workflow) {
-          state.workflow.edges = state.workflow.edges.filter((e) => e.id !== id);
+          state.workflow.edges = state.workflow.edges.filter(
+            (e) => e.id !== id
+          );
           state.selectedEdges = state.selectedEdges.filter((eId) => eId !== id);
           state.workflow.updatedAt = new Date().toISOString();
         }
@@ -506,8 +548,12 @@ export const useWorkflowStore = create<WorkflowStore>()(
     deleteEdges: (ids) => {
       set((state) => {
         if (state.workflow) {
-          state.workflow.edges = state.workflow.edges.filter((e) => !ids.includes(e.id));
-          state.selectedEdges = state.selectedEdges.filter((eId) => !ids.includes(eId));
+          state.workflow.edges = state.workflow.edges.filter(
+            (e) => !ids.includes(e.id)
+          );
+          state.selectedEdges = state.selectedEdges.filter(
+            (eId) => !ids.includes(eId)
+          );
           state.workflow.updatedAt = new Date().toISOString();
         }
       });
@@ -518,7 +564,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
       set((state) => {
         if (multi) {
           if (state.selectedNodes.includes(id)) {
-            state.selectedNodes = state.selectedNodes.filter((nId) => nId !== id);
+            state.selectedNodes = state.selectedNodes.filter(
+              (nId) => nId !== id
+            );
           } else {
             state.selectedNodes.push(id);
           }
@@ -533,7 +581,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
       set((state) => {
         if (multi) {
           if (state.selectedEdges.includes(id)) {
-            state.selectedEdges = state.selectedEdges.filter((eId) => eId !== id);
+            state.selectedEdges = state.selectedEdges.filter(
+              (eId) => eId !== id
+            );
           } else {
             state.selectedEdges.push(id);
           }
@@ -591,7 +641,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
               clone.parentId = originalParentId;
             }
 
-            const shouldOffset = !originalParentId || !idMap.has(originalParentId);
+            const shouldOffset =
+              !originalParentId || !idMap.has(originalParentId);
 
             if (shouldOffset) {
               clone.position = {
@@ -650,7 +701,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
     createNodeFromRecording: (audioBlob, transcript, duration) => {
       const { workflow, addNode } = get();
       if (!workflow) {
-        throw new Error('No active workflow');
+        throw new Error("No active workflow");
       }
 
       // Create object URL for audio playback
@@ -666,11 +717,11 @@ export const useWorkflowStore = create<WorkflowStore>()(
         : { x: 400, y: 200 };
 
       // Create voice node with recording data
-      const node = addNode('voice', basePosition, {
+      const node = addNode("voice", basePosition, {
         audioUrl,
         transcript,
         duration,
-        transcriptStatus: 'success',
+        transcriptStatus: "success",
         isLiveRecording: false,
       });
 
@@ -756,27 +807,43 @@ export const useWorkflowStore = create<WorkflowStore>()(
       set((state) => {
         if (!state.workflow) return;
 
-        const nodes = state.workflow.nodes.filter(n => nodeIds.includes(n.id));
+        const nodes = state.workflow.nodes.filter((n) =>
+          nodeIds.includes(n.id)
+        );
         if (nodes.length < 2) return;
 
-        if (direction === 'left') {
-          const minX = Math.min(...nodes.map(n => n.position.x));
-          nodes.forEach(n => { n.position.x = minX; });
-        } else if (direction === 'center') {
-          const avgX = nodes.reduce((sum, n) => sum + n.position.x, 0) / nodes.length;
-          nodes.forEach(n => { n.position.x = avgX; });
-        } else if (direction === 'right') {
-          const maxX = Math.max(...nodes.map(n => n.position.x));
-          nodes.forEach(n => { n.position.x = maxX; });
-        } else if (direction === 'top') {
-          const minY = Math.min(...nodes.map(n => n.position.y));
-          nodes.forEach(n => { n.position.y = minY; });
-        } else if (direction === 'middle') {
-          const avgY = nodes.reduce((sum, n) => sum + n.position.y, 0) / nodes.length;
-          nodes.forEach(n => { n.position.y = avgY; });
-        } else if (direction === 'bottom') {
-          const maxY = Math.max(...nodes.map(n => n.position.y));
-          nodes.forEach(n => { n.position.y = maxY; });
+        if (direction === "left") {
+          const minX = Math.min(...nodes.map((n) => n.position.x));
+          nodes.forEach((n) => {
+            n.position.x = minX;
+          });
+        } else if (direction === "center") {
+          const avgX =
+            nodes.reduce((sum, n) => sum + n.position.x, 0) / nodes.length;
+          nodes.forEach((n) => {
+            n.position.x = avgX;
+          });
+        } else if (direction === "right") {
+          const maxX = Math.max(...nodes.map((n) => n.position.x));
+          nodes.forEach((n) => {
+            n.position.x = maxX;
+          });
+        } else if (direction === "top") {
+          const minY = Math.min(...nodes.map((n) => n.position.y));
+          nodes.forEach((n) => {
+            n.position.y = minY;
+          });
+        } else if (direction === "middle") {
+          const avgY =
+            nodes.reduce((sum, n) => sum + n.position.y, 0) / nodes.length;
+          nodes.forEach((n) => {
+            n.position.y = avgY;
+          });
+        } else if (direction === "bottom") {
+          const maxY = Math.max(...nodes.map((n) => n.position.y));
+          nodes.forEach((n) => {
+            n.position.y = maxY;
+          });
         }
 
         state.workflow.updatedAt = new Date().toISOString();
@@ -787,17 +854,19 @@ export const useWorkflowStore = create<WorkflowStore>()(
       set((state) => {
         if (!state.workflow) return;
 
-        const nodes = state.workflow.nodes.filter(n => nodeIds.includes(n.id));
+        const nodes = state.workflow.nodes.filter((n) =>
+          nodeIds.includes(n.id)
+        );
         if (nodes.length < 3) return;
 
-        if (direction === 'horizontal') {
+        if (direction === "horizontal") {
           const sorted = [...nodes].sort((a, b) => a.position.x - b.position.x);
           const first = sorted[0].position.x;
           const last = sorted[sorted.length - 1].position.x;
           const spacing = (last - first) / (sorted.length - 1);
 
           sorted.forEach((node, i) => {
-            node.position.x = first + (spacing * i);
+            node.position.x = first + spacing * i;
           });
         } else {
           const sorted = [...nodes].sort((a, b) => a.position.y - b.position.y);
@@ -806,7 +875,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
           const spacing = (last - first) / (sorted.length - 1);
 
           sorted.forEach((node, i) => {
-            node.position.y = first + (spacing * i);
+            node.position.y = first + spacing * i;
           });
         }
 
