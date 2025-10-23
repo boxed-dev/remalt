@@ -63,7 +63,14 @@ export function extractChannelId(url: string): { type: 'channel' | 'handle' | 'c
  */
 async function resolveChannelId(type: 'handle' | 'custom' | 'user', identifier: string): Promise<string | null> {
   if (!YOUTUBE_API_KEY) {
-    throw new Error('YouTube API key not configured');
+    console.error('[YouTube API] YouTube API key not configured');
+    throw new Error('YouTube API key not configured. Please set YOUTUBE_API_KEY environment variable with a valid Google YouTube Data API v3 key.');
+  }
+
+  // Check if API key looks like a Google API key (starts with AIza)
+  if (!YOUTUBE_API_KEY.startsWith('AIza')) {
+    console.error('[YouTube API] Invalid API key format. Expected Google API key but got:', YOUTUBE_API_KEY.substring(0, 10) + '...');
+    throw new Error('Invalid YouTube API key format. Please use a valid Google YouTube Data API v3 key (should start with "AIza").');
   }
 
   try {
@@ -71,7 +78,18 @@ async function resolveChannelId(type: 'handle' | 'custom' | 'user', identifier: 
     if (type === 'handle') {
       const searchUrl = `${YOUTUBE_API_BASE}/search?part=snippet&type=channel&q=${encodeURIComponent(identifier)}&maxResults=1&key=${YOUTUBE_API_KEY}`;
       const response = await fetch(searchUrl);
-      if (!response.ok) throw new Error('Failed to search for channel');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[YouTube API] Search API error:', response.status, errorData);
+
+        if (response.status === 403) {
+          throw new Error('YouTube API access denied. Please check your API key and ensure the YouTube Data API v3 is enabled in Google Cloud Console.');
+        } else if (response.status === 400) {
+          throw new Error('Invalid API request. Please check your YouTube API key configuration.');
+        }
+        throw new Error(`YouTube API error: ${response.status} - ${errorData.error?.message || 'Failed to search for channel'}`);
+      }
 
       const data = await response.json();
       if (data.items && data.items.length > 0) {
@@ -81,7 +99,18 @@ async function resolveChannelId(type: 'handle' | 'custom' | 'user', identifier: 
       // For custom URLs and usernames, try to find via search
       const searchUrl = `${YOUTUBE_API_BASE}/search?part=snippet&type=channel&q=${encodeURIComponent(identifier)}&maxResults=5&key=${YOUTUBE_API_KEY}`;
       const response = await fetch(searchUrl);
-      if (!response.ok) throw new Error('Failed to search for channel');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[YouTube API] Search API error:', response.status, errorData);
+
+        if (response.status === 403) {
+          throw new Error('YouTube API access denied. Please check your API key and ensure the YouTube Data API v3 is enabled in Google Cloud Console.');
+        } else if (response.status === 400) {
+          throw new Error('Invalid API request. Please check your YouTube API key configuration.');
+        }
+        throw new Error(`YouTube API error: ${response.status} - ${errorData.error?.message || 'Failed to search for channel'}`);
+      }
 
       const data = await response.json();
       if (data.items && data.items.length > 0) {
@@ -95,6 +124,7 @@ async function resolveChannelId(type: 'handle' | 'custom' | 'user', identifier: 
     }
   } catch (error) {
     console.error('[YouTube API] Error resolving channel ID:', error);
+    throw error; // Re-throw to provide better error context
   }
 
   return null;
@@ -105,7 +135,12 @@ async function resolveChannelId(type: 'handle' | 'custom' | 'user', identifier: 
  */
 export async function getChannelById(channelId: string): Promise<YouTubeChannel | null> {
   if (!YOUTUBE_API_KEY) {
-    throw new Error('YouTube API key not configured');
+    throw new Error('YouTube API key not configured. Please set YOUTUBE_API_KEY environment variable with a valid Google YouTube Data API v3 key.');
+  }
+
+  // Check if API key looks like a Google API key (starts with AIza)
+  if (!YOUTUBE_API_KEY.startsWith('AIza')) {
+    throw new Error('Invalid YouTube API key format. Please use a valid Google YouTube Data API v3 key (should start with "AIza").');
   }
 
   try {
@@ -113,7 +148,15 @@ export async function getChannelById(channelId: string): Promise<YouTubeChannel 
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`YouTube API error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      console.error('[YouTube API] Channels API error:', response.status, errorData);
+
+      if (response.status === 403) {
+        throw new Error('YouTube API access denied. Please check your API key and ensure the YouTube Data API v3 is enabled in Google Cloud Console.');
+      } else if (response.status === 400) {
+        throw new Error('Invalid API request. Please check your YouTube API key configuration.');
+      }
+      throw new Error(`YouTube API error: ${response.status} - ${errorData.error?.message || 'Failed to fetch channel'}`);
     }
 
     const data = await response.json();
@@ -169,14 +212,28 @@ export async function getChannelVideos(
   pageToken?: string
 ): Promise<{ videos: YouTubeVideo[]; nextPageToken?: string; totalResults: number }> {
   if (!YOUTUBE_API_KEY) {
-    throw new Error('YouTube API key not configured');
+    throw new Error('YouTube API key not configured. Please set YOUTUBE_API_KEY environment variable with a valid Google YouTube Data API v3 key.');
+  }
+
+  // Check if API key looks like a Google API key (starts with AIza)
+  if (!YOUTUBE_API_KEY.startsWith('AIza')) {
+    throw new Error('Invalid YouTube API key format. Please use a valid Google YouTube Data API v3 key (should start with "AIza").');
   }
 
   try {
     // First, get the uploads playlist ID
     const channelUrl = `${YOUTUBE_API_BASE}/channels?part=contentDetails&id=${channelId}&key=${YOUTUBE_API_KEY}`;
     const channelResponse = await fetch(channelUrl);
-    if (!channelResponse.ok) throw new Error('Failed to fetch channel details');
+
+    if (!channelResponse.ok) {
+      const errorData = await channelResponse.json().catch(() => ({}));
+      console.error('[YouTube API] Channel details API error:', channelResponse.status, errorData);
+
+      if (channelResponse.status === 403) {
+        throw new Error('YouTube API access denied. Please check your API key and ensure the YouTube Data API v3 is enabled in Google Cloud Console.');
+      }
+      throw new Error(`Failed to fetch channel details: ${errorData.error?.message || channelResponse.status}`);
+    }
 
     const channelData = await channelResponse.json();
     if (!channelData.items || channelData.items.length === 0) {
@@ -192,15 +249,43 @@ export async function getChannelVideos(
     }
 
     const playlistResponse = await fetch(playlistUrl);
-    if (!playlistResponse.ok) throw new Error('Failed to fetch playlist items');
+
+    if (!playlistResponse.ok) {
+      const errorData = await playlistResponse.json().catch(() => ({}));
+      console.error('[YouTube API] Playlist API error:', playlistResponse.status, errorData);
+
+      if (playlistResponse.status === 403) {
+        throw new Error('YouTube API access denied. Please check your API key and ensure the YouTube Data API v3 is enabled in Google Cloud Console.');
+      }
+      throw new Error(`Failed to fetch playlist items: ${errorData.error?.message || playlistResponse.status}`);
+    }
 
     const playlistData = await playlistResponse.json();
+
+    // Handle empty playlists
+    if (!playlistData.items || playlistData.items.length === 0) {
+      return {
+        videos: [],
+        nextPageToken: undefined,
+        totalResults: 0,
+      };
+    }
+
     const videoIds = playlistData.items.map((item: any) => item.snippet.resourceId.videoId).join(',');
 
     // Fetch video details (duration, view count, etc.)
     const videosUrl = `${YOUTUBE_API_BASE}/videos?part=snippet,contentDetails,statistics&id=${videoIds}&key=${YOUTUBE_API_KEY}`;
     const videosResponse = await fetch(videosUrl);
-    if (!videosResponse.ok) throw new Error('Failed to fetch video details');
+
+    if (!videosResponse.ok) {
+      const errorData = await videosResponse.json().catch(() => ({}));
+      console.error('[YouTube API] Videos API error:', videosResponse.status, errorData);
+
+      if (videosResponse.status === 403) {
+        throw new Error('YouTube API access denied. Please check your API key and ensure the YouTube Data API v3 is enabled in Google Cloud Console.');
+      }
+      throw new Error(`Failed to fetch video details: ${errorData.error?.message || videosResponse.status}`);
+    }
 
     const videosData = await videosResponse.json();
 
