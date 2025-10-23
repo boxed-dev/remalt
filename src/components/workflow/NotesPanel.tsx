@@ -1,13 +1,17 @@
 "use client";
 
-import { useCreateBlockNote, SuggestionMenuController, getDefaultReactSlashMenuItems } from "@blocknote/react";
+import {
+  useCreateBlockNote,
+  SuggestionMenuController,
+  getDefaultReactSlashMenuItems,
+} from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
 import "@blocknote/core/fonts/inter.css";
-import type { Block } from '@blocknote/core';
-import { useEffect, useState, useRef } from 'react';
-import { X, FileText } from 'lucide-react';
-import { useNotesStore } from '@/lib/stores/notes-store';
+import type { Block } from "@blocknote/core";
+import { useEffect, useState, useRef } from "react";
+import { X, FileText } from "lucide-react";
+import { useNotesStore } from "@/lib/stores/notes-store";
 
 interface NotesPanelProps {
   workflowId: string;
@@ -16,9 +20,17 @@ interface NotesPanelProps {
   onClose: () => void;
 }
 
-export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelProps) {
-  const { content, isSaving, isLoading, loadNotes, saveNotes, updateContent } = useNotesStore();
-  const [initialBlocks, setInitialBlocks] = useState<Block[] | undefined>(undefined);
+export function NotesPanel({
+  workflowId,
+  userId,
+  isOpen,
+  onClose,
+}: NotesPanelProps) {
+  const { content, isSaving, isLoading, loadNotes, saveNotes, updateContent } =
+    useNotesStore();
+  const [initialBlocks, setInitialBlocks] = useState<Block[] | undefined>(
+    undefined
+  );
   const [isEditorReady, setIsEditorReady] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializingRef = useRef(false);
@@ -31,7 +43,7 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
   // Load notes when panel opens or workflowId changes
   useEffect(() => {
     if (isOpen && workflowId && userId) {
-      console.log('[NotesPanel] Loading notes for workflow:', workflowId);
+      console.log("[NotesPanel] Loading notes for workflow:", workflowId);
       loadNotes(workflowId, userId);
     }
   }, [isOpen, workflowId, userId, loadNotes]);
@@ -41,8 +53,8 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
     if (!editor || !isOpen || isEditorReady) return;
 
     isInitializingRef.current = true;
-    const storedContent = content[workflowId] || '';
-    console.log('[NotesPanel] Parsing content for:', workflowId);
+    const storedContent = content[workflowId] || "";
+    console.log("[NotesPanel] Parsing content for:", workflowId);
 
     if (!storedContent) {
       // Empty state - let editor use default content
@@ -65,7 +77,7 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
         isInitializingRef.current = false;
       }, 100);
     } catch (error) {
-      console.error('[NotesPanel] Failed to parse JSON, using default:', error);
+      console.error("[NotesPanel] Failed to parse JSON, using default:", error);
       // Let editor use default content on error
       setIsEditorReady(true);
       setTimeout(() => {
@@ -88,7 +100,7 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
       // Get blocks from editor
       const blocks = editor.document;
       const blocksString = JSON.stringify(blocks);
-      
+
       // Update local store immediately
       updateContent(workflowId, blocksString);
 
@@ -99,7 +111,7 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
 
       // Debounce save to Supabase (1 second)
       saveTimeoutRef.current = setTimeout(() => {
-        console.log('[NotesPanel] Auto-saving notes');
+        console.log("[NotesPanel] Auto-saving notes");
         saveNotes(workflowId, userId, blocksString);
       }, 1000);
     });
@@ -149,7 +161,7 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
         {/* Save Status */}
         <div className="px-6 py-2 border-b border-gray-200 bg-gray-50">
           <div className="text-xs text-gray-500">
-            {currentSaving ? 'Saving...' : 'Saved'}
+            {currentSaving ? "Saving..." : "Saved"}
           </div>
         </div>
 
@@ -172,15 +184,20 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
                     const items = getDefaultReactSlashMenuItems(editor);
                     const filteredItems = items.filter((item) => {
                       const title = item.title.toLowerCase();
-                      return !["image", "video", "audio", "file"].includes(title);
+                      return !["image", "video", "audio", "file"].includes(
+                        title
+                      );
                     });
                     // Filter by query
                     if (!query) return filteredItems;
                     const lowerQuery = query.toLowerCase();
-                    return filteredItems.filter((item) => 
-                      item.title.toLowerCase().includes(lowerQuery) ||
-                      item.subtext?.toLowerCase().includes(lowerQuery) ||
-                      item.aliases?.some(alias => alias.toLowerCase().includes(lowerQuery))
+                    return filteredItems.filter(
+                      (item) =>
+                        item.title.toLowerCase().includes(lowerQuery) ||
+                        item.subtext?.toLowerCase().includes(lowerQuery) ||
+                        item.aliases?.some((alias) =>
+                          alias.toLowerCase().includes(lowerQuery)
+                        )
                     );
                   }}
                 />
@@ -193,7 +210,8 @@ export function NotesPanel({ workflowId, userId, isOpen, onClose }: NotesPanelPr
         <style jsx global>{`
           /* BlockNote custom styling */
           .bn-container {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+              sans-serif;
           }
 
           .bn-editor {
