@@ -10,7 +10,7 @@ export function WorkflowPreview() {
           {/* Text Content */}
           <div>
             <div className="mb-6">
-              <span className="inline-flex items-center rounded-full bg-blue-100 px-4 py-2 text-sm font-medium text-blue-800">
+              <span className="inline-flex items-center rounded-full bg-[#D4AF7F]/20 px-4 py-2 text-sm font-medium text-[#095D40]">
                 🚀 Workflow Builder
               </span>
             </div>

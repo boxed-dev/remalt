@@ -385,7 +385,7 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
       <div className="w-[280px] space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-[#06B6D4]" />
+            <Globe className="h-4 w-4 text-[#095D40]" />
             <span className="text-[13px] font-medium text-[#1A1D21]">Webpage</span>
           </div>
           {renderStatus()}
@@ -402,14 +402,14 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
               if (e.key === 'Escape') { setUrl(data.url || ''); setIsEditing(false); }
             }}
             placeholder="Enter webpage URL..."
-            className="w-full px-3 py-2 text-[12px] border border-[#E5E7EB] rounded focus:outline-none focus:border-[#06B6D4]"
+            className="w-full px-3 py-2 text-[12px] border border-[#E5E7EB] rounded focus:outline-none focus:border-[#095D40]"
             autoFocus
           />
         ) : data.url ? (
           <div className="space-y-2">
             <div
               onClick={() => setIsEditing(true)}
-              className="cursor-pointer rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2 hover:border-[#06B6D4]"
+              className="cursor-pointer rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2 hover:border-[#095D40]"
             >
               <div className="text-[12px] font-medium text-[#1A1D21] truncate" title={data.url}>{data.url}</div>
               {data.pageTitle && (
@@ -497,7 +497,7 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
                   stopPropagation(event);
                   setIsEditing(true);
                 }}
-                className="rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#6B7280] hover:border-[#06B6D4] hover:text-[#06B6D4] cursor-pointer"
+                className="rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#6B7280] hover:border-[#095D40] hover:text-[#095D40] cursor-pointer"
               >
                 Edit URL
               </button>
@@ -515,7 +515,7 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
         ) : (
           <div
             onClick={() => setIsEditing(true)}
-            className="cursor-pointer rounded-lg border border-dashed border-[#E5E7EB] p-4 text-center hover:border-[#06B6D4]"
+            className="cursor-pointer rounded-lg border border-dashed border-[#E5E7EB] p-4 text-center hover:border-[#095D40]"
           >
             <Globe className="h-8 w-8 text-[#9CA3AF] mx-auto mb-1" />
             <div className="text-[11px] text-[#9CA3AF]">Enter URL</div>

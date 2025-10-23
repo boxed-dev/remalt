@@ -143,9 +143,9 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
             </div>
             <Button
               onClick={handleNewFlow}
-              className="bg-[#007AFF] text-white hover:bg-[#0051D5] transition-all duration-150 rounded-lg px-6 py-2.5 h-auto font-medium"
+              className="bg-[#095D40] text-white hover:bg-[#074030] transition-all duration-150 rounded-lg px-6 py-2.5 h-auto font-medium"
               style={{
-                boxShadow: "0 1px 3px rgba(0, 122, 255, 0.3)",
+                boxShadow: "0 1px 3px rgba(9, 93, 64, 0.3)",
               }}
             >
               <Plus className="h-4 w-4 mr-1.5" />
@@ -182,7 +182,7 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                     tags:
                       flow.metadata?.tags?.map((tag) => ({
                         name: tag as any,
-                        color: "#007AFF",
+                        color: "#D4AF7F",
                         count: 0,
                       })) || [],
                   }}
@@ -218,9 +218,9 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
               </p>
               <Button
                 onClick={handleNewFlow}
-                className="bg-[#007AFF] text-white hover:bg-[#0051D5] transition-all duration-150 rounded-lg px-8 py-3 h-auto text-[15px] font-medium"
+                className="bg-[#095D40] text-white hover:bg-[#074030] transition-all duration-150 rounded-lg px-8 py-3 h-auto text-[15px] font-medium"
                 style={{
-                  boxShadow: "0 2px 8px rgba(0, 122, 255, 0.3)",
+                  boxShadow: "0 2px 8px rgba(9, 93, 64, 0.3)",
                 }}
               >
                 <Plus className="h-5 w-5 mr-2" />
@@ -244,7 +244,7 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                 </p>
                 <Button
                   onClick={handleNewFlow}
-                  className="bg-[#007AFF] text-white hover:bg-[#0051D5] transition-all duration-150 rounded-lg"
+                  className="bg-[#095D40] text-white hover:bg-[#074030] transition-all duration-150 rounded-lg"
                 >
                   <Plus className="h-4 w-4 mr-1.5" />
                   Create New Flow

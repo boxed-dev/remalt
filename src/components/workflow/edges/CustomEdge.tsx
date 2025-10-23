@@ -104,11 +104,11 @@ export function CustomEdge({
       {/* Define the animated gradient in SVG defs */}
       <defs>
         <linearGradient id={animationId} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#10B981" stopOpacity="0.3" />
-          <stop offset="25%" stopColor="#059669" stopOpacity="0.8" />
-          <stop offset="50%" stopColor="#10B981" stopOpacity="0.3" />
-          <stop offset="75%" stopColor="#059669" stopOpacity="0.8" />
-          <stop offset="100%" stopColor="#10B981" stopOpacity="0.3" />
+          <stop offset="0%" stopColor="#D4AF7F" stopOpacity="0.3" />
+          <stop offset="25%" stopColor="#095D40" stopOpacity="0.8" />
+          <stop offset="50%" stopColor="#D4AF7F" stopOpacity="0.3" />
+          <stop offset="75%" stopColor="#095D40" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#D4AF7F" stopOpacity="0.3" />
           <animate
             attributeName="x1"
             values="0%;100%;200%"
@@ -146,15 +146,15 @@ export function CustomEdge({
           style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
         />
 
-        {/* Light green dotted background layer */}
+        {/* Light tan dotted background layer */}
         <path
           d={edgePath}
           fill="none"
-          stroke="#86EFAC"
+          stroke="#D4AF7F"
           strokeWidth={calculateStrokeWidth(selected ? 3.5 : 2.5)}
           strokeDasharray={calculateDashArray()}
           strokeLinecap="round"
-          opacity={0.7}
+          opacity={0.5}
           style={{
             pointerEvents: 'none',
             transition: 'stroke-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), stroke-dasharray 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -165,7 +165,7 @@ export function CustomEdge({
         <path
           d={edgePath}
           fill="none"
-          stroke={selected ? '#047857' : `url(#${animationId})`}
+          stroke={selected ? '#095D40' : `url(#${animationId})`}
           strokeWidth={calculateStrokeWidth(selected ? 3.5 : 2.5)}
           strokeDasharray={calculateDashArray()}
           strokeLinecap="round"

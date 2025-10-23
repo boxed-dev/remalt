@@ -243,7 +243,7 @@ export default function SignInPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-[#FAFBFC]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#007AFF]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#095D40]" />
       </div>
     }>
       <SignInForm />

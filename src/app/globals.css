@@ -7,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", Courier, monospace;
+  --font-sans: var(--font-geist-sans), "Inter", -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Roboto Mono", Courier, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -46,15 +46,15 @@
 
 :root {
   --radius: 0.75rem;
-  --background: #FFFEFF;
+  --background: #FFFFFF;
   --foreground: #333333;
   --card: #FFFFFF;
   --card-foreground: #333333;
   --popover: #FFFFFF;
   --popover-foreground: #333333;
-  --primary: #10875D;
+  --primary: #095D40;
   --primary-foreground: #FFFFFF;
-  --secondary: #F5F5F7;
+  --secondary: #D4AF7F;
   --secondary-foreground: #333333;
   --muted: #F5F5F7;
   --muted-foreground: #6B7280;
@@ -63,54 +63,54 @@
   --destructive: #FF3B30;
   --border: #E8ECEF;
   --input: #F5F5F7;
-  --ring: #10875D;
-  --chart-1: #10875D;
+  --ring: #095D40;
+  --chart-1: #095D40;
   --chart-2: #D4AF7F;
   --chart-3: #333333;
-  --chart-4: #9ca3af;
-  --chart-5: #d1d5db;
+  --chart-4: #6B7280;
+  --chart-5: #E8ECEF;
   --sidebar: #FFFFFF;
   --sidebar-foreground: #333333;
-  --sidebar-primary: #10875D;
+  --sidebar-primary: #095D40;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #D4AF7F;
   --sidebar-accent-foreground: #333333;
   --sidebar-border: #E8ECEF;
-  --sidebar-ring: #10875D;
+  --sidebar-ring: #095D40;
 }
 
 .dark {
-  --background: #000000;
+  --background: #1A1A1A;
   --foreground: #FFFFFF;
   --card: #333333;
   --card-foreground: #FFFFFF;
   --popover: #333333;
   --popover-foreground: #FFFFFF;
-  --primary: #10875D;
+  --primary: #095D40;
   --primary-foreground: #FFFFFF;
-  --secondary: #1f2937;
-  --secondary-foreground: #FFFFFF;
-  --muted: #374151;
-  --muted-foreground: #9ca3af;
+  --secondary: #D4AF7F;
+  --secondary-foreground: #333333;
+  --muted: #4A4A4A;
+  --muted-foreground: #9CA3AF;
   --accent: #D4AF7F;
-  --accent-foreground: #000000;
-  --destructive: #ef4444;
-  --border: #374151;
-  --input: #1f2937;
-  --ring: #10875D;
-  --chart-1: #10875D;
+  --accent-foreground: #333333;
+  --destructive: #EF4444;
+  --border: #4A4A4A;
+  --input: #333333;
+  --ring: #095D40;
+  --chart-1: #095D40;
   --chart-2: #D4AF7F;
-  --chart-3: #6b7280;
-  --chart-4: #9ca3af;
-  --chart-5: #d1d5db;
+  --chart-3: #6B7280;
+  --chart-4: #9CA3AF;
+  --chart-5: #E8ECEF;
   --sidebar: #333333;
   --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #10875D;
+  --sidebar-primary: #095D40;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #D4AF7F;
-  --sidebar-accent-foreground: #000000;
-  --sidebar-border: #374151;
-  --sidebar-ring: #10875D;
+  --sidebar-accent-foreground: #333333;
+  --sidebar-border: #4A4A4A;
+  --sidebar-ring: #095D40;
 }
 
 @layer base {
@@ -121,33 +121,106 @@
     @apply bg-background text-foreground font-sans antialiased;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1, 'ss01' 1, 'ss02' 1, 'ss03' 1;
+    letter-spacing: -0.011em;
+    line-height: 1.5;
   }
 
-  /* Apple-inspired typography */
+  /* Premium Geist-optimized typography */
   h1 {
     @apply text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight;
+    letter-spacing: -0.033em;
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1, 'ss01' 1, 'ss02' 1;
   }
 
   h2 {
     @apply text-3xl md:text-4xl font-semibold leading-tight;
+    letter-spacing: -0.028em;
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1, 'ss01' 1;
   }
 
   h3 {
     @apply text-2xl md:text-3xl font-medium leading-tight;
+    letter-spacing: -0.021em;
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
+  }
+
+  h4 {
+    @apply text-xl md:text-2xl font-medium leading-tight;
+    letter-spacing: -0.019em;
+  }
+
+  h5 {
+    @apply text-lg md:text-xl font-medium leading-snug;
+    letter-spacing: -0.014em;
+  }
+
+  h6 {
+    @apply text-base md:text-lg font-medium leading-snug;
+    letter-spacing: -0.011em;
   }
 
   p {
     @apply text-base md:text-lg leading-relaxed;
+    letter-spacing: -0.011em;
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
+  }
+
+  /* Enhanced text rendering for premium feel */
+  .text-display {
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1, 'ss01' 1, 'ss02' 1, 'ss03' 1;
+    letter-spacing: -0.033em;
+  }
+
+  .text-body {
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
+    letter-spacing: -0.011em;
+  }
+
+  .text-caption {
+    @apply text-sm;
+    letter-spacing: -0.006em;
+  }
+
+  /* Optimize mono font for code */
+  code, pre {
+    @apply font-mono;
+    font-feature-settings: 'liga' 0, 'calt' 1;
+    letter-spacing: 0;
   }
 
   /* Custom Apple-inspired button style */
   .apple-button {
     @apply bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-8 py-3 font-medium transition-all duration-200 ease-out;
+    letter-spacing: -0.011em;
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
   }
 
   /* Accent button style */
   .accent-button {
     @apply bg-accent text-accent-foreground hover:bg-accent/90 rounded-full px-8 py-3 font-medium transition-all duration-200 ease-out;
+    letter-spacing: -0.011em;
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
+  }
+
+  /* Premium button styles */
+  button, .btn {
+    letter-spacing: -0.006em;
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
+  }
+
+  /* Enhanced input and form elements */
+  input, textarea, select {
+    @apply font-sans;
+    letter-spacing: -0.006em;
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
+  }
+
+  /* Labels with optimal spacing */
+  label {
+    @apply font-medium text-sm;
+    letter-spacing: -0.006em;
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
   }
 
   /* Smooth scrolling */
@@ -268,7 +341,7 @@
   }
 
   .react-flow__node.selected:not(.react-flow__node-group) > div {
-    box-shadow: 0 0 0 3px #10875D !important;
+    box-shadow: 0 0 0 3px #095D40 !important;
     transition: box-shadow 0.2s ease-out !important;
   }
 

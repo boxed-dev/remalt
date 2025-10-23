@@ -1,9 +1,9 @@
 import { Suspense } from "react";
-import { Loader2 } from "lucide-react";
 import { FlowsClient } from "@/components/flows/flows-client";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWorkflowsSummary } from "@/lib/supabase/workflows";
 import { redirect } from "next/navigation";
+import { LoadingScreen } from "@/components/ui/loading";
 
 // FIXED: Remove force-dynamic to prevent unnecessary refreshes on tab switching
 // Data freshness is now handled by client-side Supabase realtime subscriptions
@@ -27,20 +27,9 @@ async function FlowsContent() {
   return <FlowsClient initialWorkflows={workflows} />;
 }
 
-function LoadingState() {
-  return (
-    <div className="h-screen bg-[#FAFBFC] flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#007AFF] mx-auto mb-4" />
-        <p className="text-[14px] text-[#6B7280]">Loading your flows...</p>
-      </div>
-    </div>
-  );
-}
-
 export default function FlowsPage() {
   return (
-    <Suspense fallback={<LoadingState />}>
+    <Suspense fallback={<LoadingScreen message="Loading your flows..." />}>
       <FlowsContent />
     </Suspense>
   );

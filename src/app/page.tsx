@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Hero } from "@/components/layout/hero";
 import { Features } from "@/components/layout/features";
 import { WorkflowPreview } from "@/components/layout/workflow-preview";
+import { Testimonials } from "@/components/layout/testimonials";
 import { Pricing } from "@/components/layout/pricing";
 import { FinalCTA } from "@/components/layout/final-cta";
 import { Footer } from "@/components/layout/footer";
@@ -37,6 +38,7 @@ export default function Home() {
         <Hero />
         <Features />
         <WorkflowPreview />
+        <Testimonials />
         <Pricing />
         <FinalCTA />
       </main>

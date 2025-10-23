@@ -15,7 +15,7 @@ import { useWorkflowPersistence } from "@/hooks/use-workflow-persistence";
 import { usePageVisibility } from "@/hooks/use-page-visibility";
 import { createClient } from "@/lib/supabase/client";
 import { getWorkflow } from "@/lib/supabase/workflows";
-import { Loader2, FileText } from "lucide-react";
+import { LoadingScreen } from "@/components/ui/loading";
 
 export default function WorkflowEditorPage() {
   const params = useParams();
@@ -266,14 +266,7 @@ export default function WorkflowEditorPage() {
 
   // Loading states
   if (userLoading || loadingWorkflow) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-[#FAFBFC]">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#007AFF] mx-auto mb-4" />
-          <p className="text-[14px] text-[#6B7280]">Loading workflow...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   // Error state
@@ -302,7 +295,7 @@ export default function WorkflowEditorPage() {
           <p className="text-[14px] text-[#6B7280] mb-6">{loadError}</p>
           <button
             onClick={() => router.push("/flows")}
-            className="px-6 py-2.5 bg-[#007AFF] text-white rounded-lg font-medium text-[14px] hover:bg-[#0051D5] transition-all"
+            className="px-6 py-2.5 bg-[#095D40] text-white rounded-lg font-medium text-[14px] hover:bg-[#074030] transition-all"
           >
             Back to Flows
           </button>

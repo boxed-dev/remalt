@@ -78,7 +78,7 @@ export default function ApplySchemaPage() {
                   href={`https://supabase.com/dashboard/project/${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 underline"
+                  className="text-[#095D40] underline"
                 >
                   Supabase SQL Editor
                 </a>
@@ -88,7 +88,7 @@ export default function ApplySchemaPage() {
               <li>Paste into the SQL editor</li>
               <li>Click <strong>"Run"</strong></li>
               <li>Verify tables created: <code className="bg-gray-100 px-2 py-1 rounded">profiles</code> and <code className="bg-gray-100 px-2 py-1 rounded">workflows</code></li>
-              <li>Return to <a href="/test-setup" className="text-blue-600 underline">/test-setup</a> to verify</li>
+              <li>Return to <a href="/test-setup" className="text-[#095D40] underline">/test-setup</a> to verify</li>
             </ol>
           </div>
         </div>

@@ -55,7 +55,7 @@ export function FlowCard({ flow, onClick, onDelete }: FlowCardProps) {
   return (
     <div
       onClick={onClick}
-      className="group relative border border-[#E8ECEF] rounded-xl p-6 hover:border-[#007AFF] hover:shadow-[0_4px_16px_rgba(0,122,255,0.12)] hover:-translate-y-1 transition-all duration-200 cursor-pointer bg-white"
+      className="group relative border border-[#E8ECEF] rounded-xl p-6 hover:border-[#095D40] hover:shadow-[0_4px_16px_rgba(9,93,64,0.12)] hover:-translate-y-1 transition-all duration-200 cursor-pointer bg-white"
       style={{
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif'
       }}
@@ -102,7 +102,7 @@ export function FlowCard({ flow, onClick, onDelete }: FlowCardProps) {
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1 min-w-0 pr-8">
-          <h3 className="font-semibold text-[16px] mb-1 text-[#1A1D21] truncate group-hover:text-[#007AFF] transition-colors">
+          <h3 className="font-semibold text-[16px] mb-1 text-[#1A1D21] truncate group-hover:text-[#095D40] transition-colors">
             {flow.name}
           </h3>
           {flow.description && (
@@ -152,7 +152,7 @@ export function FlowCard({ flow, onClick, onDelete }: FlowCardProps) {
             {formatDate(lastEdited)}
           </span>
         </div>
-        <div className="text-[11px] text-[#007AFF] opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+        <div className="text-[11px] text-[#095D40] opacity-0 group-hover:opacity-100 transition-opacity font-medium">
           Open →
         </div>
       </div>
