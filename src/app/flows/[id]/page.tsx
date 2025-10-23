@@ -8,7 +8,9 @@ import { DifyWorkflowHeader } from "@/components/workflow/DifyWorkflowHeader";
 import { DifyWorkflowSidebar } from "@/components/workflow/DifyWorkflowSidebar";
 import { StickyNoteOverlay } from "@/components/workflow/StickyNoteOverlay";
 import { NotesPanel } from "@/components/workflow/NotesPanel";
+import { NotesPanel } from "@/components/workflow/NotesPanel";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
+import { useNotesStore } from "@/lib/stores/notes-store";
 import { useNotesStore } from "@/lib/stores/notes-store";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -17,6 +19,7 @@ import { usePageVisibility } from "@/hooks/use-page-visibility";
 import { createClient } from "@/lib/supabase/client";
 import { getWorkflow } from "@/lib/supabase/workflows";
 import { LoadingScreen } from "@/components/ui/loading";
+import { Loader2, FileText } from "lucide-react";
 
 export default function WorkflowEditorPage() {
   const params = useParams();
@@ -27,6 +30,10 @@ export default function WorkflowEditorPage() {
 
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  
+  // Use notes store for panel state
+  const { isOpen: isNotesPanelOpen, setOpen: setIsNotesPanelOpen } = useNotesStore();
+  
   
   // Use notes store for panel state
   const { isOpen: isNotesPanelOpen, setOpen: setIsNotesPanelOpen } = useNotesStore();
@@ -46,6 +53,7 @@ export default function WorkflowEditorPage() {
   const duplicateNode = useWorkflowStore((state) => state.duplicateNode);
   const addNode = useWorkflowStore((state) => state.addNode);
   const undo = useWorkflowStore((state) => state.undo);
+  const redo = useWorkflowStore ((state) => state.redo);
   const redo = useWorkflowStore ((state) => state.redo);
   const setControlMode = useWorkflowStore((state) => state.setControlMode);
 
@@ -321,6 +329,29 @@ export default function WorkflowEditorPage() {
 
         {/* Sticky Notes Overlay - connected to the workflow */}
         <StickyNoteOverlay workflowId={workflowId} />
+
+        {/* Notes Panel Toggle Button - Fixed position closer to top right */}
+        {!isNotesPanelOpen && user && (
+          <button
+            onClick={() => setIsNotesPanelOpen(true)}
+            className="fixed top-20 right-6 z-30 p-3 bg-white rounded-xl shadow-lg hover:shadow-xl border border-gray-200 hover:border-gray-300 transition-all group"
+            title="Open notes"
+          >
+            <FileText className="h-5 w-5 text-gray-700 group-hover:text-blue-600 transition-colors" />
+          </button>
+        )}
+
+        {/* Notes Panel */}
+        {user && (
+          <NotesPanel
+            workflowId={workflowId}
+            userId={user.id}
+            isOpen={isNotesPanelOpen}
+            onClose={() => setIsNotesPanelOpen(false)}
+          />
+        )}
+        {/* Sticky Notes Overlay - disabled by default, can be enabled via props */}
+        <StickyNoteOverlay enabled={false} notes={[]} />
 
         {/* Notes Panel Toggle Button - Fixed position closer to top right */}
         {!isNotesPanelOpen && user && (
