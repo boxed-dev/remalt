@@ -218,91 +218,107 @@ export function NotesPanel({
             padding: 0;
           }
 
-          /* HIDE: Plus button (add block button) by hiding the add-block-button */
+          /* HIDE: Plus button (add block button) and drag handle buttons */
+          .bn-side-menu,
           .bn-side-menu button[data-test="addBlock"],
           .bn-side-menu .bn-add-block-button,
-          button[aria-label*="Add block"],
-          button[title*="Add block"] {
-            display: none !important;
-          }
-
-          /* SHOW: Drag handles with proper centering */
-          .bn-drag-handle-menu {
-            position: absolute !important;
-            left: -28px !important;
-            top: 0 !important;
-            height: 100% !important;
-            display: flex !important;
-            align-items: center !important;
-            opacity: 0;
-            transition: opacity 0.2s;
-          }
-
-          .bn-block-outer:hover .bn-drag-handle-menu {
-            opacity: 1;
-          }
-
-          /* Drag handle button styling */
+          .bn-drag-handle-menu,
           .bn-drag-handle-button,
           button[data-test="dragHandle"],
+          button[aria-label*="Add block"],
+          button[title*="Add block"],
           button[aria-label*="Drag"],
           button[title*="Drag"] {
-            cursor: grab !important;
-            padding: 4px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-          }
-
-          .bn-drag-handle-button:active {
-            cursor: grabbing !important;
+            display: none !important;
           }
 
           /* Heading styles */
           .bn-block-content h1 {
             font-size: 1.875rem;
             font-weight: 700;
-            line-height: 2.25rem;
+            line-height: 1.3;
             color: #111827;
-            margin: 1.5rem 0 1rem;
+            margin: 1rem 0 0.5rem;
           }
 
           .bn-block-content h2 {
             font-size: 1.5rem;
             font-weight: 600;
-            line-height: 2rem;
+            line-height: 1.3;
             color: #1f2937;
-            margin: 1.25rem 0 0.75rem;
+            margin: 0.875rem 0 0.5rem;
           }
 
           .bn-block-content h3 {
             font-size: 1.25rem;
             font-weight: 600;
-            line-height: 1.75rem;
+            line-height: 1.3;
             color: #374151;
-            margin: 1rem 0 0.5rem;
+            margin: 0.75rem 0 0.375rem;
           }
 
-          /* Paragraph styles */
+          /* Paragraph styles - Reduced spacing */
           .bn-block-content p {
             font-size: 0.9375rem;
-            line-height: 1.625rem;
+            line-height: 1.4;
             color: #4b5563;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.25rem;
           }
 
-          /* List styles */
+          /* List styles - Reduced spacing */
           .bn-block-content ul,
           .bn-block-content ol {
             margin-left: 1.5rem;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.25rem;
           }
 
           .bn-block-content li {
             font-size: 0.9375rem;
-            line-height: 1.625rem;
+            line-height: 1.4;
             color: #4b5563;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.125rem;
+          }
+
+          /* Toggle list styling - Fix vertical alignment */
+          .bn-toggle-wrapper {
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.375rem !important;
+          }
+
+          .bn-toggle-button {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-shrink: 0 !important;
+          }
+
+          .bn-toggle-wrapper .bn-inline-content {
+            line-height: 1.4 !important;
+            margin: 0 !important;
+          }
+
+          .bn-block-content [data-content-type="toggleList"] {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+
+          .bn-block-content [data-content-type="toggleList"] button,
+          .bn-block-content [data-content-type="toggleList"] .bn-toggle-icon,
+          .bn-block-content details summary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .bn-block-content details summary {
+            line-height: 1.4;
+          }
+
+          .bn-block-content details summary::marker,
+          .bn-block-content details summary::-webkit-details-marker {
+            vertical-align: middle;
           }
 
           /* Slash menu styling */
