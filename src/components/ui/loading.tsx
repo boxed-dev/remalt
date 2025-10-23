@@ -10,7 +10,7 @@ export function LoadingScreen({
   showBrand = true
 }: LoadingScreenProps = {}) {
   return (
-    <div className="h-screen flex items-center justify-center bg-[#FAFBFC]">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#FAFBFC]">
       <div className="text-center">
         {showBrand && (
           <div className="text-[32px] font-bold text-[#095D40] mb-4">Remalt</div>
