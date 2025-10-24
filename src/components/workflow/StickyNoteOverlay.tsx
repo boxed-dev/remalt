@@ -227,12 +227,12 @@ export function StickyNoteOverlay({ workflowId, onNoteMove }: StickyNoteOverlayP
           >
             <div
               className={`
-                relative w-full h-full rounded-lg transition-all duration-200
+                relative w-full h-full rounded-lg transition-all duration-200 overflow-hidden
                 ${isSelected ? 'ring-2 ring-[#095D40] shadow-xl' : 'shadow-md hover:shadow-lg'}
                 ${isDragging || isResizing ? 'cursor-grabbing opacity-90' : 'cursor-grab'}
               `}
               style={{
-                backgroundColor: note.color || '#FEF3C7',
+                backgroundColor: note.color || '#FFDCDB',
                 border: isSelected ? '2px solid #095D40' : '1px solid #e5e7eb',
               }}
             >

@@ -24,10 +24,11 @@ interface BaseNodeProps {
   // NEW: Multiple handles support
   sourceHandles?: HandleConfig[];
   targetHandles?: HandleConfig[];
-  // NEW: Parent group detection for hiding handles  
+  // NEW: Parent group detection for hiding handles
   // Support both parentId (current) and parentNode (legacy) for React Flow compatibility
   parentId?: string | null;
   parentNode?: string | null;
+  className?: string;
 }
 
 export function BaseNode({
@@ -45,6 +46,7 @@ export function BaseNode({
   targetHandles,
   parentId,
   parentNode,
+  className,
 }: BaseNodeProps) {
   // Node activation system
   const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
@@ -90,7 +92,9 @@ export function BaseNode({
     <div
       className={`min-w-[280px] rounded-2xl bg-white transition-all duration-200 ${
         allowOverflow ? 'relative' : 'overflow-hidden relative'
-      } border-2 border-[#E8ECEF] hover:border-[#D1D5DB] shadow-md hover:shadow-xl`}
+      } ${
+        className || 'border-2 border-[#E8ECEF] hover:border-[#D1D5DB] shadow-md hover:shadow-xl'
+      }`}
     >
       {/* Activation overlay for inactive nodes - blocks interaction until activated */}
       {!isActive && (

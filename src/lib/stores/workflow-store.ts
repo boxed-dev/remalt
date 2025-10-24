@@ -234,6 +234,22 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
         ...baseData,
         title: undefined,
       } as NodeData;
+    case "sticky":
+      return {
+        ...baseData,
+        content: JSON.stringify({
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [],
+            },
+          ],
+        }),
+        backgroundColor: "#FEF3C7", // Default yellow sticky note
+        textColor: "#1F2937",
+        fontSize: "medium",
+      } as NodeData;
     default:
       return { type } as NodeData;
   }

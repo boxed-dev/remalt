@@ -12,6 +12,7 @@ import { WebpageNode } from './WebpageNode';
 import { ChatNode } from './ChatNode';
 import { ConnectorNode } from './ConnectorNode';
 import { GroupNode } from './GroupNode';
+import { StickyNoteNode } from './StickyNoteNode';
 
 export const nodeTypes: NodeTypes = {
   text: TextNode,
@@ -27,6 +28,7 @@ export const nodeTypes: NodeTypes = {
   chat: ChatNode,
   connector: ConnectorNode,
   group: GroupNode,
+  sticky: StickyNoteNode,
 };
 
 export {
@@ -43,4 +45,5 @@ export {
   ChatNode,
   ConnectorNode,
   GroupNode,
+  StickyNoteNode,
 };

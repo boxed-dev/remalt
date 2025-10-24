@@ -6,7 +6,6 @@ import { FileText } from "lucide-react";
 import { WorkflowCanvas } from "@/components/workflow/WorkflowCanvas";
 import { DifyWorkflowHeader } from "@/components/workflow/DifyWorkflowHeader";
 import { DifyWorkflowSidebar } from "@/components/workflow/DifyWorkflowSidebar";
-import { StickyNoteOverlay } from "@/components/workflow/StickyNoteOverlay";
 import { NotesPanel } from "@/components/workflow/NotesPanel";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
 import { useNotesStore } from "@/lib/stores/notes-store";
@@ -320,8 +319,6 @@ export default function WorkflowEditorPage() {
         {/* Floating Dify-style Sidebar */}
         <DifyWorkflowSidebar />
 
-        {/* Sticky Notes Overlay - connected to the workflow */}
-        <StickyNoteOverlay workflowId={workflowId} />
 
         {/* Notes Panel Toggle Button - Fixed position closer to top right */}
         {!isNotesPanelOpen && user && (

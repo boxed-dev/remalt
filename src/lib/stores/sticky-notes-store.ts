@@ -54,7 +54,7 @@ export const useStickyNotesStore = create<StickyNotesState>()(
           text: '',
           position,
           size: { width: 200, height: 150 }, // Default size
-          color: '#FEF3C7', // Light yellow default
+          color: '#FFDCDB', // Light pink/salmon default to match your screenshot
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };

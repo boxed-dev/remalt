@@ -1,5 +1,5 @@
 import type { NodeType } from '@/types/workflow';
-import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Lightbulb, FileCode, Globe, MessageSquare, Link, Type } from 'lucide-react';
+import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Lightbulb, FileCode, Globe, MessageSquare, Link, Type, StickyNote } from 'lucide-react';
 import { Folder } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -145,6 +145,16 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     icon: Folder,
     defaultWidth: 640,
     defaultHeight: 420,
+  },
+  sticky: {
+    type: 'sticky',
+    label: 'Sticky Note',
+    description: 'Sticky notes for annotations and quick notes',
+    category: 'content',
+    color: '#FEF3C7',
+    icon: StickyNote,
+    defaultWidth: 280,
+    defaultHeight: 280,
   },
 };
 

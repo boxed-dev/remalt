@@ -18,6 +18,7 @@ const NODE_TYPES: NodeType[] = [
   'voice',
   'image',
   'mindmap',
+  'sticky',
   'template',
   'chat',
   'connector',

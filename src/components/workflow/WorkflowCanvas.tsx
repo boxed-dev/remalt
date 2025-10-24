@@ -192,7 +192,6 @@ function WorkflowCanvasInner() {
 
   // Sticky notes state
   const isStickyActive = useStickyNotesStore((state) => state.isActive);
-  const addStickyNote = useStickyNotesStore((state) => state.addNote);
 
   // Use individual selectors to avoid infinite loops
   const workflow = useWorkflowStore((state) => state.workflow);
@@ -489,25 +488,25 @@ function WorkflowCanvasInner() {
 
   // Handle pane click (deselect all and close context menus)
   const onPaneClick = useCallback((event: React.MouseEvent) => {
-    // If sticky mode is active, add a sticky note
-    if (isStickyActive && workflow?.id) {
-      if (!reactFlowInstance) {
-        return;
-      }
+    // If sticky mode is active, add a sticky note as a proper React Flow node
+    if (isStickyActive && workflow?.id && reactFlowInstance) {
+      // Convert screen coordinates to flow coordinates
+      const bounds = reactFlowWrapper.current?.getBoundingClientRect();
+      if (!bounds) return;
 
-      // Get the canvas bounds for proper coordinate conversion
-      const rect = reactFlowWrapper.current?.getBoundingClientRect();
-      if (!rect) {
-        return;
-      }
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
 
-      // Use screen coordinates relative to the canvas container
-      const notePosition = {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top
-      };
+      // Add sticky note as a proper React Flow node
+      addNode('sticky', position, {
+        backgroundColor: '#FEF3C7', // Default yellow color
+        textColor: '#1F2937',
+      });
 
-      addStickyNote(workflow.id, notePosition);
+      // Deactivate sticky mode after adding a note
+      useStickyNotesStore.getState().setActive(false);
       return;
     }
 
@@ -517,7 +516,7 @@ function WorkflowCanvasInner() {
     setContextMenuPosition(null);
     setNodeContextMenu(null);
     setSelectionContextMenu(null);
-  }, [clearSelection, setActiveNode, isStickyActive, workflow?.id, addStickyNote, reactFlowInstance]);
+  }, [clearSelection, setActiveNode, isStickyActive, workflow?.id, addNode, reactFlowInstance]);
 
   // FIXED: Access selectedNodes from store instead of using as dependency
   // This prevents callback recreation on every selection change

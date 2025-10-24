@@ -43,7 +43,8 @@ export type NodeType =
   | 'webpage'
   | 'chat'
   | 'connector'
-  | 'group';
+  | 'group'
+  | 'sticky';
 
 export interface WorkflowNode {
   id: string;
@@ -349,6 +350,14 @@ export interface GroupNodeData extends BaseNodeData {
   title?: string;
 }
 
+// Sticky Note Node
+export interface StickyNoteData extends BaseNodeData {
+  content: string; // JSON stringified editor content (TipTap format)
+  backgroundColor?: string; // Background color of the sticky note
+  textColor?: string; // Text color
+  fontSize?: 'small' | 'medium' | 'large';
+}
+
 // Union type for all node data
 export type NodeData =
   | TextNodeData
@@ -363,7 +372,8 @@ export type NodeData =
   | WebpageNodeData
   | ChatNodeData
   | ConnectorNodeData
-  | GroupNodeData;
+  | GroupNodeData
+  | StickyNoteData;
 
 // ============================================
 // EDGES (Connections)
