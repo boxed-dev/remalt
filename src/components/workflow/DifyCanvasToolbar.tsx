@@ -10,9 +10,11 @@ import {
   ZoomOut,
   Maximize2,
   Keyboard,
+  StickyNote,
 } from "lucide-react";
 import { useReactFlow } from "@xyflow/react";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
+import { useStickyNotesStore } from "@/lib/stores/sticky-notes-store";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +27,8 @@ export function DifyCanvasToolbar() {
   const canRedo = useWorkflowStore((state) => state.canRedo());
   const controlMode = useWorkflowStore((state) => state.controlMode);
   const setControlMode = useWorkflowStore((state) => state.setControlMode);
+  const isStickyActive = useStickyNotesStore((state) => state.isActive);
+  const toggleStickyMode = useStickyNotesStore((state) => state.toggleStickyMode);
 
   return (
     <>
@@ -75,6 +79,22 @@ export function DifyCanvasToolbar() {
               title="Redo (⌘⇧Z)"
             >
               <Redo2 className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Sticky Notes */}
+          <div className="flex items-center px-1 py-1">
+            <button
+              onClick={toggleStickyMode}
+              className={cn(
+                "p-2 rounded transition-colors",
+                isStickyActive
+                  ? "bg-[#095D40] text-white"
+                  : "text-gray-700 hover:bg-gray-100"
+              )}
+              title="Sticky notes • Click canvas to add"
+            >
+              <StickyNote className="h-4 w-4" />
             </button>
           </div>
 

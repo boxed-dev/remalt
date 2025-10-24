@@ -7,10 +7,12 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
-  Network
+  Network,
+  StickyNote
 } from 'lucide-react';
 import { useReactFlow } from '@xyflow/react';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
+import { useStickyNotesStore } from '@/lib/stores/sticky-notes-store';
 import { ZoomIndicator } from './ZoomIndicator';
 
 interface WorkflowToolbarProps {
@@ -23,6 +25,8 @@ export function WorkflowToolbar({ onAutoLayout }: WorkflowToolbarProps) {
   const redo = useWorkflowStore((state) => state.redo);
   const canUndo = useWorkflowStore((state) => state.canUndo());
   const canRedo = useWorkflowStore((state) => state.canRedo());
+  const isStickyActive = useStickyNotesStore((state) => state.isActive);
+  const toggleStickyMode = useStickyNotesStore((state) => state.toggleStickyMode);
 
   const handleZoomIn = () => {
     zoomIn({ duration: 200 });
@@ -58,6 +62,22 @@ export function WorkflowToolbar({ onAutoLayout }: WorkflowToolbarProps) {
           disabled={!canRedo}
         >
           <Redo2 className="h-4 w-4" />
+        </Button>
+
+        <div className="w-px h-5 bg-[#D4AF7F]/20" />
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`h-8 w-8 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#095D40]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
+            isStickyActive
+              ? 'bg-[#095D40]/10 text-[#095D40] hover:bg-[#095D40]/20'
+              : 'hover:bg-[#D4AF7F]/10 text-[#6B7280] hover:text-[#095D40]'
+          }`}
+          onClick={toggleStickyMode}
+          title="Sticky notes • Click canvas to add"
+        >
+          <StickyNote className="h-4 w-4" />
         </Button>
 
         <div className="w-px h-5 bg-[#D4AF7F]/20" />

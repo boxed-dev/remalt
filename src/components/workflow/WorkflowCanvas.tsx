@@ -20,6 +20,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
+import { useStickyNotesStore } from "@/lib/stores/sticky-notes-store";
 import type {
   WorkflowNode,
   WorkflowEdge,
@@ -41,6 +42,7 @@ import { SelectionContextMenu } from "./SelectionContextMenu";
 import { SelectionFloatingToolbar } from "./SelectionFloatingToolbar";
 import { QuickAddMenu } from "./QuickAddMenu";
 import { ExportDialog } from "./ExportDialog";
+import { isStickyNoteSelected } from "./StickyNoteOverlay";
 import { SocialMediaDialog } from "./SocialMediaDialog";
 
 type UrlNodeMapping = {
@@ -187,6 +189,10 @@ function WorkflowCanvasInner() {
   } | null>(null);
   const reactFlowInstance = useReactFlow();
   const { screenToFlowPosition, getViewport, setViewport } = reactFlowInstance;
+
+  // Sticky notes state
+  const isStickyActive = useStickyNotesStore((state) => state.isActive);
+  const addStickyNote = useStickyNotesStore((state) => state.addNote);
 
   // Use individual selectors to avoid infinite loops
   const workflow = useWorkflowStore((state) => state.workflow);
@@ -482,13 +488,36 @@ function WorkflowCanvasInner() {
   const isValidConnection = useCallback(() => true, []);
 
   // Handle pane click (deselect all and close context menus)
-  const onPaneClick = useCallback(() => {
+  const onPaneClick = useCallback((event: React.MouseEvent) => {
+    // If sticky mode is active, add a sticky note
+    if (isStickyActive && workflow?.id) {
+      if (!reactFlowInstance) {
+        return;
+      }
+
+      // Get the canvas bounds for proper coordinate conversion
+      const rect = reactFlowWrapper.current?.getBoundingClientRect();
+      if (!rect) {
+        return;
+      }
+
+      // Use screen coordinates relative to the canvas container
+      const notePosition = {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+
+      addStickyNote(workflow.id, notePosition);
+      return;
+    }
+
+    // Otherwise, handle normal click behavior
     clearSelection();
     setActiveNode(null);
     setContextMenuPosition(null);
     setNodeContextMenu(null);
     setSelectionContextMenu(null);
-  }, [clearSelection, setActiveNode]);
+  }, [clearSelection, setActiveNode, isStickyActive, workflow?.id, addStickyNote, reactFlowInstance]);
 
   // FIXED: Access selectedNodes from store instead of using as dependency
   // This prevents callback recreation on every selection change
@@ -538,6 +567,10 @@ function WorkflowCanvasInner() {
   // Handle node deletion via keyboard
   const onNodesDelete = useCallback(
     (deleted: Node[]) => {
+      // Don't delete nodes if a sticky note is selected
+      if (isStickyNoteSelected) {
+        return;
+      }
       deleteNodes(deleted.map((n) => n.id));
     },
     [deleteNodes]
@@ -546,6 +579,10 @@ function WorkflowCanvasInner() {
   // Handle edge deletion via keyboard
   const onEdgesDelete = useCallback(
     (deleted: Edge[]) => {
+      // Don't delete edges if a sticky note is selected
+      if (isStickyNoteSelected) {
+        return;
+      }
       deleteEdges(deleted.map((e) => e.id));
     },
     [deleteEdges]

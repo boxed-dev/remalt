@@ -319,8 +319,8 @@ export default function WorkflowEditorPage() {
         {/* Floating Dify-style Sidebar */}
         <DifyWorkflowSidebar />
 
-        {/* Sticky Notes Overlay - disabled by default, can be enabled via props */}
-        <StickyNoteOverlay enabled={false} notes={[]} />
+        {/* Sticky Notes Overlay - connected to the workflow */}
+        <StickyNoteOverlay workflowId={workflowId} />
 
         {/* Notes Panel Toggle Button - Fixed position closer to top right */}
         {!isNotesPanelOpen && user && (
