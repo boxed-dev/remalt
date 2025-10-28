@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { FileText, Upload, Loader2, CheckCircle2, AlertCircle, Download, AlertTriangle, ExternalLink } from 'lucide-react';
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { AIInstructionsInline } from './AIInstructionsInline';
@@ -147,6 +147,15 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
       } as Partial<PDFNodeData>);
     }
   };
+
+  // Auto-trigger parsing when PDF is uploaded
+  useEffect(() => {
+    const hasPdfUrl = data.uploadcareCdnUrl || data.url;
+    if (hasPdfUrl && data.parseStatus === 'parsing') {
+      console.log('[PDFNode] Auto-triggering parse for:', data.uploadcareCdnUrl || data.url);
+      void triggerParsing();
+    }
+  }, [data.uploadcareCdnUrl, data.url, data.parseStatus, triggerParsing]);
 
   const stopPropagation = (event: React.MouseEvent | React.TouchEvent) => {
     event.stopPropagation();

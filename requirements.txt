@@ -1,5 +1,7 @@
-google-api-python-client
-flask==3.1.0
-flask-cors==5.0.0
-youtube-transcript-api==0.6.3
-gunicorn==23.0.0
+youtube-transcript-api
+flask
+flask-cors
+requests
+python-dotenv
+deepgram-sdk
+yt-dlp

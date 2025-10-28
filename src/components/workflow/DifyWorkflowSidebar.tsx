@@ -16,6 +16,7 @@ import {
 import type { NodeType } from '@/types/workflow';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { SocialMediaDialog } from './SocialMediaDialog';
+import { UploadMediaDialog } from './UploadMediaDialog';
 
 interface NodeItem {
   id: NodeType;
@@ -52,6 +53,8 @@ export function DifyWorkflowSidebar() {
   const workflow = useWorkflowStore((state) => state.workflow);
   const [draggedNode, setDraggedNode] = useState<NodeType | null>(null);
   const [socialMediaDialogOpen, setSocialMediaDialogOpen] = useState(false);
+  const [uploadMediaDialogOpen, setUploadMediaDialogOpen] = useState(false);
+  const [uploadNodeType, setUploadNodeType] = useState<'image' | 'pdf'>('image');
 
   const handleDragStart = (e: React.DragEvent, nodeType: NodeType) => {
     console.log('🎯 Drag started for:', nodeType);
@@ -77,6 +80,13 @@ export function DifyWorkflowSidebar() {
     e.stopPropagation();
 
     console.log('🖱️ Node clicked:', nodeType);
+
+    // Open upload dialog for image and pdf nodes
+    if (nodeType === 'image' || nodeType === 'pdf') {
+      setUploadNodeType(nodeType);
+      setUploadMediaDialogOpen(true);
+      return;
+    }
 
     // Calculate center of current viewport
     const viewport = workflow?.viewport || { x: 0, y: 0, zoom: 1 };
@@ -121,6 +131,61 @@ export function DifyWorkflowSidebar() {
     } else if (type === 'webpage') {
       updateNodeData(newNode.id, { url });
     }
+  };
+
+  const handleUploadMediaAdd = (files: Array<{ cdnUrl: string; uuid?: string; name?: string; size?: number }>) => {
+    // Calculate center of current viewport
+    const viewport = workflow?.viewport || { x: 0, y: 0, zoom: 1 };
+    const windowCenterX = window.innerWidth / 2;
+    const windowCenterY = window.innerHeight / 2;
+    const centerPosition = {
+      x: (windowCenterX - viewport.x) / viewport.zoom,
+      y: (windowCenterY - viewport.y) / viewport.zoom - 100,
+    };
+
+    // Grid layout configuration
+    const GRID_SPACING_X = 320; // Horizontal spacing between nodes
+    const GRID_SPACING_Y = 280; // Vertical spacing between nodes
+    const COLUMNS = 3; // 3 nodes per row
+
+    // Create a node for each uploaded file
+    files.forEach((file, index) => {
+      const row = Math.floor(index / COLUMNS);
+      const col = index % COLUMNS;
+
+      const position = {
+        x: centerPosition.x + (col * GRID_SPACING_X),
+        y: centerPosition.y + (row * GRID_SPACING_Y),
+      };
+
+      // Create the node
+      const newNode = addNode(uploadNodeType, position);
+
+      // Update node data based on type
+      if (uploadNodeType === 'image') {
+        updateNodeData(newNode.id, {
+          imageUrl: file.cdnUrl,
+          thumbnail: file.cdnUrl,
+          uploadcareCdnUrl: file.cdnUrl,
+          uploadSource: 'uploadcare',
+          analysisStatus: 'loading',
+        });
+      } else if (uploadNodeType === 'pdf') {
+        updateNodeData(newNode.id, {
+          fileName: file.name || 'Document.pdf',
+          fileSize: file.size,
+          uploadcareCdnUrl: file.cdnUrl,
+          uploadcareUuid: file.uuid,
+          uploadSource: 'uploadcare',
+          parseStatus: 'parsing',
+          parseError: undefined,
+          url: undefined,
+          storagePath: undefined,
+        });
+      }
+    });
+
+    console.log(`✅ Created ${files.length} ${uploadNodeType} node(s)`);
   };
 
   return (
@@ -219,6 +284,13 @@ export function DifyWorkflowSidebar() {
       open={socialMediaDialogOpen}
       onOpenChange={setSocialMediaDialogOpen}
       onAddNode={handleSocialMediaAdd}
+    />
+
+    <UploadMediaDialog
+      open={uploadMediaDialogOpen}
+      onOpenChange={setUploadMediaDialogOpen}
+      nodeType={uploadNodeType}
+      onAddNodes={handleUploadMediaAdd}
     />
     </>
   );
