@@ -16,6 +16,7 @@ import { usePageVisibility } from "@/hooks/use-page-visibility";
 import { createClient } from "@/lib/supabase/client";
 import { getWorkflow } from "@/lib/supabase/workflows";
 import { LoadingScreen } from "@/components/ui/loading";
+import type { NodeType } from "@/types/workflow";
 
 export default function WorkflowEditorPage() {
   const params = useParams();
@@ -56,6 +57,26 @@ export default function WorkflowEditorPage() {
       loading: userLoading,
     });
   }, [user, userLoading]);
+
+  const addNodeAtCursor = (type: NodeType) => {
+    const state = useWorkflowStore.getState();
+    const cursor = state.cursorPosition;
+    const viewport = state.workflow?.viewport || { x: 0, y: 0, zoom: 1 };
+    const zoom = viewport.zoom || 1;
+
+    if (cursor) {
+      addNode(type, { x: cursor.x, y: cursor.y });
+      return;
+    }
+
+    const HEADER_OFFSET = 100;
+    const fallbackPosition = {
+      x: (window.innerWidth / 2 - viewport.x) / zoom,
+      y: (window.innerHeight / 2 - viewport.y) / zoom - HEADER_OFFSET,
+    };
+
+    addNode(type, fallbackPosition);
+  };
 
   // Auto-save integration with callback for navigation after first save
   const { saveWorkflow, isSaved } = useWorkflowPersistence({
@@ -242,13 +263,13 @@ export default function WorkflowEditorPage() {
       }
     },
     // Add node shortcuts
-    c: () => addNode("chat", { x: 100, y: 100 }),
-    s: () => addNode("template", { x: 100, y: 100 }),
-    r: () => addNode("voice", { x: 100, y: 100 }),
-    i: () => addNode("image", { x: 100, y: 100 }),
-    a: () => addNode("connector", { x: 100, y: 100 }),
-    w: () => addNode("webpage", { x: 100, y: 100 }),
-    d: () => addNode("pdf", { x: 100, y: 100 }),
+    c: () => addNodeAtCursor("chat"),
+    s: () => addNodeAtCursor("template"),
+    r: () => addNodeAtCursor("voice"),
+    i: () => addNodeAtCursor("image"),
+    a: () => addNodeAtCursor("connector"),
+    w: () => addNodeAtCursor("webpage"),
+    d: () => addNodeAtCursor("pdf"),
     // Zoom shortcuts
     "=": () => {
       // Will be handled by ReactFlow controls

@@ -26,6 +26,7 @@ interface WorkflowStore {
   selectedEdges: string[];
   clipboard: WorkflowNode[];
   activeNodeId: string | null;
+  cursorPosition: Position | null;
 
   // History State
   history: Workflow[];
@@ -113,6 +114,9 @@ interface WorkflowStore {
   // Canvas Control Actions
   setControlMode: (mode: "pointer" | "hand") => void;
   toggleSnapToGrid: () => void;
+
+  // Cursor Tracking
+  setCursorPosition: (position: Position | null) => void;
 
   // Alignment Actions
   alignNodes: (
@@ -270,11 +274,13 @@ export const useWorkflowStore = create<WorkflowStore>()(
     lastSaved: null,
     controlMode: "hand",
     snapToGrid: false,
+    cursorPosition: null,
 
     // Workflow Actions
     createWorkflow: (name, description) => {
       set((state) => {
         state.workflow = createDefaultWorkflow(name, description);
+        state.cursorPosition = null;
       });
     },
 
@@ -284,12 +290,14 @@ export const useWorkflowStore = create<WorkflowStore>()(
         state.selectedNodes = [];
         state.selectedEdges = [];
         state.activeNodeId = null;
+        state.cursorPosition = null;
       });
     },
 
     setWorkflow: (workflow) => {
       set((state) => {
         state.workflow = workflow;
+        state.cursorPosition = null;
       });
     },
 
@@ -312,6 +320,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
         state.isSaving = false;
         state.saveError = null;
         state.lastSaved = null;
+        state.cursorPosition = null;
       });
     },
 
@@ -815,6 +824,12 @@ export const useWorkflowStore = create<WorkflowStore>()(
     toggleSnapToGrid: () => {
       set((state) => {
         state.snapToGrid = !state.snapToGrid;
+      });
+    },
+
+    setCursorPosition: (position) => {
+      set((state) => {
+        state.cursorPosition = position ? { x: position.x, y: position.y } : null;
       });
     },
 

@@ -20,6 +20,7 @@ interface StickyNotesState {
 
   // Actions
   toggleStickyMode: () => void;
+  setActive: (active: boolean) => void;
   addNote: (workflowId: string, position: { x: number; y: number }) => string;
   updateNote: (noteId: string, updates: Partial<StickyNote>) => void;
   deleteNote: (workflowId: string, noteId: string) => void;
@@ -43,6 +44,11 @@ export const useStickyNotesStore = create<StickyNotesState>()(
           isActive: !state.isActive,
           editingNoteId: state.isActive ? null : state.editingNoteId
         }));
+      },
+
+      // Set sticky note mode active/inactive
+      setActive: (active: boolean) => {
+        set({ isActive: active });
       },
 
       // Add a new sticky note

@@ -65,6 +65,7 @@
     "next": "15.5.4",
     "novel": "^1.0.2",
     "openai": "^6.1.0",
+    "pdf-parse": "^2.4.5",
     "react": "19.1.0",
     "react-device-detect": "^2.2.3",
     "react-dom": "19.1.0",

@@ -189,6 +189,7 @@ function WorkflowCanvasInner() {
   } | null>(null);
   const reactFlowInstance = useReactFlow();
   const { screenToFlowPosition, getViewport, setViewport } = reactFlowInstance;
+  const setCursorPosition = useWorkflowStore((state) => state.setCursorPosition);
 
   // Sticky notes state
   const isStickyActive = useStickyNotesStore((state) => state.isActive);
@@ -326,6 +327,46 @@ function WorkflowCanvasInner() {
     setEdges(mappedEdges);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mappedEdges]);
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const wrapper = reactFlowWrapper.current;
+      if (!wrapper) {
+        return;
+      }
+
+      const bounds = wrapper.getBoundingClientRect();
+      const withinBounds =
+        event.clientX >= bounds.left &&
+        event.clientX <= bounds.right &&
+        event.clientY >= bounds.top &&
+        event.clientY <= bounds.bottom;
+
+      if (!withinBounds) {
+        setCursorPosition(null);
+        return;
+      }
+
+      const flowPosition = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      setCursorPosition(flowPosition);
+    };
+
+    const resetCursor = () => setCursorPosition(null);
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerleave", resetCursor);
+    window.addEventListener("blur", resetCursor);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerleave", resetCursor);
+      window.removeEventListener("blur", resetCursor);
+    };
+  }, [screenToFlowPosition, setCursorPosition]);
 
   // FIXED: Add proper debouncing (500ms) to prevent excessive viewport updates
   const viewportDebounceTimer = useRef<NodeJS.Timeout | null>(null);

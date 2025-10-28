@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, forwardRef } from 'react';
 import { recordingManager, type RecordingState } from '@/lib/recording-manager';
 import { cn } from '@/lib/utils';
 
-interface VoiceInputBarProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+interface VoiceInputBarProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
   value: string;
   onChange: (value: string) => void;
   onSend?: () => void;
@@ -18,7 +18,7 @@ interface VoiceInputBarProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
 /**
  * Modern voice input bar with dark pill design and live waveform
  */
-export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
+export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>(
   ({
     value,
     onChange,
@@ -36,6 +36,7 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
     const [recordingState, setRecordingState] = useState<RecordingState>('idle');
     const [error, setError] = useState<string | null>(null);
     const [isActiveRecorder, setIsActiveRecorder] = useState(false);
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
     // Audio visualization - store real frequency data for each bar
     const [frequencyData, setFrequencyData] = useState<Uint8Array>(new Uint8Array(32));
@@ -237,7 +238,25 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
       }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Auto-resize textarea based on content
+    const adjustTextareaHeight = () => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+
+      // Set height based on scrollHeight, with min and max constraints
+      const newHeight = Math.min(Math.max(textarea.scrollHeight, 40), 200);
+      textarea.style.height = `${newHeight}px`;
+    };
+
+    // Adjust height when value changes
+    useEffect(() => {
+      adjustTextareaHeight();
+    }, [value]);
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey && onSend) {
         e.preventDefault();
         onSend();
@@ -253,9 +272,10 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
         {/* Main pill container */}
         <div
           className={cn(
-            'relative flex items-center gap-3 px-4 py-3 rounded-[28px] transition-all duration-300',
+            'relative flex items-start gap-3 px-4 py-3 rounded-[28px] transition-all duration-300',
             'bg-white border-2 border-[#E8ECEF]',
             'shadow-sm hover:shadow-md',
+            'min-h-[56px]',
             isRecording && 'border-[#095D40]/50 shadow-[0_0_0_3px_rgba(9,93,64,0.12)]',
             disabled && 'opacity-50 cursor-not-allowed',
             className
@@ -267,30 +287,44 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
               type="button"
               onClick={onAddClick}
               disabled={disabled}
-              className="flex-shrink-0 p-1.5 rounded-full hover:bg-gray-100 transition-all duration-200 disabled:cursor-not-allowed group"
+              className="flex-shrink-0 p-1.5 rounded-full hover:bg-gray-100 transition-all duration-200 disabled:cursor-not-allowed group mt-1"
               title="Add attachment"
             >
               <Plus className="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors" strokeWidth={2.5} />
             </button>
           )}
 
-          {/* Middle: Input with waveform overlay */}
+          {/* Middle: Textarea with waveform overlay */}
           <div className="relative flex-1 flex items-center">
-            <input
-              ref={ref}
-              type="text"
+            <textarea
+              ref={(node) => {
+                textareaRef.current = node;
+                if (typeof ref === 'function') {
+                  ref(node);
+                } else if (ref) {
+                  ref.current = node;
+                }
+              }}
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={disabled || isRecording}
               placeholder={placeholder}
+              rows={1}
               className={cn(
-                'w-full bg-transparent border-none outline-none',
+                'w-full bg-transparent border-none outline-none resize-none',
                 'text-[14px] text-[#1A1D21] placeholder:text-[#9CA3AF]',
                 'transition-all duration-300',
+                'leading-[1.5] py-2',
+                'overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent',
+                'max-h-[200px]',
                 isRecording && 'opacity-40',
                 disabled && 'cursor-not-allowed'
               )}
+              style={{
+                minHeight: '40px',
+                fieldSizing: 'content'
+              }}
               {...props}
             />
 
@@ -312,6 +346,7 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
               'bg-[#095D40] hover:bg-[#074A32]',
               'shadow-[0_0_8px_rgba(9,93,64,0.4)]',
               'transition-all duration-200',
+              'mt-1',
               isRecording ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
             )}
             title="Confirm and send"
@@ -333,6 +368,7 @@ export const VoiceInputBar = forwardRef<HTMLInputElement, VoiceInputBarProps>(
             className={cn(
               'flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center',
               'transition-all duration-200',
+              'mt-1',
               !isRecording && !value.trim() && 'hover:bg-[#095D40]/5 border border-[#E8ECEF]',
               !isRecording && value.trim() && [
                 'bg-[#095D40] border-[#095D40]',

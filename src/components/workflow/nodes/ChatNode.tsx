@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { MessageSquare, Copy, Check, Maximize2, X, User } from 'lucide-react';
+import { MessageSquare, Copy, Check, Maximize2, X, User, Plus, Library, ChevronDown, Trash2, Settings } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { SyntheticEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -12,7 +12,7 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { buildChatContext, getLinkedNodeIds } from '@/lib/workflow/context-builder';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import type { ChatNodeData, ChatMessage } from '@/types/workflow';
+import type { ChatNodeData, ChatMessage, ChatSession } from '@/types/workflow';
 import type { NodeProps } from '@xyflow/react';
 import { VoiceInputBar } from '../VoiceInputBar';
 import 'katex/dist/katex.min.css';
@@ -34,7 +34,7 @@ function CodeBlock({ inline, className, children, isUserMessage }: any) {
 
   if (inline) {
     return (
-      <code className="bg-gray-100 px-2 py-1 rounded text-[12px] font-mono">
+      <code className="bg-gray-100 px-2 py-1 rounded text-[12px] font-mono select-text" style={{ userSelect: 'text' }}>
         {children}
       </code>
     );
@@ -65,14 +65,16 @@ function CodeBlock({ inline, className, children, isUserMessage }: any) {
                 borderRadius: 0,
                 fontSize: '12px',
                 padding: '16px',
+                userSelect: 'text',
               }}
               showLineNumbers={code.split('\n').length > 3}
+              codeTagProps={{ style: { userSelect: 'text' } }}
             >
               {code}
             </SyntaxHighlighter>
           </span>
         ) : (
-          <code className="block bg-[#1e1e1e] text-gray-300 p-4 rounded-xl text-[12px] font-mono overflow-x-auto border border-gray-700">
+          <code className="block bg-[#1e1e1e] text-gray-300 p-4 rounded-xl text-[12px] font-mono overflow-x-auto border border-gray-700 select-text" style={{ userSelect: 'text' }}>
             {children}
           </code>
         )}
@@ -86,14 +88,36 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-flash-latest');
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const modalMessagesEndRef = useRef<HTMLDivElement>(null);
-  const modalScrollContainerRef = useRef<HTMLDivElement>(null);
-  const prevMessagesLengthRef = useRef(data.messages.length);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const workflow = useWorkflowStore((state) => state.workflow);
   const { user } = useCurrentUser();
+
+  // Initialize sessions if not present (migration from old format)
+  useEffect(() => {
+    if (!data.sessions) {
+      // Migrate old format to new sessions format
+      const initialSession: ChatSession = {
+        id: crypto.randomUUID(),
+        title: 'New Chat',
+        messages: data.messages || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        model: 'gemini-flash-latest',
+      };
+      updateNodeData(id, {
+        sessions: [initialSession],
+        currentSessionId: initialSession.id,
+      } as Partial<ChatNodeData>);
+    }
+  }, []);
+
+  // Get current session
+  const currentSession = data.sessions?.find(s => s.id === data.currentSessionId) || data.sessions?.[0];
+  const messages = currentSession?.messages || [];
 
   // Get display name from user metadata or email
   const getUserDisplayName = () => {
@@ -112,39 +136,24 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const scrollToBottomModal = () => {
-    modalMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   // Check if user is near bottom of scroll container
   const isNearBottom = () => {
     const container = scrollContainerRef.current;
     if (!container) return true;
-    const threshold = 100; // pixels from bottom
+    const threshold = 100;
     return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
   };
 
-  // Handle scroll event to detect manual scrolling
   const handleScroll = () => {
     setShouldAutoScroll(isNearBottom());
   };
 
-  // Auto-scroll only when new messages arrive and user is near bottom
+  // Auto-scroll when new messages arrive
   useEffect(() => {
-    const hasNewMessage = data.messages.length > prevMessagesLengthRef.current;
-    prevMessagesLengthRef.current = data.messages.length;
-
-    if (hasNewMessage && shouldAutoScroll) {
-      // Small delay to ensure DOM is updated
-      setTimeout(() => {
-        if (isMaximized) {
-          scrollToBottomModal();
-        } else {
-          scrollToBottom();
-        }
-      }, 50);
+    if (shouldAutoScroll) {
+      setTimeout(scrollToBottom, 50);
     }
-  }, [data.messages, shouldAutoScroll, isMaximized]);
+  }, [messages.length, shouldAutoScroll]);
 
   // Update linked nodes when workflow changes
   useEffect(() => {
@@ -156,8 +165,110 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
     }
   }, [workflow, id, data.linkedNodes, updateNodeData]);
 
+  // Create new chat session
+  const createNewChat = () => {
+    const newSession: ChatSession = {
+      id: crypto.randomUUID(),
+      title: 'New Chat',
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      model: selectedModel as any,
+    };
+
+    const updatedSessions = [...(data.sessions || []), newSession];
+    updateNodeData(id, {
+      sessions: updatedSessions,
+      currentSessionId: newSession.id,
+    } as Partial<ChatNodeData>);
+  };
+
+  // Switch to a different chat session
+  const switchSession = (sessionId: string) => {
+    updateNodeData(id, {
+      currentSessionId: sessionId,
+    } as Partial<ChatNodeData>);
+  };
+
+  // Delete a chat session
+  const deleteSession = (sessionId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const updatedSessions = (data.sessions || []).filter(s => s.id !== sessionId);
+
+    // If deleting current session, switch to another or create new
+    let newCurrentId = data.currentSessionId;
+    if (sessionId === data.currentSessionId) {
+      newCurrentId = updatedSessions[0]?.id;
+      if (!newCurrentId) {
+        // Create a new session if none left
+        const newSession: ChatSession = {
+          id: crypto.randomUUID(),
+          title: 'New Chat',
+          messages: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          model: 'gemini-flash-latest',
+        };
+        updatedSessions.push(newSession);
+        newCurrentId = newSession.id;
+      }
+    }
+
+    updateNodeData(id, {
+      sessions: updatedSessions,
+      currentSessionId: newCurrentId,
+    } as Partial<ChatNodeData>);
+  };
+
+  // Copy message content to clipboard
+  const handleCopyMessage = async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+    }
+  };
+
+  // Generate AI-powered chat title from user message
+  const generateChatTitle = async (userMessage: string, sessionId: string) => {
+    try {
+      const response = await fetch('/api/chat/generate-title', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to generate title');
+        return;
+      }
+
+      const { title } = await response.json();
+
+      // Get fresh data from the store to avoid overwriting messages
+      const currentWorkflow = useWorkflowStore.getState().workflow;
+      const currentNode = currentWorkflow?.nodes.find(n => n.id === id);
+      const currentData = currentNode?.data as ChatNodeData;
+
+      if (!currentData?.sessions) return;
+
+      // Update session title with fresh data
+      const updatedSessions = currentData.sessions.map(session =>
+        session.id === sessionId
+          ? { ...session, title }
+          : session
+      );
+      updateNodeData(id, { sessions: updatedSessions } as Partial<ChatNodeData>);
+    } catch (error) {
+      console.error('Error generating title:', error);
+      // Silently fail - keep the temporary title
+    }
+  };
+
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !currentSession) return;
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -166,11 +277,25 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
       timestamp: new Date().toISOString(),
     };
 
-    const updatedMessages = [...data.messages, userMessage];
-    updateNodeData(id, { messages: updatedMessages } as Partial<ChatNodeData>);
+    const updatedMessages = [...currentSession.messages, userMessage];
+    const isFirstMessage = currentSession.messages.length === 0;
+    const userMessageContent = input.trim();
+
+    // Update current session with new message
+    const updatedSessions = (data.sessions || []).map(session =>
+      session.id === currentSession.id
+        ? {
+            ...session,
+            messages: updatedMessages,
+            updatedAt: new Date().toISOString(),
+          }
+        : session
+    );
+
+    updateNodeData(id, { sessions: updatedSessions } as Partial<ChatNodeData>);
     setInput('');
     setIsLoading(true);
-    setShouldAutoScroll(true); // Re-enable auto-scroll when user sends a message
+    setShouldAutoScroll(true);
 
     // Create placeholder for streaming response
     const assistantMessageId = crypto.randomUUID();
@@ -182,7 +307,13 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
     };
 
     // Add empty assistant message immediately for streaming
-    updateNodeData(id, { messages: [...updatedMessages, streamingMessage] } as Partial<ChatNodeData>);
+    const messagesWithStreaming = [...updatedMessages, streamingMessage];
+    const sessionsWithStreaming = updatedSessions.map(session =>
+      session.id === currentSession.id
+        ? { ...session, messages: messagesWithStreaming }
+        : session
+    );
+    updateNodeData(id, { sessions: sessionsWithStreaming } as Partial<ChatNodeData>);
 
     try {
       // Build context from linked nodes
@@ -251,9 +382,14 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
                   fullContent = parsed.content;
                 } else {
                   fullContent += parsed.content;
-                  // Update message in real-time with accumulated content
+                  // Update message in real-time
                   const currentMessages = [...updatedMessages, { ...streamingMessage, content: fullContent }];
-                  updateNodeData(id, { messages: currentMessages } as Partial<ChatNodeData>);
+                  const currentSessions = (data.sessions || []).map(session =>
+                    session.id === currentSession.id
+                      ? { ...session, messages: currentMessages }
+                      : session
+                  );
+                  updateNodeData(id, { sessions: currentSessions } as Partial<ChatNodeData>);
                 }
               } catch (e) {
                 // Skip invalid JSON
@@ -271,8 +407,18 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
         timestamp: new Date().toISOString(),
       };
 
-      const withResponse = [...updatedMessages, aiResponse];
-      updateNodeData(id, { messages: withResponse } as Partial<ChatNodeData>);
+      const finalMessages = [...updatedMessages, aiResponse];
+      const finalSessions = (data.sessions || []).map(session =>
+        session.id === currentSession.id
+          ? { ...session, messages: finalMessages, updatedAt: new Date().toISOString() }
+          : session
+      );
+      updateNodeData(id, { sessions: finalSessions } as Partial<ChatNodeData>);
+
+      // Generate AI title for first message
+      if (isFirstMessage) {
+        generateChatTitle(userMessageContent, currentSession.id);
+      }
     } catch (error: any) {
       console.error('Chat error:', error);
 
@@ -284,8 +430,13 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
         timestamp: new Date().toISOString(),
       };
 
-      const withError = [...updatedMessages, errorMessage];
-      updateNodeData(id, { messages: withError } as Partial<ChatNodeData>);
+      const errorMessages = [...updatedMessages, errorMessage];
+      const errorSessions = (data.sessions || []).map(session =>
+        session.id === currentSession.id
+          ? { ...session, messages: errorMessages }
+          : session
+      );
+      updateNodeData(id, { sessions: errorSessions } as Partial<ChatNodeData>);
     } finally {
       setIsLoading(false);
     }
@@ -295,345 +446,312 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
     <>
       <BaseNode id={id} allowOverflow={true} showSourceHandle={false} showTargetHandle={true} parentId={parentId}>
         <div
-          className="flex w-[480px] flex-col space-y-2"
+          className="flex w-[1100px] h-[700px] border border-[#E5E7EB] rounded-2xl overflow-hidden bg-white shadow-sm"
           onWheel={(event) => stopReactFlowPropagation(event)}
           onWheelCapture={(event) => stopReactFlowPropagation(event)}
         >
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-[#14B8A6]" />
-              <span className="text-[13px] font-medium text-[#1A1D21]">Chat</span>
+          {/* Left Sidebar */}
+          <div className="nodrag w-[280px] border-r border-[#E5E7EB] flex flex-col bg-[#FAFBFC]">
+            {/* Connected Data Section */}
+            <div className="p-4 border-b border-[#E5E7EB]">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-wide">
+                  Connected Data ({data.linkedNodes?.length || 0})
+                </h3>
+                <button
+                  onClick={(e) => {
+                    stopReactFlowPropagation(e);
+                  }}
+                  className="p-1 hover:bg-white rounded transition-colors"
+                  title="Settings"
+                >
+                  <Settings className="h-3.5 w-3.5 text-[#6B7280]" />
+                </button>
+              </div>
+              {data.linkedNodes && data.linkedNodes.length > 0 ? (
+                <div className="text-[11px] text-[#6B7280] px-2 py-1.5 bg-white border border-[#E5E7EB] rounded">
+                  {data.linkedNodes.length} {data.linkedNodes.length === 1 ? 'node' : 'nodes'} connected
+                </div>
+              ) : (
+                <p className="text-[11px] text-[#9CA3AF]">No data connected</p>
+              )}
             </div>
-            <button
-              onClick={(event) => {
-                stopReactFlowPropagation(event);
-                setIsMaximized(true);
-              }}
-              className="p-1 hover:bg-[#F5F5F7] rounded transition-colors"
-              title="Maximize chat"
-            >
-              <Maximize2 className="h-3.5 w-3.5 text-[#6B7280] hover:text-[#14B8A6]" />
-            </button>
+
+            {/* Chats Section */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="p-4 pb-3">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-wide">
+                    Chats ({data.sessions?.length || 0})
+                  </h3>
+                </div>
+                <button
+                  onClick={(e) => {
+                    stopReactFlowPropagation(e);
+                    createNewChat();
+                  }}
+                  onMouseDown={(e) => stopReactFlowPropagation(e)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-[#E5E7EB] rounded-lg hover:bg-gray-50 transition-colors text-[12px] font-medium text-[#1A1D21]"
+                >
+                  <Plus className="h-4 w-4" />
+                  New Chat
+                </button>
+              </div>
+
+              {/* Chat List */}
+              <div
+                className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5"
+                onWheel={(e) => stopReactFlowPropagation(e)}
+                onMouseDown={(e) => stopReactFlowPropagation(e)}
+              >
+                {data.sessions && data.sessions.length > 0 ? (
+                  data.sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      onClick={(e) => {
+                        stopReactFlowPropagation(e);
+                        switchSession(session.id);
+                      }}
+                      onMouseDown={(e) => stopReactFlowPropagation(e)}
+                      className={`group p-3 rounded-lg cursor-pointer transition-all ${
+                        session.id === currentSession?.id
+                          ? 'bg-white border-2 border-[#14B8A6] shadow-sm'
+                          : 'bg-white border border-[#E5E7EB] hover:border-[#9CA3AF]'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] font-medium text-[#1A1D21] truncate">
+                            {session.title}
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => deleteSession(session.id, e)}
+                          onMouseDown={(e) => stopReactFlowPropagation(e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded transition-all"
+                          title="Delete chat"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[11px] text-[#9CA3AF] text-center py-8">No chats yet</p>
+                )}
+              </div>
+            </div>
           </div>
-          {/* Wrapper for scroll isolation */}
-          <div className="relative rounded-lg bg-[#FAFBFC] border border-[#E8ECEF]">
+
+          {/* Main Chat Area */}
+          <div className="flex-1 flex flex-col">
+            {/* Chat Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
+              <div className="flex items-center gap-3">
+                <MessageSquare className="h-5 w-5 text-[#14B8A6]" />
+                <h3 className="text-[14px] font-semibold text-[#1A1D21]">
+                  {currentSession?.title || 'Chat'}
+                </h3>
+              </div>
+              <button
+                onClick={(e) => {
+                  stopReactFlowPropagation(e);
+                  setIsMaximized(true);
+                }}
+                onMouseDown={(e) => stopReactFlowPropagation(e)}
+                className="p-2 hover:bg-[#F5F5F7] rounded-lg transition-colors"
+                title="Maximize chat"
+              >
+                <Maximize2 className="h-4 w-4 text-[#6B7280] hover:text-[#14B8A6]" />
+              </button>
+            </div>
+
+            {/* Messages Area */}
             <div
               ref={scrollContainerRef}
               onScroll={handleScroll}
-              onWheel={(event) => stopReactFlowPropagation(event)}
-              onWheelCapture={(event) => stopReactFlowPropagation(event)}
-              onMouseDown={(event) => stopReactFlowPropagation(event)}
-              onPointerDown={(event) => stopReactFlowPropagation(event)}
-              onTouchStart={(event) => stopReactFlowPropagation(event)}
-              onTouchMove={(event) => stopReactFlowPropagation(event)}
+              onWheel={(e) => stopReactFlowPropagation(e)}
+              onWheelCapture={(e) => stopReactFlowPropagation(e)}
               data-lenis-prevent
-              data-lenis-prevent-wheel
-              data-lenis-prevent-touch
-              className="relative h-[480px] overflow-y-auto overflow-x-hidden px-3 py-3 space-y-3 scroll-smooth chat-scrollbar"
-              style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
+              className="nodrag flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-white"
+              style={{ overscrollBehavior: 'contain', userSelect: 'text' }}
             >
-              {data.messages.length > 0 ? (
-                data.messages.map((message) => (
-                  <div key={message.id} className="max-w-[85%]">
+              {messages.length > 0 ? (
+                messages.map((message) => (
+                  <div key={message.id} className="max-w-[90%]">
                     <div className="flex items-center gap-2 mb-1.5">
                       {message.role === 'assistant' ? (
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#FAFBFC] border border-[#E8ECEF]">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F5F5F7] border border-[#E5E7EB]">
                           <div className="w-1.5 h-1.5 bg-[#14B8A6] rounded-full"></div>
                           <span className="text-[10px] font-medium text-[#6B7280] tracking-wide">AI</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#FAFBFC] border border-[#E8ECEF]">
-                          <User className="w-2.5 h-2.5 text-[#6B7280]" />
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F5F5F7] border border-[#E5E7EB]">
+                          <User className="w-3 h-3 text-[#6B7280]" />
                           <span className="text-[10px] font-medium text-[#6B7280] tracking-wide">{getUserDisplayName()}</span>
                         </div>
                       )}
                     </div>
                     <div
-                      className={`p-3.5 rounded-lg text-[13px] leading-[1.6] break-words transition-all ${
+                      className={`group nodrag p-4 rounded-lg text-[13px] leading-[1.6] select-text cursor-text ${
                         message.role === 'user'
-                          ? 'bg-[#F5F5F7] text-[#1A1D21] border border-[#E8ECEF]'
-                          : 'bg-white text-[#1A1D21]'
+                          ? 'bg-[#F5F5F7] text-[#1A1D21] border border-[#E5E7EB]'
+                          : 'bg-white text-[#1A1D21] border border-[#E5E7EB]'
                       }`}
-                      style={{
-                        wordWrap: 'break-word',
-                        overflowWrap: 'break-word',
+                      style={{ userSelect: 'text' }}
+                      onMouseDown={(e) => {
+                        // Stop propagation to prevent ReactFlow from capturing drag events
+                        e.stopPropagation();
                       }}
                     >
-                    <div className="prose prose-sm max-w-none markdown-content overflow-x-auto">
-                      {message.content === '' && isLoading ? (
-                        <div className="flex items-center gap-2 py-2">
-                          <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse"></div>
-                          <div className="w-2 h-2 bg-[#14B8A6] rounded-full" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '0.2s' }}></div>
-                          <div className="w-2 h-2 bg-[#14B8A6] rounded-full" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '0.4s' }}></div>
-                        </div>
-                      ) : (
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm, remarkMath]}
-                        rehypePlugins={[rehypeKatex]}
-                        components={{
-                          // Code blocks with syntax highlighting
-                          code: (props) => <CodeBlock {...props} isUserMessage={message.role === 'user'} />,
-                          pre: ({ children }) => <>{children}</>,
+                      <div className="prose prose-sm max-w-none select-text" style={{ userSelect: 'text' }}>
+                        {message.content === '' && isLoading ? (
+                          <div className="flex items-center gap-2 py-2">
+                            <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse"></div>
+                            <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                            <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                          </div>
+                        ) : (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[rehypeKatex]}
+                            components={{
+                              code: (props) => <CodeBlock {...props} isUserMessage={message.role === 'user'} />,
+                              pre: ({ children }) => <>{children}</>,
+                              p: ({ children }) => <p className="text-[13px] mb-3 last:mb-0 select-text" style={{ userSelect: 'text' }}>{children}</p>,
+                              h1: ({ children }) => <h1 className="text-[18px] font-bold mb-4 mt-5 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h1>,
+                              h2: ({ children }) => <h2 className="text-[16px] font-bold mb-3 mt-4 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h2>,
+                              h3: ({ children }) => <h3 className="text-[15px] font-semibold mb-3 mt-4 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h3>,
+                              ul: ({ children }) => <ul className="list-disc ml-5 mb-4 space-y-2 text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</ul>,
+                              ol: ({ children }) => <ol className="list-decimal ml-5 mb-4 space-y-2 text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</ol>,
+                              li: ({ children }) => <li className="leading-[1.6] text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</li>,
+                              strong: ({ children }) => <strong className="font-semibold text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</strong>,
+                              em: ({ children }) => <em className="italic text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</em>,
+                              a: ({ href, children }) => (
+                                <a
+                                  href={href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[13px] text-[#155EEF] hover:underline select-text"
+                                  style={{ userSelect: 'text' }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {children}
+                                </a>
+                              ),
+                              blockquote: ({ children }) => (
+                                <blockquote className="border-l-4 text-[13px] border-[#E8ECEF] bg-[#F5F5F7] pl-4 py-3 my-4 italic rounded-r leading-[1.6] select-text" style={{ userSelect: 'text' }}>
+                                  {children}
+                                </blockquote>
+                              ),
+                              table: ({ children }) => (
+                                <div className="overflow-x-auto my-4 select-text" style={{ userSelect: 'text' }}>
+                                  <table className="min-w-full text-[13px] border-collapse">{children}</table>
+                                </div>
+                              ),
+                              thead: ({ children }) => <thead className="bg-gray-100">{children}</thead>,
+                              th: ({ children }) => <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</th>,
+                              td: ({ children }) => <td className="border border-gray-300 px-3 py-2 text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</td>,
+                              hr: () => <hr className="my-4 border-t border-[#E8ECEF]" />,
+                            }}
+                          >
+                            {message.content}
+                          </ReactMarkdown>
+                        )}
+                      </div>
 
-                          // Typography - Consistent sizing
-                          p: ({ children }) => <p className="text-[13px] mb-3 last:mb-0 leading-[1.6]">{children}</p>,
-                          h1: ({ children }) => <h1 className="text-[16px] font-bold mb-3 mt-4 first:mt-0 leading-[1.4]">{children}</h1>,
-                          h2: ({ children }) => <h2 className="text-[15px] font-bold mb-3 mt-4 first:mt-0 leading-[1.4]">{children}</h2>,
-                          h3: ({ children }) => <h3 className="text-[14px] font-semibold mb-2 mt-3 first:mt-0 leading-[1.4]">{children}</h3>,
-                          h4: ({ children }) => <h4 className="text-[13px] font-semibold mb-2 mt-3 first:mt-0 leading-[1.4]">{children}</h4>,
-
-                          // Lists - Consistent sizing
-                          ul: ({ children }) => <ul className="list-disc ml-5 mb-3 space-y-1.5 text-[13px]">{children}</ul>,
-                          ol: ({ children }) => <ol className="list-decimal ml-5 mb-3 space-y-1.5 text-[13px]">{children}</ol>,
-                          li: ({ children }) => <li className="leading-[1.6] text-[13px]">{children}</li>,
-
-                          // Inline elements
-                          strong: ({ children }) => <strong className="font-semibold text-[13px]">{children}</strong>,
-                          em: ({ children }) => <em className="italic text-[13px]">{children}</em>,
-                          a: ({ href, children }) => (
-                            <a
-                              href={href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`text-[13px] ${message.role === 'user' ? 'text-white underline decoration-white/60 hover:decoration-white' : 'text-[#155EEF] hover:underline'}`}
-                            >
-                              {children}
-                            </a>
-                          ),
-
-                          // Blockquote
-                          blockquote: ({ children }) => (
-                            <blockquote className={`border-l-4 text-[13px] ${message.role === 'user' ? 'border-white/50 bg-white/10' : 'border-[#E8ECEF] bg-[#F5F5F7]'} pl-4 py-3 my-3 italic rounded-r leading-[1.6]`}>
-                              {children}
-                            </blockquote>
-                          ),
-
-                          // Tables
-                          table: ({ children }) => (
-                            <div className="overflow-x-auto my-4">
-                              <table className="min-w-full text-[13px] border-collapse">{children}</table>
-                            </div>
-                          ),
-                          thead: ({ children }) => <thead className="bg-gray-100">{children}</thead>,
-                          th: ({ children }) => <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-[13px]">{children}</th>,
-                          td: ({ children }) => <td className="border border-gray-300 px-3 py-2 text-[13px]">{children}</td>,
-
-                          // Horizontal rule
-                          hr: () => <hr className={`my-4 border-t ${message.role === 'user' ? 'border-white/30' : 'border-[#E8ECEF]'}`} />,
-                        }}
-                      >
-                        {message.content}
-                      </ReactMarkdown>
-                      )}
-                    </div>
+                      {/* Copy button */}
+                      <div className="flex justify-start mt-2 pt-2 border-t border-[#E5E7EB]">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyMessage(message.id, message.content);
+                          }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-[#6B7280] hover:text-[#14B8A6] hover:bg-[#F0F9FF] rounded-md transition-all opacity-0 group-hover:opacity-100"
+                          title="Copy message"
+                        >
+                          {copiedMessageId === message.id ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-[#14B8A6]" />
+                              <span className="font-medium text-[#14B8A6]">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="flex items-center justify-center h-full text-[12px] text-[#9CA3AF]">
-                  No messages yet
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <MessageSquare className="h-16 w-16 text-[#D1D5DB] mb-6" />
+                  <button
+                    onClick={(e) => stopReactFlowPropagation(e)}
+                    onMouseDown={(e) => stopReactFlowPropagation(e)}
+                    className="flex items-center gap-2 px-5 py-3 bg-white border-2 border-[#E5E7EB] rounded-xl hover:border-[#14B8A6] hover:bg-[#F5F5F7] transition-all text-[13px] font-medium text-[#1A1D21]"
+                  >
+                    <Library className="h-4 w-4" />
+                    Browse Prompt Library
+                  </button>
                 </div>
               )}
-              
-              
               <div ref={messagesEndRef} />
             </div>
-          </div>
 
-        {data.linkedNodes.length > 0 && (
-          <div className="text-[10px] text-[#9CA3AF] flex items-center gap-1.5">
-            <div className="w-1 h-1 bg-[#14B8A6] rounded-full"></div>
-            <span>{data.linkedNodes.length} source{data.linkedNodes.length !== 1 ? 's' : ''}</span>
-          </div>
-        )}
+            {/* Input Area */}
+            <div className="nodrag px-6 py-4 border-t border-[#E5E7EB] bg-[#FAFBFC]">
+              <div className="flex items-center gap-3 mb-3">
+                {/* Model Selector */}
+                <div className="relative">
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    onClick={(e) => stopReactFlowPropagation(e)}
+                    onMouseDown={(e) => stopReactFlowPropagation(e)}
+                    className="appearance-none pl-3 pr-8 py-2 text-[11px] font-medium bg-white border border-[#E5E7EB] rounded-lg cursor-pointer hover:border-[#9CA3AF] transition-colors focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
+                  >
+                    <option value="gemini-flash-latest">GPT-4.1</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#6B7280] pointer-events-none" />
+                </div>
 
-        <div
-          onMouseDown={(event) => stopReactFlowPropagation(event)}
-          onWheel={(event) => stopReactFlowPropagation(event)}
-          onWheelCapture={(event) => stopReactFlowPropagation(event)}
-        >
-          <VoiceInputBar
-            value={input}
-            onChange={setInput}
-            onSend={handleSend}
-            placeholder="Ask anything..."
-            disabled={isLoading}
-            voiceMode="replace"
-            showAddButton={false}
-            showRecordingHint={false}
-          />
-        </div>
-      </div>
-    </BaseNode>
+                {/* Prompts Button */}
+                <button
+                  onClick={(e) => stopReactFlowPropagation(e)}
+                  onMouseDown={(e) => stopReactFlowPropagation(e)}
+                  className="flex items-center gap-2 px-3 py-2 text-[11px] font-medium bg-white border border-[#E5E7EB] rounded-lg hover:border-[#9CA3AF] transition-colors"
+                >
+                  <Library className="h-3.5 w-3.5" />
+                  Prompts
+                </button>
+              </div>
 
-    {/* Fullscreen Chat Modal */}
-    {isMaximized && (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        onClick={() => setIsMaximized(false)}
-      >
-        <div
-          className="bg-white rounded-2xl shadow-2xl w-[90vw] max-w-6xl h-[90vh] flex flex-col overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Modal Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
-            <div className="flex items-center gap-3">
-              <MessageSquare className="h-5 w-5 text-[#14B8A6]" />
-              <div>
-                <h3 className="text-[16px] font-semibold text-[#1A1D21]">Chat Assistant</h3>
-                {data.linkedNodes.length > 0 && (
-                  <p className="text-[11px] text-[#6B7280]">
-                    {data.linkedNodes.length} source{data.linkedNodes.length !== 1 ? 's' : ''} connected
-                  </p>
-                )}
+              <div onMouseDown={(e) => stopReactFlowPropagation(e)}>
+                <VoiceInputBar
+                  value={input}
+                  onChange={setInput}
+                  onSend={handleSend}
+                  placeholder="Ask anything..."
+                  disabled={isLoading}
+                  voiceMode="replace"
+                  showAddButton={false}
+                  showRecordingHint={false}
+                />
               </div>
             </div>
-            <button
-              onClick={() => setIsMaximized(false)}
-              className="p-2 hover:bg-[#F5F5F7] rounded-lg transition-colors"
-              title="Close"
-            >
-              <X className="h-5 w-5 text-[#6B7280] hover:text-[#1A1D21]" />
-            </button>
-          </div>
-
-          {/* Modal Messages */}
-          <div
-            ref={modalScrollContainerRef}
-            onScroll={() => {
-              if (modalScrollContainerRef.current) {
-                const { scrollHeight, scrollTop, clientHeight } = modalScrollContainerRef.current;
-                const threshold = 100;
-                setShouldAutoScroll(scrollHeight - scrollTop - clientHeight < threshold);
-              }
-            }}
-            onWheel={(event) => stopReactFlowPropagation(event)}
-            onWheelCapture={(event) => stopReactFlowPropagation(event)}
-            onMouseDown={(event) => stopReactFlowPropagation(event)}
-            onPointerDown={(event) => stopReactFlowPropagation(event)}
-            onTouchStart={(event) => stopReactFlowPropagation(event)}
-            onTouchMove={(event) => stopReactFlowPropagation(event)}
-            data-lenis-prevent
-            data-lenis-prevent-wheel
-            data-lenis-prevent-touch
-            className="relative flex-1 overflow-y-auto overflow-x-hidden px-8 py-6 space-y-4 chat-scrollbar bg-[#FAFBFC]"
-            style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
-          >
-            {data.messages.length > 0 ? (
-              data.messages.map((message) => (
-                <div key={message.id} className="max-w-[85%]">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    {message.role === 'assistant' ? (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FAFBFC] border border-[#E8ECEF]">
-                        <div className="w-1.5 h-1.5 bg-[#14B8A6] rounded-full"></div>
-                        <span className="text-[11px] font-medium text-[#6B7280] tracking-wide">AI</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FAFBFC] border border-[#E8ECEF]">
-                        <User className="w-3 h-3 text-[#6B7280]" />
-                        <span className="text-[11px] font-medium text-[#6B7280] tracking-wide">{getUserDisplayName()}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div
-                    className={`p-4 rounded-lg text-[14px] leading-[1.6] ${
-                      message.role === 'user'
-                        ? 'bg-[#F5F5F7] text-[#1A1D21] border border-[#E8ECEF]'
-                        : 'bg-white text-[#1A1D21]'
-                    }`}
-                  >
-                  <div className="prose prose-sm max-w-none markdown-content overflow-x-auto">
-                    {message.content === '' && isLoading ? (
-                      <div className="flex items-center gap-2 py-2">
-                        <div className="w-2.5 h-2.5 bg-[#14B8A6] rounded-full animate-pulse"></div>
-                        <div className="w-2.5 h-2.5 bg-[#14B8A6] rounded-full" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '0.2s' }}></div>
-                        <div className="w-2.5 h-2.5 bg-[#14B8A6] rounded-full" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '0.4s' }}></div>
-                      </div>
-                    ) : (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm, remarkMath]}
-                      rehypePlugins={[rehypeKatex]}
-                      components={{
-                        code: (props) => <CodeBlock {...props} isUserMessage={message.role === 'user'} />,
-                        pre: ({ children }) => <>{children}</>,
-                        // Typography - Consistent sizing (larger for modal)
-                        p: ({ children }) => <p className="text-[14px] mb-3 last:mb-0 leading-[1.6]">{children}</p>,
-                        h1: ({ children }) => <h1 className="text-[18px] font-bold mb-4 mt-5 first:mt-0 leading-[1.4]">{children}</h1>,
-                        h2: ({ children }) => <h2 className="text-[16px] font-bold mb-3 mt-4 first:mt-0 leading-[1.4]">{children}</h2>,
-                        h3: ({ children }) => <h3 className="text-[15px] font-semibold mb-3 mt-4 first:mt-0 leading-[1.4]">{children}</h3>,
-                        h4: ({ children }) => <h4 className="text-[14px] font-semibold mb-2 mt-3 first:mt-0 leading-[1.4]">{children}</h4>,
-                        ul: ({ children }) => <ul className="list-disc ml-5 mb-4 space-y-2 text-[14px]">{children}</ul>,
-                        ol: ({ children }) => <ol className="list-decimal ml-5 mb-4 space-y-2 text-[14px]">{children}</ol>,
-                        li: ({ children }) => <li className="leading-[1.6] text-[14px]">{children}</li>,
-                        strong: ({ children }) => <strong className="font-semibold text-[14px]">{children}</strong>,
-                        em: ({ children }) => <em className="italic text-[14px]">{children}</em>,
-                        a: ({ href, children }) => (
-                          <a
-                            href={href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`text-[14px] ${message.role === 'user' ? 'text-white underline decoration-white/60 hover:decoration-white' : 'text-[#155EEF] hover:underline'}`}
-                          >
-                            {children}
-                          </a>
-                        ),
-                        blockquote: ({ children }) => (
-                          <blockquote className={`border-l-4 text-[14px] ${message.role === 'user' ? 'border-white/50 bg-white/10' : 'border-[#E8ECEF] bg-[#F5F5F7]'} pl-4 py-3 my-4 italic rounded-r leading-[1.6]`}>
-                            {children}
-                          </blockquote>
-                        ),
-                        table: ({ children }) => (
-                          <div className="overflow-x-auto my-4">
-                            <table className="min-w-full text-[14px] border-collapse">{children}</table>
-                          </div>
-                        ),
-                        thead: ({ children }) => <thead className="bg-gray-100">{children}</thead>,
-                        th: ({ children }) => <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-[14px]">{children}</th>,
-                        td: ({ children }) => <td className="border border-gray-300 px-3 py-2 text-[14px]">{children}</td>,
-                        hr: () => <hr className={`my-4 border-t ${message.role === 'user' ? 'border-white/30' : 'border-[#E8ECEF]'}`} />,
-                      }}
-                    >
-                      {message.content}
-                    </ReactMarkdown>
-                    )}
-                  </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <MessageSquare className="h-12 w-12 text-[#9CA3AF] mb-4" />
-                <p className="text-[16px] font-medium text-[#6B7280] mb-2">No messages yet</p>
-                <p className="text-[13px] text-[#9CA3AF]">Start a conversation with the AI assistant</p>
-              </div>
-            )}
-            
-            
-            <div ref={modalMessagesEndRef} />
-          </div>
-
-          {/* Modal Input */}
-          <div
-            className="px-6 py-5 border-t border-[#E8ECEF] bg-[#fafafa]"
-            onMouseDown={(event) => stopReactFlowPropagation(event)}
-            onWheel={(event) => stopReactFlowPropagation(event)}
-            onWheelCapture={(event) => stopReactFlowPropagation(event)}
-          >
-            <VoiceInputBar
-              value={input}
-              onChange={setInput}
-              onSend={handleSend}
-              placeholder="Ask anything..."
-              disabled={isLoading}
-              voiceMode="replace"
-              showAddButton={false}
-              autoFocus
-            />
           </div>
         </div>
-      </div>
-    )}
+      </BaseNode>
     </>
   );
 });
+
+ChatNode.displayName = 'ChatNode';

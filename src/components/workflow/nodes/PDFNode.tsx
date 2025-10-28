@@ -97,9 +97,12 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
         parseError: undefined,
       } as Partial<PDFNodeData>);
 
-      // Prepare request body based on source
+      // Prepare request body based on source (include uploadcareUuid for caching)
       const body = parseSource.kind === 'uploadcare'
-        ? { uploadcareCdnUrl: parseSource.payload }
+        ? {
+            uploadcareCdnUrl: parseSource.payload,
+            uploadcareUuid: data.uploadcareUuid // Include UUID for cache lookup
+          }
         : { pdfUrl: parseSource.payload };
 
       const response = await fetch('/api/pdf/parse', {
@@ -112,14 +115,22 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
       const result = await response.json();
 
       if (response.ok) {
-        console.log('[PDFNode] Parse successful');
-        updateNodeData(id, {
-          parsedText: result.parsedText,
-          segments: result.segments,
-          pageCount: result.pageCount,
-          parseStatus: 'success',
-          parseError: undefined,
-        } as Partial<PDFNodeData>);
+        // Check if this is a background job
+        if (result.status === 'processing' && result.jobId) {
+          console.log('[PDFNode] Background job created:', result.jobId);
+          // Start polling for job status
+          pollJobStatus(result.jobId);
+        } else {
+          // Immediate success
+          console.log('[PDFNode] Parse successful');
+          updateNodeData(id, {
+            parsedText: result.parsedText,
+            segments: result.segments,
+            pageCount: result.pageCount,
+            parseStatus: 'success',
+            parseError: undefined,
+          } as Partial<PDFNodeData>);
+        }
       } else {
         // Handle specific error codes
         let errorMessage = result.error || 'Failed to parse PDF';
@@ -146,6 +157,64 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
         parseError: error instanceof Error ? error.message : 'Failed to parse PDF',
       } as Partial<PDFNodeData>);
     }
+  };
+
+  const pollJobStatus = async (jobId: string) => {
+    const maxAttempts = 120; // 2 minutes max (120 * 1s)
+    let attempts = 0;
+
+    const poll = async () => {
+      if (attempts >= maxAttempts) {
+        updateNodeData(id, {
+          parseStatus: 'error',
+          parseError: 'Parsing timeout - job took too long to complete',
+        } as Partial<PDFNodeData>);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/pdf/status/${jobId}`, {
+          credentials: 'include',
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          updateNodeData(id, {
+            parseStatus: 'error',
+            parseError: result.error || 'Failed to check job status',
+          } as Partial<PDFNodeData>);
+          return;
+        }
+
+        if (result.status === 'completed') {
+          console.log('[PDFNode] Background job completed');
+          updateNodeData(id, {
+            parsedText: result.result.parsedText,
+            segments: result.result.segments,
+            pageCount: result.result.pageCount,
+            parseStatus: 'success',
+            parseError: undefined,
+          } as Partial<PDFNodeData>);
+        } else if (result.status === 'failed') {
+          updateNodeData(id, {
+            parseStatus: 'error',
+            parseError: result.error || 'Parsing failed',
+          } as Partial<PDFNodeData>);
+        } else {
+          // Still processing, poll again
+          attempts++;
+          setTimeout(poll, 1000);
+        }
+      } catch (error) {
+        updateNodeData(id, {
+          parseStatus: 'error',
+          parseError: 'Failed to check parsing status',
+        } as Partial<PDFNodeData>);
+      }
+    };
+
+    poll();
   };
 
   // Auto-trigger parsing when PDF is uploaded

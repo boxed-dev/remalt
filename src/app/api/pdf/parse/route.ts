@@ -1,22 +1,25 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
+import { parsePdf, parsePdfFromUrl } from '@/lib/pdf/parser';
+import { createJob, registerProcessor, updateJobProgress } from '@/lib/pdf/job-queue';
 import { createClient } from '@supabase/supabase-js';
 
 // Maximum file size: 50MB
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
-// API timeout: 2 minutes for large PDFs
+// Threshold for background processing: 20MB
+const BACKGROUND_THRESHOLD = 20 * 1024 * 1024;
+// API timeout: 2 minutes for synchronous parsing
 const API_TIMEOUT_MS = 120000;
 
 // Initialize Supabase client
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  
+
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error('Supabase configuration missing');
   }
-  
+
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
@@ -30,6 +33,51 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: st
   ]);
 }
 
+// Register job processor for background jobs
+registerProcessor(async (job) => {
+  console.log('[PDF Parse] Processing background job:', job.id);
+
+  try {
+    updateJobProgress(job.id, 20);
+
+    let pdfBuffer: ArrayBuffer;
+
+    // Fetch PDF based on available data
+    if (job.uploadcareCdnUrl) {
+      const response = await fetch(job.uploadcareCdnUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+      }
+      pdfBuffer = await response.arrayBuffer();
+    } else if (job.pdfUrl) {
+      const response = await fetch(job.pdfUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+      }
+      pdfBuffer = await response.arrayBuffer();
+    } else {
+      throw new Error('No PDF source available');
+    }
+
+    updateJobProgress(job.id, 30);
+
+    // Parse PDF with hybrid approach
+    const result = await parsePdf(job.pdfIdentifier, pdfBuffer, {
+      useContextCache: true, // Use context caching for large files
+    });
+
+    return {
+      parsedText: result.parsedText,
+      segments: result.segments,
+      pageCount: result.pageCount,
+      parseMethod: result.parseMethod,
+    };
+  } catch (error) {
+    console.error('[PDF Parse] Background job error:', error);
+    throw error;
+  }
+});
+
 export async function POST(req: NextRequest) {
   // Require authentication
   const { user, error: authError } = await requireAuth(req);
@@ -38,7 +86,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { pdfData, pdfUrl, storagePath, uploadcareCdnUrl } = await req.json();
+    const { pdfData, pdfUrl, storagePath, uploadcareCdnUrl, uploadcareUuid } = await req.json();
 
     // Validate input
     if (!pdfData && !pdfUrl && !storagePath && !uploadcareCdnUrl) {
@@ -48,21 +96,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate API key
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'GEMINI_API_KEY is not configured' },
-        { status: 500 }
-      );
-    }
-
     console.log('\n=== PDF Parsing Request ===');
     console.log('User ID:', user.id);
 
     let pdfBuffer: ArrayBuffer;
     let fileSize: number;
     let source: 'storage' | 'url' | 'upload' | 'uploadcare';
+    let fileName: string | undefined;
+
+    // Generate PDF identifier for caching (prefer uploadcare UUID)
+    let pdfIdentifier: string;
+    if (uploadcareUuid) {
+      pdfIdentifier = uploadcareUuid;
+    } else if (uploadcareCdnUrl) {
+      // Extract UUID from URL if not provided
+      const match = uploadcareCdnUrl.match(/\/([a-f0-9-]+)\//);
+      pdfIdentifier = match ? match[1] : `url-${hashString(uploadcareCdnUrl)}`;
+    } else if (pdfUrl) {
+      pdfIdentifier = `url-${hashString(pdfUrl)}`;
+    } else {
+      pdfIdentifier = `upload-${Date.now()}`;
+    }
 
     // Get PDF data from different sources
     if (uploadcareCdnUrl) {
@@ -85,6 +139,7 @@ export async function POST(req: NextRequest) {
 
       pdfBuffer = await urlResponse.arrayBuffer();
       fileSize = pdfBuffer.byteLength;
+      fileName = uploadcareCdnUrl.split('/').pop();
 
     } else if (storagePath) {
       // Fetch from Supabase Storage
@@ -106,6 +161,7 @@ export async function POST(req: NextRequest) {
 
       pdfBuffer = await fileData.arrayBuffer();
       fileSize = pdfBuffer.byteLength;
+      fileName = storagePath.split('/').pop();
 
     } else if (pdfUrl) {
       // Fetch from URL
@@ -127,6 +183,7 @@ export async function POST(req: NextRequest) {
 
       pdfBuffer = await urlResponse.arrayBuffer();
       fileSize = pdfBuffer.byteLength;
+      fileName = pdfUrl.split('/').pop();
 
     } else {
       // Use provided base64 data (legacy support)
@@ -148,7 +205,7 @@ export async function POST(req: NextRequest) {
     if (fileSize > MAX_FILE_SIZE) {
       const sizeMB = (fileSize / (1024 * 1024)).toFixed(2);
       return NextResponse.json(
-        { 
+        {
           error: `PDF file too large (${sizeMB}MB). Maximum size is 50MB.`,
           code: 'FILE_TOO_LARGE'
         },
@@ -157,110 +214,77 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`File size: ${(fileSize / (1024 * 1024)).toFixed(2)}MB`);
+    console.log(`PDF Identifier: ${pdfIdentifier}`);
 
-    // Initialize Gemini
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    // Decide: synchronous or background processing
+    if (fileSize >= BACKGROUND_THRESHOLD) {
+      console.log('[PDF Parse] File is large, creating background job');
 
-    // Prepare PDF for Gemini
-    const base64Pdf = Buffer.from(pdfBuffer).toString('base64');
-    const pdfPart = {
-      inlineData: {
-        data: base64Pdf,
-        mimeType: 'application/pdf',
-      },
-    };
+      // Create background job
+      const job = createJob(pdfIdentifier, {
+        pdfUrl,
+        uploadcareCdnUrl,
+        fileName,
+        fileSize,
+      });
 
-    const prompt = `Extract all text from this PDF document with structure preservation. Organize the content as follows:
-
-1. **Full Text**: Complete text extraction
-2. **Segments**: Break content into logical sections with headings
-3. **Page Count**: Total number of pages
-
-Format your response as JSON:
-{
-  "parsedText": "complete text here",
-  "segments": [
-    {
-      "heading": "Section Title",
-      "content": "section content",
-      "page": 1
+      return NextResponse.json({
+        status: 'processing',
+        jobId: job.id,
+        message: 'PDF parsing started in background. Poll /api/pdf/status/' + job.id + ' for progress.',
+        metadata: {
+          source,
+          fileSize,
+          fileSizeMB: (fileSize / (1024 * 1024)).toFixed(2),
+          backgroundJob: true,
+        }
+      });
     }
-  ],
-  "pageCount": 10
-}
 
-Important:
-- Preserve paragraph structure
-- Identify and label headings/sections
-- Maintain logical reading order
-- Include all text, tables, and captions`;
+    // Synchronous processing for smaller files
+    console.log('[PDF Parse] Processing synchronously');
 
-    console.log('Starting Gemini API call...');
-    
-    // Call Gemini with timeout
     const result = await withTimeout(
-      model.generateContent([prompt, pdfPart]),
+      parsePdf(pdfIdentifier, pdfBuffer, { useContextCache: false }),
       API_TIMEOUT_MS,
       'PDF parsing timed out. The file might be too large or complex.'
     );
 
-    const responseText = result.response.text();
-    console.log('[Gemini] Parsing complete:', responseText.length, 'chars');
-
-    // Parse JSON response
-    let parseData;
-    try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parseData = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
-    } catch (parseError) {
-      console.warn('Failed to parse JSON, using fallback format');
-      // Fallback: use raw response as parsed text
-      parseData = {
-        parsedText: responseText,
-        segments: [
-          {
-            heading: 'Document Content',
-            content: responseText,
-            page: 1
-          }
-        ],
-        pageCount: 1
-      };
-    }
-
     console.log('[Result] ✅ Success');
-    console.log('  Parsed text length:', parseData.parsedText?.length || 0, 'chars');
-    console.log('  Segments:', parseData.segments?.length || 0);
-    console.log('  Pages:', parseData.pageCount || 0);
+    console.log('  Parse method:', result.parseMethod);
+    console.log('  Cached:', result.cached);
+    console.log('  Parsed text length:', result.parsedText?.length || 0, 'chars');
+    console.log('  Segments:', result.segments?.length || 0);
+    console.log('  Pages:', result.pageCount || 0);
+    console.log('  Duration:', result.parseDurationMs, 'ms');
     console.log('===================\n');
 
     return NextResponse.json({
-      parsedText: parseData.parsedText || '',
-      segments: parseData.segments || [],
-      pageCount: parseData.pageCount || 1,
+      parsedText: result.parsedText || '',
+      segments: result.segments || [],
+      pageCount: result.pageCount || 1,
       status: 'success',
       metadata: {
         source,
         fileSize,
         fileSizeMB: (fileSize / (1024 * 1024)).toFixed(2),
+        parseMethod: result.parseMethod,
+        cached: result.cached,
+        parseDurationMs: result.parseDurationMs,
+        backgroundJob: false,
       }
     });
 
   } catch (error) {
     console.error('PDF Parsing Error:', error);
-    
+
     // Handle specific error types
     let errorMessage = 'Failed to parse PDF';
     let statusCode = 500;
 
     if (error instanceof Error) {
       errorMessage = error.message;
-      
+
       // Check for timeout
       if (errorMessage.includes('timed out')) {
         statusCode = 504;
@@ -281,11 +305,22 @@ Important:
       {
         error: errorMessage,
         status: 'error',
-        code: statusCode === 429 ? 'RATE_LIMIT' : 
-              statusCode === 504 ? 'TIMEOUT' : 
+        code: statusCode === 429 ? 'RATE_LIMIT' :
+              statusCode === 504 ? 'TIMEOUT' :
               statusCode === 400 ? 'INVALID_FILE' : 'PARSE_ERROR'
       },
       { status: statusCode }
     );
   }
+}
+
+// Simple string hash function for generating identifiers
+function hashString(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36);
 }

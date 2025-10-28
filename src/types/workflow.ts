@@ -316,6 +316,7 @@ export interface WebpageNodeData extends BaseNodeData {
 
 // Chat / Assistant Node
 export interface ChatNodeData extends BaseNodeData {
+  // Legacy support for old single-chat format
   messages: ChatMessage[];
   linkedNodes: string[];
   systemPrompt?: string;
@@ -323,6 +324,19 @@ export interface ChatNodeData extends BaseNodeData {
   temperature?: number;
   maxTokens?: number;
   contextWindow: unknown[];
+
+  // New multi-chat session support
+  sessions?: ChatSession[];
+  currentSessionId?: string;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string; // Auto-generated from first message or custom
+  messages: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
+  model: 'gemini-flash-latest' | 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash-exp';
 }
 
 export interface ChatMessage {
