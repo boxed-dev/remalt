@@ -36,9 +36,9 @@ interface BaseNodeProps {
 
 export function BaseNode({
   id,
-  type,
-  icon,
-  iconBg = 'bg-gray-100',
+  type: _type,
+  icon: _icon,
+  iconBg: _iconBg = 'bg-gray-100',
   children,
   showSourceHandle = true,
   showTargetHandle = false, // Changed default to false - most nodes only need source handle
@@ -54,6 +54,9 @@ export function BaseNode({
   contentClassName,
   contentStyle,
 }: BaseNodeProps) {
+  void _type;
+  void _icon;
+  void _iconBg;
   // Node activation system
   const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
   const setActiveNode = useWorkflowStore((state) => state.setActiveNode);

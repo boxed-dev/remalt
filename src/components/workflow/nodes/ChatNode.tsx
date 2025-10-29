@@ -1,7 +1,7 @@
 import { memo } from 'react';
-import { MessageSquare, Copy, Check, Maximize2, X, User, Plus, Library, ChevronDown, Trash2, Settings } from 'lucide-react';
+import { MessageSquare, Copy, Check, Maximize2, User, Plus, Library, ChevronDown, Trash2, Settings } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { SyntheticEvent, WheelEvent as ReactWheelEvent } from 'react';
+import type { SyntheticEvent, WheelEvent as ReactWheelEvent, ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -26,6 +26,13 @@ const CHAT_NODE_MIN_WIDTH = 760;
 const CHAT_NODE_MIN_HEIGHT = 520;
 const CHAT_NODE_MAX_WIDTH = 2000;
 const CHAT_NODE_MAX_HEIGHT = 1600;
+const CHAT_MODELS = [
+  'gemini-flash-latest',
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-2.0-flash-exp',
+] as const;
+type SupportedChatModel = typeof CHAT_MODELS[number];
 
 const parseDimension = (value: number | string | undefined): number | undefined => {
   if (typeof value === 'number') {
@@ -41,7 +48,7 @@ const parseDimension = (value: number | string | undefined): number | undefined 
 };
 
 // Code block component with syntax highlighting and copy button
-function CodeBlock({ inline, className, children, isUserMessage }: any) {
+function CodeBlock({ inline, className, children }: { inline?: boolean; className?: string; children: ReactNode }) {
   const [copied, setCopied] = useState(false);
   const match = /language-(\w+)/.exec(className || '');
   const language = match ? match[1] : '';
@@ -115,19 +122,24 @@ export const ChatNode = memo(({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  const [isMaximized, setIsMaximized] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>('gemini-flash-latest');
+  const [, setIsMaximized] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<SupportedChatModel>('gemini-flash-latest');
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const updateNode = useWorkflowStore((state) => state.updateNode);
   const workflow = useWorkflowStore((state) => state.workflow);
+  const isActive = useWorkflowStore((state) => state.activeNodeId === id);
   const storedStyle = useWorkflowStore((state) => {
     const node = state.workflow?.nodes.find((n) => n.id === id);
     return node?.style;
   });
   const { user } = useCurrentUser();
+
+  const isSupportedModel = useCallback((value: string): value is SupportedChatModel => {
+    return (CHAT_MODELS as readonly string[]).includes(value);
+  }, []);
 
   const storedWidth = parseDimension(storedStyle?.width);
   const storedHeight = parseDimension(storedStyle?.height);
@@ -159,7 +171,7 @@ export const ChatNode = memo(({
         currentSessionId: initialSession.id,
       } as Partial<ChatNodeData>);
     }
-  }, []);
+  }, [data.messages, data.sessions, id, updateNodeData]);
 
   // Get current session
   const currentSession = data.sessions?.find(s => s.id === data.currentSessionId) || data.sessions?.[0];
@@ -259,6 +271,10 @@ export const ChatNode = memo(({
     updateDimensions(params.width, params.height);
   }, [updateDimensions]);
 
+  const handleVisibilityClass = isActive
+    ? '!opacity-100'
+    : 'group-hover:!opacity-100 group-focus-within:!opacity-100';
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -300,7 +316,7 @@ export const ChatNode = memo(({
       messages: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      model: selectedModel as any,
+      model: selectedModel,
     };
 
     const updatedSessions = [...(data.sessions || []), newSession];
@@ -518,7 +534,7 @@ export const ChatNode = memo(({
                   );
                   updateNodeData(id, { sessions: currentSessions } as Partial<ChatNodeData>);
                 }
-              } catch (e) {
+              } catch {
                 // Skip invalid JSON
               }
             }
@@ -546,14 +562,16 @@ export const ChatNode = memo(({
       if (isFirstMessage) {
         generateChatTitle(userMessageContent, currentSession.id);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Chat error:', error);
+
+      const errorMessageText = error instanceof Error ? error.message : String(error);
 
       // Show error message in chat
       const errorMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: `Error: ${error.message || 'Failed to get response. Make sure GEMINI_API_KEY is set in .env.local'}`,
+        content: `Error: ${errorMessageText || 'Failed to get response. Make sure GEMINI_API_KEY is set in .env.local'}`,
         timestamp: new Date().toISOString(),
       };
 
@@ -570,7 +588,10 @@ export const ChatNode = memo(({
   };
 
   return (
-    <>
+    <div
+      className="group relative"
+      style={{ width: effectiveWidth, height: effectiveHeight }}
+    >
       <NodeResizer
         nodeId={id}
         minWidth={CHAT_NODE_MIN_WIDTH}
@@ -578,7 +599,7 @@ export const ChatNode = memo(({
         maxWidth={CHAT_NODE_MAX_WIDTH}
         maxHeight={CHAT_NODE_MAX_HEIGHT}
         color="transparent"
-        handleClassName="!w-3 !h-3 !border-2 !border-[#14B8A6] !bg-white !rounded-full !opacity-0 group-hover:!opacity-100 !transition-opacity"
+        handleClassName={`!w-3 !h-3 !border-2 !border-[#14B8A6] !bg-white !rounded-full !opacity-0 ${handleVisibilityClass} data-[resizing=true]:!opacity-100 !transition-opacity`}
         lineClassName="!hidden"
         onResize={handleResize}
         onResizeEnd={handleResizeEnd}
@@ -589,9 +610,10 @@ export const ChatNode = memo(({
         showSourceHandle={false}
         showTargetHandle={true}
         parentId={parentId}
-        className="group bg-transparent !border-0 !shadow-none"
+        className="h-full w-full bg-transparent !border-0 !shadow-none"
         contentClassName="p-0 h-full"
-        style={{ width: effectiveWidth, height: effectiveHeight }}
+        contentStyle={{ height: '100%' }}
+        style={{ width: '100%', height: '100%' }}
       >
         <div
           className="flex h-full w-full border border-[#E5E7EB] rounded-2xl overflow-hidden bg-white shadow-sm"
@@ -764,7 +786,7 @@ export const ChatNode = memo(({
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeKatex]}
                             components={{
-                              code: (props) => <CodeBlock {...props} isUserMessage={message.role === 'user'} />,
+                              code: (props) => <CodeBlock {...props} />,
                               pre: ({ children }) => <>{children}</>,
                               p: ({ children }) => <p className="text-[13px] mb-3 last:mb-0 select-text" style={{ userSelect: 'text' }}>{children}</p>,
                               h1: ({ children }) => <h1 className="text-[18px] font-bold mb-4 mt-5 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h1>,
@@ -858,7 +880,12 @@ export const ChatNode = memo(({
                 <div className="relative">
                   <select
                     value={selectedModel}
-                    onChange={(e) => setSelectedModel(e.target.value)}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      if (isSupportedModel(nextValue)) {
+                        setSelectedModel(nextValue);
+                      }
+                    }}
                     onClick={(e) => stopReactFlowPropagation(e)}
                     onMouseDown={(e) => stopReactFlowPropagation(e)}
                     className="appearance-none pl-3 pr-8 py-2 text-[11px] font-medium bg-white border border-[#E5E7EB] rounded-lg cursor-pointer hover:border-[#9CA3AF] transition-colors focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
@@ -898,7 +925,7 @@ export const ChatNode = memo(({
           </div>
         </div>
       </BaseNode>
-    </>
+    </div>
   );
 });
 
