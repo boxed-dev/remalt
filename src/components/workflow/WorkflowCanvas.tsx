@@ -190,6 +190,8 @@ function WorkflowCanvasInner() {
   const reactFlowInstance = useReactFlow();
   const { screenToFlowPosition, getViewport, setViewport } = reactFlowInstance;
   const setCursorPosition = useWorkflowStore((state) => state.setCursorPosition);
+  const connectSourceRef = useRef<string | null>(null);
+  const connectedViaNativeRef = useRef(false);
 
   // Sticky notes state
   const isStickyActive = useStickyNotesStore((state) => state.isActive);
@@ -229,6 +231,8 @@ function WorkflowCanvasInner() {
   const alignNodes = useWorkflowStore((state) => state.alignNodes);
   const distributeNodes = useWorkflowStore((state) => state.distributeNodes);
   const setActiveNode = useWorkflowStore((state) => state.setActiveNode);
+  const setConnecting = useWorkflowStore((state) => state.setConnecting);
+  const setConnectHoveredTarget = useWorkflowStore((state) => state.setConnectHoveredTarget);
 
   // Convert workflow nodes/edges to React Flow format
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -353,6 +357,41 @@ function WorkflowCanvasInner() {
       });
 
       setCursorPosition(flowPosition);
+
+      // Magnetic targeting while connecting
+      const store = useWorkflowStore.getState();
+      if (store.isConnecting) {
+        const nodesRf = reactFlowInstance
+          .getNodes()
+          .filter((n) => n.type !== "group" && n.id !== connectSourceRef.current);
+
+        const MAGNET_RADIUS = 72; // px in flow coords (bigger zone)
+        let bestId: string | null = null;
+        let bestDist = Infinity;
+
+        for (const n of nodesRf) {
+          const w = n.width || n.measured?.width || 300;
+          const h = n.height || n.measured?.height || 200;
+          // Assume primary target handle on LEFT edge center
+          const hx = n.position.x; // left edge
+          const hy = n.position.y + h / 2; // vertical center
+          const dx = flowPosition.x - hx;
+          const dy = flowPosition.y - hy;
+          const dist = Math.hypot(dx, dy);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestId = n.id;
+          }
+        }
+
+        if (bestId && bestDist <= MAGNET_RADIUS) {
+          if (store.connectHoveredTargetId !== bestId) {
+            setConnectHoveredTarget(bestId);
+          }
+        } else if (store.connectHoveredTargetId) {
+          setConnectHoveredTarget(null);
+        }
+      }
     };
 
     const resetCursor = () => setCursorPosition(null);
@@ -498,6 +537,7 @@ function WorkflowCanvasInner() {
   const onConnect = useCallback(
     (connection: Connection) => {
       if (connection.source && connection.target) {
+        connectedViaNativeRef.current = true;
         addEdgeToStore(
           connection.source,
           connection.target,
@@ -505,9 +545,46 @@ function WorkflowCanvasInner() {
           connection.targetHandle || undefined
         );
       }
+      // clear hover target after a successful connect
+      setConnectHoveredTarget(null);
     },
-    [addEdgeToStore]
+    [addEdgeToStore, setConnectHoveredTarget]
   );
+
+  // Begin/End connection lifecycle
+  const onConnectStart = useCallback((_: any, params?: any) => {
+    setConnecting(true);
+    connectSourceRef.current = params?.nodeId ?? null;
+  }, [setConnecting]);
+
+  const onConnectEnd = useCallback(() => {
+    const store = useWorkflowStore.getState();
+    // If native connect didn't happen, but we're within magnetic zone, connect programmatically
+    if (!connectedViaNativeRef.current && store.connectHoveredTargetId && connectSourceRef.current) {
+      addEdgeToStore(connectSourceRef.current, store.connectHoveredTargetId);
+    }
+    // Cleanup
+    connectedViaNativeRef.current = false;
+    setConnecting(false);
+    setConnectHoveredTarget(null);
+    connectSourceRef.current = null;
+  }, [addEdgeToStore, setConnecting, setConnectHoveredTarget]);
+
+  // onConnectStop is not available in our React Flow version; rely on onConnectEnd only
+
+  // Track potential target under cursor while connecting
+  const onNodeMouseEnter = useCallback((_: React.MouseEvent, node: Node) => {
+    if (useWorkflowStore.getState().isConnecting) {
+      setConnectHoveredTarget(node.id);
+    }
+  }, [setConnectHoveredTarget]);
+
+  const onNodeMouseLeave = useCallback((_: React.MouseEvent, node: Node) => {
+    const state = useWorkflowStore.getState();
+    if (state.connectHoveredTargetId === node.id) {
+      setConnectHoveredTarget(null);
+    }
+  }, [setConnectHoveredTarget]);
 
   // Handle viewport changes
   const onMove = useCallback<OnMove>(
@@ -1380,6 +1457,45 @@ function WorkflowCanvasInner() {
         .react-flow__pane:active {
           cursor: grabbing !important;
         }
+        /* Blackhole effect on connector handles only */
+        .flowy-bh-handle {
+          /* Do not override transform or position: React Flow uses them */
+          border-color: #155EEF !important;
+          z-index: 60;
+          box-shadow: 0 0 0 2px rgba(21,94,239,0.25);
+        }
+        .flowy-bh-handle::before,
+        .flowy-bh-handle::after {
+          content: "";
+          position: absolute;
+          inset: -20px;
+          border-radius: 9999px;
+          pointer-events: none;
+        }
+        .flowy-bh-handle::before {
+          background: radial-gradient(60% 60% at 50% 50%, rgba(21,94,239,0.35) 0%, rgba(21,94,239,0.12) 45%, rgba(21,94,239,0) 60%);
+          filter: blur(6px);
+          opacity: .9;
+          animation: bh-glow 900ms ease-in-out infinite alternate;
+          transform: scale(2.4);
+        }
+        .flowy-bh-handle::after {
+          -webkit-mask: radial-gradient(circle at 50% 50%, transparent 40%, black 42%);
+          mask: radial-gradient(circle at 50% 50%, transparent 40%, black 42%);
+          background: radial-gradient(60% 60% at 50% 50%, rgba(3,7,18,0.75) 0%, rgba(3,7,18,0.35) 42%, rgba(3,7,18,0) 60%);
+          animation: bh-pulse 950ms ease-in-out infinite;
+          opacity: .85;
+          transform: scale(2.0);
+        }
+        @keyframes bh-glow {
+          from { transform: scale(1.00); }
+          to { transform: scale(0.96); }
+        }
+        @keyframes bh-pulse {
+          0%   { transform: scale(1.00); }
+          50%  { transform: scale(0.92); }
+          100% { transform: scale(1.00); }
+        }
       `}</style>
       <ReactFlow
         nodes={nodes}
@@ -1393,6 +1509,10 @@ function WorkflowCanvasInner() {
         isValidConnection={isValidConnection}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
+        onNodeMouseEnter={onNodeMouseEnter}
+        onNodeMouseLeave={onNodeMouseLeave}
         onConnect={onConnect}
         onMove={onMove}
         onMoveEnd={onMoveEnd}

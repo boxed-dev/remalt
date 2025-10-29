@@ -27,6 +27,9 @@ interface WorkflowStore {
   clipboard: WorkflowNode[];
   activeNodeId: string | null;
   cursorPosition: Position | null;
+  // Connection UI State
+  isConnecting: boolean;
+  connectHoveredTargetId: string | null;
 
   // History State
   history: Workflow[];
@@ -130,6 +133,9 @@ interface WorkflowStore {
 
   // Activation Actions
   setActiveNode: (id: string | null) => void;
+  // Connection UI Actions
+  setConnecting: (is: boolean) => void;
+  setConnectHoveredTarget: (id: string | null) => void;
 }
 
 const createDefaultWorkflow = (
@@ -275,6 +281,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
     controlMode: "hand",
     snapToGrid: false,
     cursorPosition: null,
+    isConnecting: false,
+    connectHoveredTargetId: null,
 
     // Workflow Actions
     createWorkflow: (name, description) => {
@@ -918,6 +926,17 @@ export const useWorkflowStore = create<WorkflowStore>()(
     setActiveNode: (id) => {
       set((state) => {
         state.activeNodeId = id;
+      });
+    },
+    // Connection UI Actions
+    setConnecting: (is) => {
+      set((state) => {
+        state.isConnecting = is;
+      });
+    },
+    setConnectHoveredTarget: (id) => {
+      set((state) => {
+        state.connectHoveredTargetId = id;
       });
     },
   }))
