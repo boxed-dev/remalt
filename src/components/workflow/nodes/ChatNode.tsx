@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { MessageSquare, Copy, Check, Maximize2, X, User, Plus, Library, ChevronDown, Trash2, Settings } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { SyntheticEvent } from 'react';
+import type { SyntheticEvent, WheelEvent as ReactWheelEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -131,6 +131,18 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
     event.stopPropagation();
     (event.nativeEvent as NativeEventWithStop).stopImmediatePropagation?.();
   }, []);
+
+  const handleWheelEvent = useCallback(
+    (event: ReactWheelEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        return;
+      }
+
+      stopReactFlowPropagation(event);
+    },
+    [stopReactFlowPropagation],
+  );
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -447,8 +459,8 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
       <BaseNode id={id} allowOverflow={true} showSourceHandle={false} showTargetHandle={true} parentId={parentId}>
         <div
           className="flex w-[1100px] h-[700px] border border-[#E5E7EB] rounded-2xl overflow-hidden bg-white shadow-sm"
-          onWheel={(event) => stopReactFlowPropagation(event)}
-          onWheelCapture={(event) => stopReactFlowPropagation(event)}
+          onWheel={handleWheelEvent}
+          onWheelCapture={handleWheelEvent}
         >
           {/* Left Sidebar */}
           <div className="nodrag w-[280px] border-r border-[#E5E7EB] flex flex-col bg-[#FAFBFC]">
@@ -501,7 +513,7 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
               {/* Chat List */}
               <div
                 className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5"
-                onWheel={(e) => stopReactFlowPropagation(e)}
+                onWheel={handleWheelEvent}
                 onMouseDown={(e) => stopReactFlowPropagation(e)}
               >
                 {data.sessions && data.sessions.length > 0 ? (
@@ -570,8 +582,8 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
             <div
               ref={scrollContainerRef}
               onScroll={handleScroll}
-              onWheel={(e) => stopReactFlowPropagation(e)}
-              onWheelCapture={(e) => stopReactFlowPropagation(e)}
+              onWheel={handleWheelEvent}
+              onWheelCapture={handleWheelEvent}
               data-lenis-prevent
               className="nodrag flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-white"
               style={{ overscrollBehavior: 'contain', userSelect: 'text' }}
