@@ -12,12 +12,33 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { buildChatContext, getLinkedNodeIds } from '@/lib/workflow/context-builder';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import type { ChatNodeData, ChatMessage, ChatSession } from '@/types/workflow';
-import type { NodeProps } from '@xyflow/react';
+import type { ChatNodeData, ChatMessage, ChatSession, NodeStyle } from '@/types/workflow';
+import { NodeResizer, type NodeProps } from '@xyflow/react';
+import type { OnResize, OnResizeEnd } from '@xyflow/system';
 import { VoiceInputBar } from '../VoiceInputBar';
 import 'katex/dist/katex.min.css';
 
 type ChatNodeProps = NodeProps<ChatNodeData>;
+
+const CHAT_NODE_DEFAULT_WIDTH = 1100;
+const CHAT_NODE_DEFAULT_HEIGHT = 700;
+const CHAT_NODE_MIN_WIDTH = 760;
+const CHAT_NODE_MIN_HEIGHT = 520;
+const CHAT_NODE_MAX_WIDTH = 2000;
+const CHAT_NODE_MAX_HEIGHT = 1600;
+
+const parseDimension = (value: number | string | undefined): number | undefined => {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const numeric = Number.parseFloat(value);
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }
+
+  return undefined;
+};
 
 // Code block component with syntax highlighting and copy button
 function CodeBlock({ inline, className, children, isUserMessage }: any) {
@@ -83,7 +104,14 @@ function CodeBlock({ inline, className, children, isUserMessage }: any) {
   );
 }
 
-export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
+export const ChatNode = memo(({
+  id,
+  data,
+  parentId,
+  width: nodeWidth,
+  height: nodeHeight,
+  style: nodeStyle,
+}: ChatNodeProps) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -93,8 +121,26 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+  const updateNode = useWorkflowStore((state) => state.updateNode);
   const workflow = useWorkflowStore((state) => state.workflow);
+  const storedStyle = useWorkflowStore((state) => {
+    const node = state.workflow?.nodes.find((n) => n.id === id);
+    return node?.style;
+  });
   const { user } = useCurrentUser();
+
+  const storedWidth = parseDimension(storedStyle?.width);
+  const storedHeight = parseDimension(storedStyle?.height);
+  const styleWidth = parseDimension(nodeStyle?.width as number | string | undefined);
+  const styleHeight = parseDimension(nodeStyle?.height as number | string | undefined);
+  const effectiveWidth = Math.max(
+    CHAT_NODE_MIN_WIDTH,
+    storedWidth ?? styleWidth ?? nodeWidth ?? CHAT_NODE_DEFAULT_WIDTH,
+  );
+  const effectiveHeight = Math.max(
+    CHAT_NODE_MIN_HEIGHT,
+    storedHeight ?? styleHeight ?? nodeHeight ?? CHAT_NODE_DEFAULT_HEIGHT,
+  );
 
   // Initialize sessions if not present (migration from old format)
   useEffect(() => {
@@ -143,6 +189,75 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
     },
     [stopReactFlowPropagation],
   );
+
+  useEffect(() => {
+    const state = useWorkflowStore.getState();
+    const currentNode = state.workflow?.nodes.find((n) => n.id === id);
+    if (!currentNode) {
+      return;
+    }
+
+    const width = parseDimension(currentNode.style?.width);
+    const height = parseDimension(currentNode.style?.height);
+    const nextStyle: NodeStyle = { ...(currentNode.style ?? {}) };
+    let changed = false;
+
+    if (width === undefined) {
+      nextStyle.width = CHAT_NODE_DEFAULT_WIDTH;
+      changed = true;
+    }
+
+    if (height === undefined) {
+      nextStyle.height = CHAT_NODE_DEFAULT_HEIGHT;
+      changed = true;
+    }
+
+    if (changed) {
+      updateNode(id, { style: nextStyle });
+    }
+  }, [id, updateNode]);
+
+  const updateDimensions = useCallback(
+    (width: number, height: number) => {
+      const clampedWidth = Math.min(
+        CHAT_NODE_MAX_WIDTH,
+        Math.max(CHAT_NODE_MIN_WIDTH, width),
+      );
+      const clampedHeight = Math.min(
+        CHAT_NODE_MAX_HEIGHT,
+        Math.max(CHAT_NODE_MIN_HEIGHT, height),
+      );
+
+      const state = useWorkflowStore.getState();
+      const currentNode = state.workflow?.nodes.find((n) => n.id === id);
+      if (!currentNode) {
+        return;
+      }
+
+      const prevWidth = parseDimension(currentNode.style?.width);
+      const prevHeight = parseDimension(currentNode.style?.height);
+      if (prevWidth === clampedWidth && prevHeight === clampedHeight) {
+        return;
+      }
+
+      const nextStyle: NodeStyle = {
+        ...(currentNode.style ?? {}),
+        width: clampedWidth,
+        height: clampedHeight,
+      };
+
+      updateNode(id, { style: nextStyle });
+    },
+    [id, updateNode],
+  );
+
+  const handleResize = useCallback<OnResize>((_, params) => {
+    updateDimensions(params.width, params.height);
+  }, [updateDimensions]);
+
+  const handleResizeEnd = useCallback<OnResizeEnd>((_, params) => {
+    updateDimensions(params.width, params.height);
+  }, [updateDimensions]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -456,9 +571,30 @@ export const ChatNode = memo(({ id, data, parentId }: ChatNodeProps) => {
 
   return (
     <>
-      <BaseNode id={id} allowOverflow={true} showSourceHandle={false} showTargetHandle={true} parentId={parentId}>
+      <NodeResizer
+        nodeId={id}
+        minWidth={CHAT_NODE_MIN_WIDTH}
+        minHeight={CHAT_NODE_MIN_HEIGHT}
+        maxWidth={CHAT_NODE_MAX_WIDTH}
+        maxHeight={CHAT_NODE_MAX_HEIGHT}
+        color="transparent"
+        handleClassName="!w-3 !h-3 !border-2 !border-[#14B8A6] !bg-white !rounded-full !opacity-0 group-hover:!opacity-100 !transition-opacity"
+        lineClassName="!hidden"
+        onResize={handleResize}
+        onResizeEnd={handleResizeEnd}
+      />
+      <BaseNode
+        id={id}
+        allowOverflow={true}
+        showSourceHandle={false}
+        showTargetHandle={true}
+        parentId={parentId}
+        className="group bg-transparent !border-0 !shadow-none"
+        contentClassName="p-0 h-full"
+        style={{ width: effectiveWidth, height: effectiveHeight }}
+      >
         <div
-          className="flex w-[1100px] h-[700px] border border-[#E5E7EB] rounded-2xl overflow-hidden bg-white shadow-sm"
+          className="flex h-full w-full border border-[#E5E7EB] rounded-2xl overflow-hidden bg-white shadow-sm"
           onWheel={handleWheelEvent}
           onWheelCapture={handleWheelEvent}
         >

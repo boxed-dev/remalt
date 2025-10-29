@@ -29,6 +29,9 @@ interface BaseNodeProps {
   parentId?: string | null;
   parentNode?: string | null;
   className?: string;
+  style?: CSSProperties;
+  contentClassName?: string;
+  contentStyle?: CSSProperties;
 }
 
 export function BaseNode({
@@ -47,6 +50,9 @@ export function BaseNode({
   parentId,
   parentNode,
   className,
+  style,
+  contentClassName,
+  contentStyle,
 }: BaseNodeProps) {
   // Node activation system
   const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
@@ -99,6 +105,7 @@ export function BaseNode({
       } ${
         className || 'border-2 border-[#E8ECEF] hover:border-[#D1D5DB] shadow-md hover:shadow-xl'
       }`}
+      style={style}
     >
       {/* Activation overlay for inactive nodes - blocks interaction until activated */}
       {!isActive && (
@@ -109,7 +116,10 @@ export function BaseNode({
       )}
 
       {/* Content */}
-      <div className="p-5 relative z-0">
+      <div
+        className={`relative z-0 ${contentClassName ?? 'p-5'}`}
+        style={contentStyle}
+      >
         {children}
       </div>
 

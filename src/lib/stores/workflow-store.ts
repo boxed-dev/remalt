@@ -9,6 +9,7 @@ import type {
   NodeType,
   Position,
   Viewport,
+  NodeStyle,
 } from "@/types/workflow";
 
 function deepClone<T>(value: T): T {
@@ -373,16 +374,20 @@ export const useWorkflowStore = create<WorkflowStore>()(
       const { pushHistory } = get();
       pushHistory();
 
+      let style: NodeStyle | undefined;
+      if (type === "group") {
+        style = { width: 640, height: 420, backgroundColor: "#F7F7F7" };
+      } else if (type === "chat") {
+        style = { width: 1100, height: 700 };
+      }
+
       const node: WorkflowNode = {
         id: crypto.randomUUID(),
         type,
         position,
         data: { ...createDefaultNodeData(type), ...data },
-        // sensible defaults for group sizing so it's visible and usable immediately
-        style:
-          type === "group"
-            ? { width: 640, height: 420, backgroundColor: "#F7F7F7" }
-            : undefined,
+        // sensible defaults for initial sizing so nodes are immediately usable
+        style,
         zIndex: type === "group" ? 1 : 2,
       };
 
