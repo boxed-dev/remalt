@@ -1207,24 +1207,27 @@ function WorkflowCanvasInner() {
         event.preventDefault();
 
         const { type, data } = mapUrlToNode(parsedUrl);
+        const { cursorPosition } = useWorkflowStore.getState();
         const wrapperBounds = reactFlowWrapper.current?.getBoundingClientRect();
-        const centerPosition = wrapperBounds
+        const fallbackPosition = wrapperBounds
           ? screenToFlowPosition({
               x: wrapperBounds.left + wrapperBounds.width / 2,
               y: wrapperBounds.top + wrapperBounds.height / 2,
             })
           : { x: 0, y: 0 };
 
-        const newNode = addNode(type, centerPosition, data);
+        const targetPosition = cursorPosition ?? fallbackPosition;
+
+        const newNode = addNode(type, targetPosition, data);
         clearSelection();
         selectNode(newNode.id);
         return;
       }
 
-      const { clipboard } = useWorkflowStore.getState();
+      const { clipboard, cursorPosition } = useWorkflowStore.getState();
       if (clipboard.length > 0) {
         event.preventDefault();
-        pasteNodes();
+        pasteNodes(cursorPosition ?? undefined);
       }
     };
 

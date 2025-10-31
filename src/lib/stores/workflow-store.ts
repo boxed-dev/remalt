@@ -654,12 +654,41 @@ export const useWorkflowStore = create<WorkflowStore>()(
     pasteNodes: (position) => {
       set((state) => {
         if (state.workflow && state.clipboard.length > 0) {
-          const offset = position ? position : { x: 50, y: 50 };
           const idMap = new Map<string, string>();
 
           state.clipboard.forEach((node) => {
             idMap.set(node.id, crypto.randomUUID());
           });
+
+          const rootNodes = state.clipboard.filter((node) => {
+            const parentId = node.parentId ?? null;
+            return !parentId || !idMap.has(parentId);
+          });
+
+          const offset = (() => {
+            if (!position) {
+              return { x: 50, y: 50 };
+            }
+
+            if (rootNodes.length === 0) {
+              return { x: position.x, y: position.y };
+            }
+
+            const minX = Math.min(...rootNodes.map((node) => node.position.x));
+            const minY = Math.min(...rootNodes.map((node) => node.position.y));
+            const maxX = Math.max(...rootNodes.map((node) => node.position.x));
+            const maxY = Math.max(...rootNodes.map((node) => node.position.y));
+
+            const center = {
+              x: minX + (maxX - minX) / 2,
+              y: minY + (maxY - minY) / 2,
+            };
+
+            return {
+              x: position.x - center.x,
+              y: position.y - center.y,
+            };
+          })();
 
           const newNodes = state.clipboard.map((node) => {
             const clone = deepClone(node);

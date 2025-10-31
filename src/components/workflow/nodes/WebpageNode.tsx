@@ -170,6 +170,10 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
         } as Partial<WebpageNodeData>);
       }
     } catch (error: unknown) {
+      // Silently ignore abort errors - these are expected when component unmounts
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
       if (controller.signal.aborted) {
         return;
       }
@@ -242,7 +246,11 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
 
   useEffect(() => () => {
     if (scrapeControllerRef.current) {
-      scrapeControllerRef.current.abort();
+      try {
+        scrapeControllerRef.current.abort();
+      } catch {
+        // Ignore errors from aborting - this is cleanup
+      }
       scrapeControllerRef.current = null;
     }
   }, []);
