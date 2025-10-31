@@ -75,7 +75,7 @@ export function AppHeader() {
             href="/flows"
             className="px-4 py-2 text-[14px] font-medium text-[#1A1D21] hover:bg-[#F5F5F7] rounded-lg transition-all"
           >
-            Flows
+            Canvas
           </Link>
           <Link
             href="/pricing"

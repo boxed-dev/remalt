@@ -197,28 +197,20 @@ export const LinkedInNode = memo(({ id, data, parentId }: NodeProps<LinkedInNode
             />
           </div>
         ) : hasPostData && data.author ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {data.author.profilePicUrl && (
-                <img
-                  src={data.author.profilePicUrl}
-                  alt={data.author.name}
-                  className="w-7 h-7 rounded-full border-2 border-white shadow"
-                />
+          <div className="flex items-center gap-2">
+            {data.author.profilePicUrl && (
+              <img
+                src={data.author.profilePicUrl}
+                alt={data.author.name}
+                className="w-7 h-7 rounded-full border-2 border-white shadow"
+              />
+            )}
+            <div className="flex flex-col">
+              <span className="text-[12px] font-medium text-gray-700">{data.author.name}</span>
+              {data.author.headline && (
+                <span className="text-[10px] text-gray-500 line-clamp-1">{data.author.headline}</span>
               )}
-              <div className="flex flex-col">
-                <span className="text-[12px] font-medium text-gray-700">{data.author.name}</span>
-                {data.author.headline && (
-                  <span className="text-[10px] text-gray-500 line-clamp-1">{data.author.headline}</span>
-                )}
-              </div>
             </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-              className="text-[10px] text-gray-500 hover:text-[#0A66C2] font-medium cursor-pointer"
-            >
-              Change
-            </button>
           </div>
         ) : (
           <button

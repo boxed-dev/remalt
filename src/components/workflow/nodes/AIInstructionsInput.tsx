@@ -89,10 +89,10 @@ export function AIInstructionsInput({
       {/* Collapsible Header */}
       <button
         onClick={toggleExpanded}
-        className="flex items-center gap-2 text-[11px] font-medium text-[#6B7280] hover:text-[#155EEF] transition-colors w-full group"
+        className="flex items-center gap-2 text-[11px] font-medium text-[#6B7280] hover:text-[#095D40] transition-colors w-full group"
         type="button"
       >
-        <Sparkles className="h-3.5 w-3.5 text-[#F59E0B] group-hover:text-[#155EEF] transition-colors" />
+        <Sparkles className="h-3.5 w-3.5 text-[#F59E0B] group-hover:text-[#095D40] transition-colors" />
         <span className="flex-1 text-left">AI Instructions</span>
 
         {/* Visual indicators */}
@@ -133,7 +133,7 @@ export function AIInstructionsInput({
             onChange={handleChange}
             placeholder={placeholder}
             maxLength={maxLength}
-            className="w-full px-3 py-2.5 text-[12px] leading-[1.5] border border-[#E8ECEF] rounded-lg bg-[#FAFBFC] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#155EEF]/20 focus:border-[#155EEF] resize-none transition-all placeholder:text-[#9CA3AF]"
+            className="w-full px-3 py-2.5 text-[12px] leading-[1.5] border border-[#E8ECEF] rounded-lg bg-[#FAFBFC] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#095D40]/20 focus:border-[#095D40] resize-none transition-all placeholder:text-[#9CA3AF]"
             rows={3}
             onMouseDown={stopPropagation}
             onWheel={stopPropagation}

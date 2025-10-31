@@ -319,7 +319,7 @@ export default function WorkflowEditorPage() {
             className="px-6 py-2.5 bg-[#095D40] text-white rounded-lg font-medium text-[14px] hover:bg-[#074030] transition-all"
 
           >
-            Back to Flows
+            Back to Canvas
           </button>
         </div>
       </div>

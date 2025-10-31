@@ -19,6 +19,8 @@ export interface WorkflowMetadata {
   category?: string;
   isPublic: boolean;
   author?: string;
+  authorEmail?: string;
+  publishedAt?: string;
 }
 
 export interface Viewport {

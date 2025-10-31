@@ -8,8 +8,8 @@ import { SmoothScrollProvider } from "@/components/layout/smooth-scroll-provider
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "Remalt - Build AI Workflows That Actually Work",
-  description: "Create, automate, and optimize AI-powered workflows with our intuitive drag-and-drop interface. From content creation to data analysis.",
+  title: "Remalt - Build AI Canvas That Actually Work",
+  description: "Create, automate, and optimize AI-powered canvas with our intuitive drag-and-drop interface. From content creation to data analysis.",
 };
 
 export default function RootLayout({

@@ -215,6 +215,7 @@ export async function deleteWorkflow(supabase: SupabaseClient, id: string): Prom
 
 /**
  * Duplicate a workflow
+ * IMPORTANT: Duplicated workflows are always private (isPublic: false)
  */
 export async function duplicateWorkflow(
   supabase: SupabaseClient,
@@ -229,10 +230,15 @@ export async function duplicateWorkflow(
   }
 
   // Create a new workflow with the same data but new ID
+  // CRITICAL: Always set isPublic to false for duplicates
   const duplicate: Workflow = {
     ...original,
     id: crypto.randomUUID(),
     name: newName || `${original.name} (Copy)`,
+    metadata: {
+      ...original.metadata,
+      isPublic: false, // Always private when duplicated
+    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -317,4 +323,215 @@ export async function updateWorkflowMetadata(
     console.error('Error updating workflow metadata:', error);
     throw new Error(error.message);
   }
+}
+
+/**
+ * Public template summary with author information
+ */
+export type PublicTemplateSummary = WorkflowSummary & {
+  authorName: string | null;
+  authorEmail: string;
+  userId: string;
+};
+
+/**
+ * Fetch all public templates (workflows with isPublic=true)
+ * Includes author information from profiles table
+ * No authentication required - accessible to all users
+ */
+export async function getPublicTemplates(supabase: SupabaseClient): Promise<PublicTemplateSummary[]> {
+  console.log('🔍 Fetching public templates...');
+
+  const { data, error } = await supabase
+    .from('workflows')
+    .select(`
+      id,
+      name,
+      description,
+      nodes,
+      metadata,
+      created_at,
+      updated_at,
+      user_id,
+      profiles!inner (
+        email,
+        full_name
+      )
+    `)
+    .eq('metadata->isPublic', true)
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.error('❌ Error fetching public templates:', error);
+    throw new Error(error.message);
+  }
+
+  console.log(`✅ Found ${data?.length || 0} public templates`);
+  if (data && data.length > 0) {
+    console.log('📋 Template IDs:', data.map(t => t.id));
+  }
+
+  if (!data) return [];
+
+  return data.map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    nodeCount: Array.isArray(row.nodes) ? row.nodes.length : 0,
+    updatedAt: row.updated_at,
+    createdAt: row.created_at,
+    metadata: row.metadata || {
+      version: '1.0.0',
+      tags: [],
+      isPublic: true,
+    },
+    authorName: row.profiles?.full_name || null,
+    authorEmail: row.profiles?.email || 'Unknown',
+    userId: row.user_id,
+  }));
+}
+
+/**
+ * Fetch public templates filtered by category
+ * @param supabase - Supabase client
+ * @param category - Template category to filter by
+ */
+export async function getPublicTemplatesByCategory(
+  supabase: SupabaseClient,
+  category: string
+): Promise<PublicTemplateSummary[]> {
+  const { data, error } = await supabase
+    .from('workflows')
+    .select(`
+      id,
+      name,
+      description,
+      nodes,
+      metadata,
+      created_at,
+      updated_at,
+      user_id,
+      profiles!inner (
+        email,
+        full_name
+      )
+    `)
+    .eq('metadata->isPublic', true)
+    .eq('metadata->>category', category)
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching templates by category:', error);
+    throw new Error(error.message);
+  }
+
+  if (!data) return [];
+
+  return data.map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    nodeCount: Array.isArray(row.nodes) ? row.nodes.length : 0,
+    updatedAt: row.updated_at,
+    createdAt: row.created_at,
+    metadata: row.metadata || {
+      version: '1.0.0',
+      tags: [],
+      isPublic: true,
+    },
+    authorName: row.profiles?.full_name || null,
+    authorEmail: row.profiles?.email || 'Unknown',
+    userId: row.user_id,
+  }));
+}
+
+/**
+ * Publish a workflow as a public template
+ * Updates metadata.isPublic to true and adds publishing metadata
+ * @param supabase - Supabase client
+ * @param id - Workflow ID
+ * @param userId - User ID (must match workflow owner)
+ * @param publishMetadata - Additional metadata for publishing (category, tags, etc.)
+ */
+export async function publishWorkflow(
+  supabase: SupabaseClient,
+  id: string,
+  userId: string,
+  publishMetadata: {
+    category?: string;
+    tags?: string[];
+    authorEmail: string;
+    authorName?: string;
+  }
+): Promise<void> {
+  console.log('📝 Publishing workflow:', id);
+
+  // First, verify the workflow exists and belongs to the user
+  const workflow = await getWorkflow(supabase, id);
+  if (!workflow) {
+    throw new Error('Workflow not found');
+  }
+
+  // Update metadata with public flag and publishing info
+  const updatedMetadata = {
+    ...workflow.metadata,
+    isPublic: true,
+    category: publishMetadata.category,
+    tags: publishMetadata.tags || workflow.metadata.tags,
+    author: publishMetadata.authorName,
+    authorEmail: publishMetadata.authorEmail,
+    publishedAt: new Date().toISOString(),
+  };
+
+  console.log('📋 Updated metadata:', JSON.stringify(updatedMetadata, null, 2));
+
+  const { error } = await supabase
+    .from('workflows')
+    .update({ metadata: updatedMetadata })
+    .eq('id', id)
+    .eq('user_id', userId); // Security: ensure user owns the workflow
+
+  if (error) {
+    console.error('❌ Error publishing workflow:', error);
+    throw new Error(error.message);
+  }
+
+  console.log('✅ Workflow published as template:', id);
+}
+
+/**
+ * Unpublish a template (set isPublic to false)
+ * @param supabase - Supabase client
+ * @param id - Workflow ID
+ * @param userId - User ID (must match workflow owner)
+ */
+export async function unpublishWorkflow(
+  supabase: SupabaseClient,
+  id: string,
+  userId: string
+): Promise<void> {
+  // First, verify the workflow exists and belongs to the user
+  const workflow = await getWorkflow(supabase, id);
+  if (!workflow) {
+    throw new Error('Workflow not found');
+  }
+
+  // Update metadata to set isPublic to false
+  const updatedMetadata = {
+    ...workflow.metadata,
+    isPublic: false,
+  };
+
+  const { error } = await supabase
+    .from('workflows')
+    .update({ metadata: updatedMetadata })
+    .eq('id', id)
+    .eq('user_id', userId); // Security: ensure user owns the workflow
+
+  if (error) {
+    console.error('Error unpublishing workflow:', error);
+    throw new Error(error.message);
+  }
+
+  console.log('✅ Workflow unpublished:', id);
 }

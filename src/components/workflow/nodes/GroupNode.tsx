@@ -134,9 +134,9 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
       return {
         border: "",
         outline:
-          "outline outline-4 outline-dashed outline-[#10B981] outline-offset-0",
-        shadow: "shadow-[0_0_0_8px_rgba(16,185,129,0.15)]",
-        bg: "bg-[#10B981]/5",
+          "outline outline-4 outline-dashed outline-[#095D40] outline-offset-0",
+        shadow: "shadow-[0_0_0_8px_rgba(9,93,64,0.15)]",
+        bg: "bg-[#095D40]/5",
       };
     }
     if (selected) {
@@ -243,7 +243,7 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
         {/* Empty state hint - shown during drag-over to indicate drop zone */}
         {isDragOver && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center text-[#10B981] text-[13px] font-medium">
+            <div className="text-center text-[#095D40] text-[13px] font-medium">
               <p>Drop here to add to group</p>
             </div>
           </div>
@@ -285,7 +285,7 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
         type="source"
         position={Position.Right}
         isConnectable={true}
-        className="!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#155EEF] hover:!scale-125 !transition-all !duration-150 !opacity-100 pointer-events-auto"
+        className="!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] hover:!scale-125 !transition-all !duration-150 !opacity-100 pointer-events-auto"
         style={{ right: "-7px", zIndex: 50 }}
       />
     </div>

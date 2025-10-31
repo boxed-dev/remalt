@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 const features = [
   {
     title: "Just Drag & Drop",
-    description: "No code. No complexity. Build powerful AI workflows in minutes, not months.",
+    description: "No code. No complexity. Build powerful AI canvas in minutes, not months.",
     icon: Layers,
     color: "text-[#095D40]",
     bgColor: "bg-[#095D40]/10",
@@ -30,7 +30,7 @@ const features = [
   },
   {
     title: "Real-Time Magic",
-    description: "Watch your workflows come alive. Instant results, infinite possibilities.",
+    description: "Watch your canvas come alive. Instant results, infinite possibilities.",
     icon: Zap,
     color: "text-[#095D40]",
     bgColor: "bg-[#095D40]/10",

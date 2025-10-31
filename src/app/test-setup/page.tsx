@@ -56,7 +56,7 @@ export default function TestSetupPage() {
       .limit(1);
 
     testResults.push({
-      test: '3. Workflows Table Exists',
+      test: '3. Canvas Table Exists',
       passed: !tableError || tableError.code !== '42P01',
       details: {
         error: tableError ? {
@@ -73,7 +73,7 @@ export default function TestSetupPage() {
         test: 'STOP',
         passed: false,
         details: {
-          message: 'Table "workflows" does not exist. Run the SQL in supabase/schema.sql in Supabase SQL Editor.',
+          message: 'Table "canvas" does not exist. Run the SQL in supabase/schema.sql in Supabase SQL Editor.',
           instructions: [
             '1. Go to https://supabase.com/dashboard',
             `2. Select project: ${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}`,

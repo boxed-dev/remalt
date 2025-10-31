@@ -107,7 +107,7 @@ export function Testimonials() {
             </div>
             <div>
               <div className="text-4xl lg:text-5xl font-bold text-white mb-2">3x</div>
-              <div className="text-white/80">Faster Workflows</div>
+              <div className="text-white/80">Faster Canvas</div>
             </div>
             <div>
               <div className="text-4xl lg:text-5xl font-bold text-white mb-2">500+</div>

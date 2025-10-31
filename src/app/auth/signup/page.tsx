@@ -152,7 +152,7 @@ export default function SignUpPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-[32px] font-bold text-[#1A1D21] mb-2">Create your account</h1>
-          <p className="text-[15px] text-[#6B7280]">Start building AI workflows in minutes</p>
+          <p className="text-[15px] text-[#6B7280]">Start building AI canvas in minutes</p>
         </div>
 
         {/* Sign Up Form */}

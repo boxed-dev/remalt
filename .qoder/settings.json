@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "ask": [
+      "Read(!/Users/rishabh/Code/flowy/**)",
+      "Edit(!/Users/rishabh/Code/flowy/**)"
+    ],
+    "allow": [
+      "Read(/Users/rishabh/Code/flowy/**)",
+      "Edit(/Users/rishabh/Code/flowy/**)"
+    ]
+  },
+  "memoryImport": {},
+  "monitoring": {}
+}

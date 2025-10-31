@@ -492,15 +492,6 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
               </div>
             )}
             <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
-              <button
-                onClick={(event) => {
-                  stopPropagation(event);
-                  setIsEditing(true);
-                }}
-                className="rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#6B7280] hover:border-[#095D40] hover:text-[#095D40] cursor-pointer"
-              >
-                Edit URL
-              </button>
               {data.url && (
                 <button
                   onClick={openInNewTab}

@@ -347,24 +347,16 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
             />
           </div>
         ) : hasReelData && data.author ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {data.author.profilePicUrl && (
-                <img
-                  src={getProxiedThumbnail(data.author.profilePicUrl)}
-                  alt={data.author.username}
-                  className="w-7 h-7 rounded-full border-2 border-white shadow"
-                  crossOrigin="anonymous"
-                />
-              )}
-              <span className="text-[12px] font-medium text-gray-700">@{data.author.username}</span>
-            </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-              className="text-[10px] text-gray-500 hover:text-[#E4405F] font-medium cursor-pointer"
-            >
-              Change
-            </button>
+          <div className="flex items-center gap-2">
+            {data.author.profilePicUrl && (
+              <img
+                src={getProxiedThumbnail(data.author.profilePicUrl)}
+                alt={data.author.username}
+                className="w-7 h-7 rounded-full border-2 border-white shadow"
+                crossOrigin="anonymous"
+              />
+            )}
+            <span className="text-[12px] font-medium text-gray-700">@{data.author.username}</span>
           </div>
         ) : (
           <button

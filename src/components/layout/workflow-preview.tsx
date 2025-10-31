@@ -16,7 +16,7 @@ export function WorkflowPreview() {
             </div>
 
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-gray-900 mb-6">
-              Build workflows
+              Build canvas
               <br />
               <span className="bg-gradient-to-r from-[#095D40] to-[#D4AF7F] bg-clip-text text-transparent">
                 visually
@@ -25,7 +25,7 @@ export function WorkflowPreview() {
 
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
               No coding required. Simply drag and drop components to create
-              sophisticated AI workflows. Connect data sources, apply AI models,
+              sophisticated AI canvas. Connect data sources, apply AI models,
               and automate your processes with ease.
             </p>
 

@@ -82,7 +82,7 @@ export const StickyNoteNode = memo(({ id, data, parentId }: NodeProps<StickyNote
             className="p-1.5 rounded hover:bg-black/5 transition-colors"
             aria-label="Change color"
           >
-            <Palette className="h-3.5 w-3.5" style={{ color: textColor }} />
+            <Palette size={14} style={{ color: textColor }} />
           </button>
 
           {/* Delete Button */}
@@ -91,7 +91,7 @@ export const StickyNoteNode = memo(({ id, data, parentId }: NodeProps<StickyNote
             className="p-1.5 rounded hover:bg-black/5 transition-colors"
             aria-label="Delete note"
           >
-            <X className="h-3.5 w-3.5" style={{ color: textColor }} />
+            <X size={14} style={{ color: textColor }} />
           </button>
         </div>
 
@@ -118,8 +118,8 @@ export const StickyNoteNode = memo(({ id, data, parentId }: NodeProps<StickyNote
         )}
 
         {/* Sticky Note Icon in corner */}
-        <div className="absolute top-2 left-2">
-          <StickyNote className="h-4 w-4 opacity-50" style={{ color: textColor }} />
+        <div className="absolute top-2 left-2 opacity-50">
+          <StickyNote size={16} style={{ color: textColor }} />
         </div>
 
       {/* Content Editor */}

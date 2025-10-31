@@ -599,7 +599,7 @@ export const ChatNode = memo(({
         maxWidth={CHAT_NODE_MAX_WIDTH}
         maxHeight={CHAT_NODE_MAX_HEIGHT}
         color="transparent"
-        handleClassName={`!w-3 !h-3 !border-2 !border-[#14B8A6] !bg-white !rounded-full !opacity-0 ${handleVisibilityClass} data-[resizing=true]:!opacity-100 !transition-opacity`}
+        handleClassName={`!w-3 !h-3 !border-2 !border-primary !bg-white !rounded-full !opacity-0 ${handleVisibilityClass} data-[resizing=true]:!opacity-100 !transition-opacity`}
         lineClassName="!hidden"
         onResize={handleResize}
         onResizeEnd={handleResizeEnd}
@@ -616,34 +616,34 @@ export const ChatNode = memo(({
         style={{ width: '100%', height: '100%' }}
       >
         <div
-          className="flex h-full w-full border border-[#E5E7EB] rounded-2xl overflow-hidden bg-white shadow-sm"
+          className="flex h-full w-full border-2 border-[#095D40]/20 rounded-2xl overflow-hidden bg-white shadow-sm"
           onWheel={handleWheelEvent}
           onWheelCapture={handleWheelEvent}
         >
           {/* Left Sidebar */}
-          <div className="nodrag w-[280px] border-r border-[#E5E7EB] flex flex-col bg-[#FAFBFC]">
+          <div className="nodrag w-[280px] border-r border-[#095D40]/20 flex flex-col bg-[#095D40]/5">
             {/* Connected Data Section */}
-            <div className="p-4 border-b border-[#E5E7EB]">
+            <div className="p-4 border-b border-[#095D40]/20">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-wide">
+                <h3 className="text-[12px] font-semibold text-[#095D40] uppercase tracking-wide">
                   Connected Data ({data.linkedNodes?.length || 0})
                 </h3>
                 <button
                   onClick={(e) => {
                     stopReactFlowPropagation(e);
                   }}
-                  className="p-1 hover:bg-white rounded transition-colors"
+                  className="p-1 hover:bg-white/50 rounded transition-colors"
                   title="Settings"
                 >
-                  <Settings className="h-3.5 w-3.5 text-[#6B7280]" />
+                  <Settings className="h-3.5 w-3.5 text-[#095D40]" />
                 </button>
               </div>
               {data.linkedNodes && data.linkedNodes.length > 0 ? (
-                <div className="text-[11px] text-[#6B7280] px-2 py-1.5 bg-white border border-[#E5E7EB] rounded">
+                <div className="text-[11px] text-[#095D40]/80 px-2 py-1.5 bg-white border border-[#095D40]/20 rounded">
                   {data.linkedNodes.length} {data.linkedNodes.length === 1 ? 'node' : 'nodes'} connected
                 </div>
               ) : (
-                <p className="text-[11px] text-[#9CA3AF]">No data connected</p>
+                <p className="text-[11px] text-[#095D40]/60">No data connected</p>
               )}
             </div>
 
@@ -651,7 +651,7 @@ export const ChatNode = memo(({
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="p-4 pb-3">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-wide">
+                  <h3 className="text-[12px] font-semibold text-[#095D40] uppercase tracking-wide">
                     Chats ({data.sessions?.length || 0})
                   </h3>
                 </div>
@@ -661,7 +661,7 @@ export const ChatNode = memo(({
                     createNewChat();
                   }}
                   onMouseDown={(e) => stopReactFlowPropagation(e)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-[#E5E7EB] rounded-lg hover:bg-gray-50 transition-colors text-[12px] font-medium text-[#1A1D21]"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-[#095D40] hover:bg-[#074830] border-0 rounded-lg transition-colors text-[12px] font-medium text-white"
                 >
                   <Plus className="h-4 w-4" />
                   New Chat
@@ -685,41 +685,45 @@ export const ChatNode = memo(({
                       onMouseDown={(e) => stopReactFlowPropagation(e)}
                       className={`group p-3 rounded-lg cursor-pointer transition-all ${
                         session.id === currentSession?.id
-                          ? 'bg-white border-2 border-[#14B8A6] shadow-sm'
-                          : 'bg-white border border-[#E5E7EB] hover:border-[#9CA3AF]'
+                          ? 'bg-[#095D40] text-white shadow-sm'
+                          : 'bg-white border border-[#095D40]/20 hover:bg-[#095D40]/10'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="text-[12px] font-medium text-[#1A1D21] truncate">
+                          <p className={`text-[12px] font-medium truncate ${
+                            session.id === currentSession?.id ? 'text-white' : 'text-[#095D40]'
+                          }`}>
                             {session.title}
                           </p>
                         </div>
                         <button
                           onClick={(e) => deleteSession(session.id, e)}
                           onMouseDown={(e) => stopReactFlowPropagation(e)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded transition-all"
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#FF3B30]/10 rounded transition-all"
                           title="Delete chat"
                         >
-                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                          <Trash2 className={`h-3.5 w-3.5 ${
+                            session.id === currentSession?.id ? 'text-white/80' : 'text-[#FF3B30]'
+                          }`} />
                         </button>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-[11px] text-[#9CA3AF] text-center py-8">No chats yet</p>
+                  <p className="text-[11px] text-[#095D40]/60 text-center py-8">No chats yet</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Main Chat Area */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col bg-white">
             {/* Chat Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#095D40]/20">
               <div className="flex items-center gap-3">
-                <MessageSquare className="h-5 w-5 text-[#14B8A6]" />
-                <h3 className="text-[14px] font-semibold text-[#1A1D21]">
+                <MessageSquare className="h-5 w-5 text-[#095D40]" />
+                <h3 className="text-[14px] font-semibold text-[#095D40]">
                   {currentSession?.title || 'Chat'}
                 </h3>
               </div>
@@ -729,10 +733,10 @@ export const ChatNode = memo(({
                   setIsMaximized(true);
                 }}
                 onMouseDown={(e) => stopReactFlowPropagation(e)}
-                className="p-2 hover:bg-[#F5F5F7] rounded-lg transition-colors"
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
                 title="Maximize chat"
               >
-                <Maximize2 className="h-4 w-4 text-[#6B7280] hover:text-[#14B8A6]" />
+                <Maximize2 className="h-4 w-4 text-muted-foreground hover:text-primary" />
               </button>
             </div>
 
@@ -743,7 +747,7 @@ export const ChatNode = memo(({
               onWheel={handleWheelEvent}
               onWheelCapture={handleWheelEvent}
               data-lenis-prevent
-              className="nodrag flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-white"
+              className="nodrag flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-card"
               style={{ overscrollBehavior: 'contain', userSelect: 'text' }}
             >
               {messages.length > 0 ? (
@@ -751,22 +755,22 @@ export const ChatNode = memo(({
                   <div key={message.id} className="max-w-[90%]">
                     <div className="flex items-center gap-2 mb-1.5">
                       {message.role === 'assistant' ? (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F5F5F7] border border-[#E5E7EB]">
-                          <div className="w-1.5 h-1.5 bg-[#14B8A6] rounded-full"></div>
-                          <span className="text-[10px] font-medium text-[#6B7280] tracking-wide">AI</span>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted border border-border">
+                          <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                          <span className="text-[10px] font-medium text-muted-foreground tracking-wide">AI</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F5F5F7] border border-[#E5E7EB]">
-                          <User className="w-3 h-3 text-[#6B7280]" />
-                          <span className="text-[10px] font-medium text-[#6B7280] tracking-wide">{getUserDisplayName()}</span>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted border border-border">
+                          <User className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-[10px] font-medium text-muted-foreground tracking-wide">{getUserDisplayName()}</span>
                         </div>
                       )}
                     </div>
                     <div
                       className={`group nodrag p-4 rounded-lg text-[13px] leading-[1.6] select-text cursor-text ${
                         message.role === 'user'
-                          ? 'bg-[#F5F5F7] text-[#1A1D21] border border-[#E5E7EB]'
-                          : 'bg-white text-[#1A1D21] border border-[#E5E7EB]'
+                          ? 'bg-muted text-foreground border border-border'
+                          : 'bg-card text-foreground border border-border'
                       }`}
                       style={{ userSelect: 'text' }}
                       onMouseDown={(e) => {
@@ -777,9 +781,9 @@ export const ChatNode = memo(({
                       <div className="prose prose-sm max-w-none select-text" style={{ userSelect: 'text' }}>
                         {message.content === '' && isLoading ? (
                           <div className="flex items-center gap-2 py-2">
-                            <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse"></div>
-                            <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                            <div className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                            <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                           </div>
                         ) : (
                           <ReactMarkdown
@@ -802,7 +806,7 @@ export const ChatNode = memo(({
                                   href={href}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[13px] text-[#155EEF] hover:underline select-text"
+                                  className="text-[13px] text-primary hover:underline select-text"
                                   style={{ userSelect: 'text' }}
                                   onClick={(e) => e.stopPropagation()}
                                 >
@@ -810,7 +814,7 @@ export const ChatNode = memo(({
                                 </a>
                               ),
                               blockquote: ({ children }) => (
-                                <blockquote className="border-l-4 text-[13px] border-[#E8ECEF] bg-[#F5F5F7] pl-4 py-3 my-4 italic rounded-r leading-[1.6] select-text" style={{ userSelect: 'text' }}>
+                                <blockquote className="border-l-4 text-[13px] border-border bg-muted pl-4 py-3 my-4 italic rounded-r leading-[1.6] select-text" style={{ userSelect: 'text' }}>
                                   {children}
                                 </blockquote>
                               ),
@@ -819,10 +823,10 @@ export const ChatNode = memo(({
                                   <table className="min-w-full text-[13px] border-collapse">{children}</table>
                                 </div>
                               ),
-                              thead: ({ children }) => <thead className="bg-gray-100">{children}</thead>,
-                              th: ({ children }) => <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</th>,
-                              td: ({ children }) => <td className="border border-gray-300 px-3 py-2 text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</td>,
-                              hr: () => <hr className="my-4 border-t border-[#E8ECEF]" />,
+                              thead: ({ children }) => <thead className="bg-muted">{children}</thead>,
+                              th: ({ children }) => <th className="border border-border px-3 py-2 text-left font-semibold text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</th>,
+                              td: ({ children }) => <td className="border border-border px-3 py-2 text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</td>,
+                              hr: () => <hr className="my-4 border-t border-border" />,
                             }}
                           >
                             {message.content}
@@ -831,20 +835,20 @@ export const ChatNode = memo(({
                       </div>
 
                       {/* Copy button */}
-                      <div className="flex justify-start mt-2 pt-2 border-t border-[#E5E7EB]">
+                      <div className="flex justify-start mt-2 pt-2 border-t border-border">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleCopyMessage(message.id, message.content);
                           }}
                           onMouseDown={(e) => e.stopPropagation()}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-[#6B7280] hover:text-[#14B8A6] hover:bg-[#F0F9FF] rounded-md transition-all opacity-0 group-hover:opacity-100"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-all opacity-0 group-hover:opacity-100"
                           title="Copy message"
                         >
                           {copiedMessageId === message.id ? (
                             <>
-                              <Check className="h-3.5 w-3.5 text-[#14B8A6]" />
-                              <span className="font-medium text-[#14B8A6]">Copied!</span>
+                              <Check className="h-3.5 w-3.5 text-primary" />
+                              <span className="font-medium text-primary">Copied!</span>
                             </>
                           ) : (
                             <>
@@ -859,11 +863,11 @@ export const ChatNode = memo(({
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center">
-                  <MessageSquare className="h-16 w-16 text-[#D1D5DB] mb-6" />
+                  <MessageSquare className="h-16 w-16 text-border mb-6" />
                   <button
                     onClick={(e) => stopReactFlowPropagation(e)}
                     onMouseDown={(e) => stopReactFlowPropagation(e)}
-                    className="flex items-center gap-2 px-5 py-3 bg-white border-2 border-[#E5E7EB] rounded-xl hover:border-[#14B8A6] hover:bg-[#F5F5F7] transition-all text-[13px] font-medium text-[#1A1D21]"
+                    className="flex items-center gap-2 px-5 py-3 bg-background border-2 border-border rounded-xl hover:border-primary hover:bg-muted transition-all text-[13px] font-medium text-foreground"
                   >
                     <Library className="h-4 w-4" />
                     Browse Prompt Library
@@ -874,7 +878,7 @@ export const ChatNode = memo(({
             </div>
 
             {/* Input Area */}
-            <div className="nodrag px-6 py-4 border-t border-[#E5E7EB] bg-[#FAFBFC]">
+            <div className="nodrag px-6 py-4 border-t border-[#095D40]/20 bg-[#095D40]/5">
               <div className="flex items-center gap-3 mb-3">
                 {/* Model Selector */}
                 <div className="relative">
@@ -888,21 +892,21 @@ export const ChatNode = memo(({
                     }}
                     onClick={(e) => stopReactFlowPropagation(e)}
                     onMouseDown={(e) => stopReactFlowPropagation(e)}
-                    className="appearance-none pl-3 pr-8 py-2 text-[11px] font-medium bg-white border border-[#E5E7EB] rounded-lg cursor-pointer hover:border-[#9CA3AF] transition-colors focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
+                    className="appearance-none pl-3 pr-8 py-2 text-[11px] font-medium bg-white border border-[#095D40]/20 rounded-lg cursor-pointer hover:border-[#095D40] transition-colors focus:outline-none focus:ring-2 focus:ring-[#095D40] text-[#095D40]"
                   >
                     <option value="gemini-flash-latest">GPT-4.1</option>
                     <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                     <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                     <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
                   </select>
-                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#6B7280] pointer-events-none" />
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#095D40]/60 pointer-events-none" />
                 </div>
 
                 {/* Prompts Button */}
                 <button
                   onClick={(e) => stopReactFlowPropagation(e)}
                   onMouseDown={(e) => stopReactFlowPropagation(e)}
-                  className="flex items-center gap-2 px-3 py-2 text-[11px] font-medium bg-white border border-[#E5E7EB] rounded-lg hover:border-[#9CA3AF] transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 text-[11px] font-medium bg-white border border-[#095D40]/20 rounded-lg hover:border-[#095D40] hover:bg-[#095D40]/10 transition-colors text-[#095D40]"
                 >
                   <Library className="h-3.5 w-3.5" />
                   Prompts

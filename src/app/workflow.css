@@ -95,11 +95,27 @@ div[class*="react-flow__node"].react-flow__node-group {
   animation: node-entrance 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Edge path */
+/* Edge path - Default green color */
 .react-flow__edge-path {
-  stroke: #6B7280;
+  stroke: #095D40 !important;
   stroke-width: 3.5;
   stroke-linecap: round;
+}
+
+/* Override ReactFlow's default edge color variables */
+.react-flow__edge {
+  --xy-edge-stroke: #095D40 !important;
+  --xy-edge-stroke-selected: #095D40 !important;
+}
+
+/* Force all edge markers (arrows) to be green */
+.react-flow__arrowhead,
+.react-flow__edge-path,
+.react-flow__edge marker,
+marker {
+  fill: #095D40 !important;
+  stroke: #095D40 !important;
+  color: #095D40 !important;
 }
 
 /* Keep threads above group surfaces while preserving node interactivity */
@@ -114,12 +130,12 @@ div[class*="react-flow__node"].react-flow__node-group {
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #095D40;
+  stroke: #095D40 !important;
   stroke-width: 4.5;
 }
 
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke: #333333;
+  stroke: #095D40 !important;
   stroke-width: 4;
 }
 
@@ -173,11 +189,17 @@ div[class*="react-flow__node"].react-flow__node-group {
 
 /* Connection line - Enhanced with animation */
 .react-flow__connectionline {
-  stroke: #095D40;
-  stroke-width: 4;
+  stroke: #095D40 !important;
+  stroke-width: 4 !important;
   stroke-linecap: round;
   filter: drop-shadow(0 2px 4px rgba(9, 93, 64, 0.3));
   animation: connection-pulse 1.5s ease-in-out infinite;
+}
+
+/* Connection line path */
+.react-flow__connectionline-path {
+  stroke: #095D40 !important;
+  fill: none !important;
 }
 
 @keyframes connection-pulse {
@@ -270,6 +292,7 @@ div[class*="react-flow__node"].react-flow__node-group {
   width: 16px !important;
   height: 16px !important;
   border-width: 3px !important;
+  border-color: #095D40 !important; /* Brand green */
   transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0.6;
   transform: translateZ(0);

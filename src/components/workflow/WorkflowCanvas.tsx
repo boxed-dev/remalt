@@ -1460,9 +1460,9 @@ function WorkflowCanvasInner() {
         /* Blackhole effect on connector handles only */
         .flowy-bh-handle {
           /* Do not override transform or position: React Flow uses them */
-          border-color: #155EEF !important;
+          border-color: #095D40 !important;
           z-index: 60;
-          box-shadow: 0 0 0 2px rgba(21,94,239,0.25);
+          box-shadow: 0 0 0 2px rgba(9,93,64,0.25);
         }
         .flowy-bh-handle::before,
         .flowy-bh-handle::after {
@@ -1473,7 +1473,7 @@ function WorkflowCanvasInner() {
           pointer-events: none;
         }
         .flowy-bh-handle::before {
-          background: radial-gradient(60% 60% at 50% 50%, rgba(21,94,239,0.35) 0%, rgba(21,94,239,0.12) 45%, rgba(21,94,239,0) 60%);
+          background: radial-gradient(60% 60% at 50% 50%, rgba(9,93,64,0.35) 0%, rgba(9,93,64,0.12) 45%, rgba(9,93,64,0) 60%);
           filter: blur(6px);
           opacity: .9;
           animation: bh-glow 900ms ease-in-out infinite alternate;

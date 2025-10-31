@@ -12,7 +12,7 @@ const PRODUCTS = {
     price: 0,
     priceId: 'price_free',
     features: [
-      '5 workflows per month',
+      '5 canvas per month',
       'Basic AI models',
       'Community support',
       'Email notifications',
@@ -24,7 +24,7 @@ const PRODUCTS = {
     price: 29,
     priceId: 'price_pro',
     features: [
-      'Unlimited workflows',
+      'Unlimited canvas',
       'Advanced AI models',
       'Priority support',
       'Custom integrations',
@@ -52,7 +52,7 @@ export default function PricingPage() {
   const router = useRouter()
 
   const handleSubscribe = (planName: string) => {
-    // Navigate to flows page for now
+    // Navigate to canvas page for now
     router.push('/flows')
   }
 

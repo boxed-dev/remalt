@@ -343,12 +343,7 @@ class RecordingManager {
       this.session.state = 'processing';
       this.emit('state-changed', 'processing');
 
-      // Stop MediaRecorder
-      if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-        this.mediaRecorder.stop();
-      }
-
-      // Close Deepgram connection gracefully
+      // Close Deepgram connection gracefully first
       if (this.deepgramConnection) {
         // Capture reference before clearing
         const connection = this.deepgramConnection;
@@ -363,6 +358,11 @@ class RecordingManager {
         } catch (error) {
           console.error('[Deepgram] Error closing connection:', error);
         }
+      }
+
+      // Stop MediaRecorder - this will trigger finalizeRecording via onstop handler
+      if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+        this.mediaRecorder.stop();
       }
     } catch (error) {
       console.error('[RecordingManager] Error stopping recording:', error);
@@ -451,14 +451,38 @@ class RecordingManager {
    * Cleanup resources
    */
   private cleanup(): void {
-    // Stop all media tracks
-    if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach(track => track.stop());
-      this.mediaStream = null;
+    // Stop MediaRecorder first to release browser recording state
+    if (this.mediaRecorder) {
+      try {
+        if (this.mediaRecorder.state !== 'inactive') {
+          this.mediaRecorder.stop();
+        }
+        // Remove event handlers to prevent memory leaks
+        this.mediaRecorder.ondataavailable = null;
+        this.mediaRecorder.onstop = null;
+        this.mediaRecorder.onerror = null;
+      } catch (error) {
+        console.error('Error stopping MediaRecorder:', error);
+      }
+      // Explicitly null out reference
+      this.mediaRecorder = null;
     }
 
-    // Clear MediaRecorder
-    this.mediaRecorder = null;
+    // Stop and release all media stream tracks immediately
+    if (this.mediaStream) {
+      const tracks = this.mediaStream.getTracks();
+      tracks.forEach(track => {
+        try {
+          track.stop();
+          // Explicitly remove track from stream
+          this.mediaStream?.removeTrack(track);
+        } catch (error) {
+          console.error('Error stopping track:', error);
+        }
+      });
+      // Null out reference to ensure browser releases microphone
+      this.mediaStream = null;
+    }
 
     // Close Deepgram connection
     if (this.deepgramConnection) {

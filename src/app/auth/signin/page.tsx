@@ -38,7 +38,7 @@ function SignInForm() {
 
       console.log('[SignIn] Success:', { user: data.user?.id, session: !!data.session });
 
-      // Redirect to intended page or flows
+      // Redirect to intended page or canvas
       const redirectTo = redirectedFrom || '/flows';
 
       // Force a hard navigation to ensure cookies are set

@@ -227,7 +227,7 @@ export function AIInstructionsModal({
             </button>
             <button
               onClick={onClose}
-              className="px-4 py-2 text-[12px] bg-[#155EEF] hover:bg-[#1249CC] text-white rounded-lg font-medium transition-colors shadow-sm"
+              className="px-4 py-2 text-[12px] bg-[#095D40] hover:bg-[#074830] text-white rounded-lg font-medium transition-colors shadow-sm"
               type="button"
             >
               Done

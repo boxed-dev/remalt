@@ -41,7 +41,7 @@ export function Hero() {
 
           {/* Subheadline - Clear value proposition */}
           <p className={`mx-auto max-w-2xl text-xl sm:text-2xl text-[#6B7280] mb-12 leading-relaxed ${mounted ? 'animate-slide-up-delay' : 'opacity-0'}`}>
-            Drag. Drop. Create. The simplest way to build AI workflows that transform how you work.
+            Drag. Drop. Create. The simplest way to build AI canvas that transform how you work.
           </p>
 
           {/* CTA Buttons - Clear hierarchy */}
@@ -69,7 +69,7 @@ export function Hero() {
           <div className={`grid grid-cols-3 gap-8 max-w-3xl mx-auto ${mounted ? 'animate-fade-in-delay' : 'opacity-0'}`}>
             <div>
               <div className="text-3xl font-bold text-[#095D40]">10k+</div>
-              <div className="text-sm text-[#6B7280] mt-1">Workflows Created</div>
+              <div className="text-sm text-[#6B7280] mt-1">Canvas Created</div>
             </div>
             <div>
               <div className="text-3xl font-bold text-[#095D40]">50M+</div>

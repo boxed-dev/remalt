@@ -78,50 +78,7 @@ export function GlobalHeader() {
           </span>
         </Link>
 
-        {/* Desktop Navigation */}
-        {!isWorkflowEditor && (
-          <nav className="hidden md:flex items-center gap-1">
-            {user ? (
-              <>
-                <Link
-                  href="/flows"
-                  className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors ${
-                    pathname === "/flows"
-                      ? "text-[#095D40] bg-[#095D40]/10"
-                      : "text-[#6B7280] hover:text-[#095D40] hover:bg-[#D4AF7F]/10"
-                  }`}
-                >
-                  Flows
-                </Link>
-                <Link
-                  href="/pricing"
-                  className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors ${
-                    pathname === "/pricing"
-                      ? "text-[#095D40] bg-[#095D40]/10"
-                      : "text-[#6B7280] hover:text-[#095D40] hover:bg-[#D4AF7F]/10"
-                  }`}
-                >
-                  Pricing
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/#features"
-                  className="px-3 py-1.5 text-[13px] font-medium text-[#6B7280] hover:text-[#095D40] hover:bg-[#D4AF7F]/10 rounded-md transition-colors"
-                >
-                  Features
-                </Link>
-                <Link
-                  href="/pricing"
-                  className="px-3 py-1.5 text-[13px] font-medium text-[#6B7280] hover:text-[#095D40] hover:bg-[#D4AF7F]/10 rounded-md transition-colors"
-                >
-                  Pricing
-                </Link>
-              </>
-            )}
-          </nav>
-        )}
+        {/* Desktop Navigation - Removed */}
 
         {/* Right Section */}
         <div className="flex items-center gap-2">
@@ -207,20 +164,6 @@ export function GlobalHeader() {
             {user ? (
               <>
                 <Link
-                  href="/flows"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-[14px] font-medium text-[#333333] hover:bg-[#D4AF7F]/10 rounded-md transition-colors"
-                >
-                  Flows
-                </Link>
-                <Link
-                  href="/pricing"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-[14px] font-medium text-[#333333] hover:bg-[#D4AF7F]/10 rounded-md transition-colors"
-                >
-                  Pricing
-                </Link>
-                <Link
                   href="/account"
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-3 py-2 text-[14px] font-medium text-[#333333] hover:bg-[#D4AF7F]/10 rounded-md transition-colors"
@@ -230,20 +173,6 @@ export function GlobalHeader() {
               </>
             ) : (
               <>
-                <Link
-                  href="/#features"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-[14px] font-medium text-[#333333] hover:bg-[#D4AF7F]/10 rounded-md transition-colors"
-                >
-                  Features
-                </Link>
-                <Link
-                  href="/pricing"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-[14px] font-medium text-[#333333] hover:bg-[#D4AF7F]/10 rounded-md transition-colors"
-                >
-                  Pricing
-                </Link>
                 <div className="pt-2 border-t border-[#D4AF7F]/20 mt-2 space-y-1">
                   <Link
                     href="/auth/signin"

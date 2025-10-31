@@ -58,7 +58,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect to flows if accessing auth pages while authenticated
+  // Redirect to canvas if accessing auth pages while authenticated
   const authRoutes = ['/auth/signin', '/auth/signup'];
   const isAuthRoute = authRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)

@@ -8,10 +8,10 @@ const plans = [
     name: "Starter",
     price: "$0",
     period: "forever",
-    description: "Perfect for trying out AI workflows",
+    description: "Perfect for trying out AI canvas",
     badge: null,
     features: [
-      "5 workflows per month",
+      "5 canvas per month",
       "Basic AI models",
       "Community support",
       "Template library access",
@@ -26,7 +26,7 @@ const plans = [
     description: "For professionals and growing teams",
     badge: "Most Popular",
     features: [
-      "Unlimited workflows",
+      "Unlimited canvas",
       "Advanced AI models (GPT-4, Claude)",
       "Priority support",
       "Custom templates",

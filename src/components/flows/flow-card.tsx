@@ -1,38 +1,33 @@
 import { Badge } from "@/components/ui/badge";
 import { Flow } from "@/lib/mock-data/flows";
-import { Clock, Trash2, MoreVertical } from "lucide-react";
+import { Trash2, Globe } from "lucide-react";
 import { useState } from "react";
 
 // Extended Flow type to support both mock and real data
 interface ExtendedFlow extends Omit<Flow, 'created' | 'updated' | 'recentlyOpened'> {
   nodeCount?: number;
   lastEdited?: Date;
+  isPublic?: boolean;
+  category?: string;
 }
 
 interface FlowCardProps {
   flow: ExtendedFlow;
   onClick?: () => void;
   onDelete?: () => void;
+  onPublish?: () => void;
+  isTemplateAdmin?: boolean;
 }
 
-export function FlowCard({ flow, onClick, onDelete }: FlowCardProps) {
+export function FlowCard({ flow, onClick, onDelete, onPublish, isTemplateAdmin }: FlowCardProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Format date nicely
-  const formatDate = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) return 'Today';
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days} days ago`;
-    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-    if (days < 365) return `${Math.floor(days / 30)} months ago`;
-    return date.toLocaleDateString();
+  const handlePublish = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onPublish) {
+      onPublish();
+    }
   };
-
-  const lastEdited = flow.lastEdited instanceof Date ? flow.lastEdited : (flow.lastEdited ? new Date(flow.lastEdited) : new Date());
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -67,7 +62,7 @@ export function FlowCard({ flow, onClick, onDelete }: FlowCardProps) {
           onClick={(e) => e.stopPropagation()}
         >
           <Trash2 className="h-8 w-8 text-[#FF3B30] mb-3" />
-          <h4 className="text-[15px] font-semibold text-[#1A1D21] mb-2">Delete Workflow?</h4>
+          <h4 className="text-[15px] font-semibold text-[#1A1D21] mb-2">Delete Canvas?</h4>
           <p className="text-[13px] text-[#6B7280] mb-6 text-center">
             This action cannot be undone.
           </p>
@@ -88,16 +83,40 @@ export function FlowCard({ flow, onClick, onDelete }: FlowCardProps) {
         </div>
       )}
 
-      {/* Delete Button */}
-      {onDelete && (
-        <button
-          onClick={handleDelete}
-          className="absolute top-3 right-3 p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-[#FF3B30]/10 transition-all duration-200 z-[5]"
-          title="Delete workflow"
-        >
-          <Trash2 className="h-4 w-4 text-[#FF3B30]" />
-        </button>
+      {/* Published Badge - Top Right (Hides on Hover) */}
+      {flow.isPublic && (
+        <div className="absolute top-3 right-3 z-[5] opacity-100 group-hover:opacity-0 transition-opacity duration-200">
+          <Badge className="bg-[#095D40] text-white hover:bg-[#074830] text-[10px] font-medium flex items-center gap-1">
+            <Globe className="h-3 w-3" />
+            Public
+          </Badge>
+        </div>
       )}
+
+      {/* Action Buttons (Show on Hover) */}
+      <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-[10]">
+        {/* Publish Button (Admin Only) */}
+        {isTemplateAdmin && onPublish && (
+          <button
+            onClick={handlePublish}
+            className="p-2 rounded-lg hover:bg-[#095D40]/10 bg-white shadow-sm transition-all duration-200"
+            title={flow.isPublic ? "Manage template" : "Publish as template"}
+          >
+            <Globe className={`h-4 w-4 ${flow.isPublic ? 'text-[#095D40]' : 'text-[#6B7280]'}`} />
+          </button>
+        )}
+
+        {/* Delete Button */}
+        {onDelete && (
+          <button
+            onClick={handleDelete}
+            className="p-2 rounded-lg hover:bg-[#FF3B30]/10 bg-white shadow-sm transition-all duration-200"
+            title="Delete workflow"
+          >
+            <Trash2 className="h-4 w-4 text-[#FF3B30]" />
+          </button>
+        )}
+      </div>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
@@ -113,21 +132,9 @@ export function FlowCard({ flow, onClick, onDelete }: FlowCardProps) {
         </div>
       </div>
 
-      {/* Node Count */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="flex items-center gap-1.5">
-          <svg className="h-4 w-4 text-[#9CA3AF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-          </svg>
-          <span className="text-[12px] text-[#6B7280] font-medium">
-            {flow.nodeCount || 0} {flow.nodeCount === 1 ? 'node' : 'nodes'}
-          </span>
-        </div>
-      </div>
-
       {/* Tags */}
       {flow.tags && flow.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
+        <div className="flex flex-wrap gap-1.5">
           {flow.tags.slice(0, 3).map((tag) => (
             <span
               key={tag.name}
@@ -143,19 +150,6 @@ export function FlowCard({ flow, onClick, onDelete }: FlowCardProps) {
           )}
         </div>
       )}
-
-      {/* Footer */}
-      <div className="flex items-center justify-between pt-4 border-t border-[#E8ECEF]">
-        <div className="flex items-center gap-1.5">
-          <Clock className="h-3.5 w-3.5 text-[#9CA3AF]" />
-          <span className="text-[12px] text-[#9CA3AF]">
-            {formatDate(lastEdited)}
-          </span>
-        </div>
-        <div className="text-[11px] text-[#095D40] opacity-0 group-hover:opacity-100 transition-opacity font-medium">
-          Open →
-        </div>
-      </div>
     </div>
   );
 }

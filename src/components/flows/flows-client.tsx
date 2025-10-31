@@ -9,6 +9,9 @@ import { createClient } from "@/lib/supabase/client";
 import { deleteWorkflow, type WorkflowSummary } from "@/lib/supabase/workflows";
 import { toast } from "sonner";
 import { usePageVisibility } from "@/hooks/use-page-visibility";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { canPublishTemplates } from "@/lib/permissions/template-permissions";
+import { PublishTemplateDialog } from "@/components/flows/publish-template-dialog";
 
 interface FlowsClientProps {
   initialWorkflows: WorkflowSummary[];
@@ -16,10 +19,15 @@ interface FlowsClientProps {
 
 export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
   const router = useRouter();
+  const { user } = useCurrentUser();
   const [workflows, setWorkflows] =
     useState<WorkflowSummary[]>(initialWorkflows);
   const [searchQuery, setSearchQuery] = useState("");
   const isPageVisible = usePageVisibility();
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowSummary | null>(null);
+
+  const isTemplateAdmin = canPublishTemplates(user?.email);
 
   const filteredFlows = useMemo(() => {
     let filtered = workflows;
@@ -57,6 +65,93 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
     } catch (error) {
       console.error("Failed to delete workflow:", error);
       toast.error("Failed to delete workflow. Please try again.");
+    }
+  };
+
+  const handleOpenPublishDialog = (workflow: WorkflowSummary) => {
+    setSelectedWorkflow(workflow);
+    setPublishDialogOpen(true);
+  };
+
+  const handlePublish = async (category: string, tags: string[]) => {
+    if (!selectedWorkflow) return;
+
+    try {
+      const response = await fetch("/api/templates/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workflowId: selectedWorkflow.id,
+          category,
+          tags,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to publish template");
+      }
+
+      // Update local state
+      setWorkflows(
+        workflows.map((w) =>
+          w.id === selectedWorkflow.id
+            ? {
+                ...w,
+                metadata: {
+                  ...w.metadata,
+                  isPublic: true,
+                  category,
+                  tags,
+                },
+              }
+            : w
+        )
+      );
+
+      toast.success("Template published successfully");
+    } catch (error) {
+      console.error("Failed to publish template:", error);
+      toast.error("Failed to publish template. Please try again.");
+      throw error;
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!selectedWorkflow) return;
+
+    try {
+      const response = await fetch("/api/templates/publish", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workflowId: selectedWorkflow.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to unpublish template");
+      }
+
+      // Update local state
+      setWorkflows(
+        workflows.map((w) =>
+          w.id === selectedWorkflow.id
+            ? {
+                ...w,
+                metadata: {
+                  ...w.metadata,
+                  isPublic: false,
+                },
+              }
+            : w
+        )
+      );
+
+      toast.success("Template unpublished successfully");
+    } catch (error) {
+      console.error("Failed to unpublish template:", error);
+      toast.error("Failed to unpublish template. Please try again.");
+      throw error;
     }
   };
 
@@ -123,14 +218,14 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
     <div className="min-h-screen bg-[#FAFBFC]" data-testid="flows-list">
       {/* Main Content */}
       <main className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-8 py-8">
+        <div className="max-w-full mx-auto px-8 py-8">
           {/* Header with Search and New Flow Button */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
             <div className="relative w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" />
               <input
                 type="text"
-                placeholder="Search flows..."
+                placeholder="Search canvas..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#1A1D21] text-sm bg-white transition-all duration-150"
@@ -149,7 +244,7 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
               }}
             >
               <Plus className="h-4 w-4 mr-1.5" />
-              New Flow
+              New Canvas
             </Button>
           </div>
 
@@ -165,7 +260,7 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                   <Plus className="h-6 w-6 text-[#9CA3AF] group-hover:text-white transition-all duration-200" />
                 </div>
                 <span className="text-[14px] font-medium text-[#6B7280] group-hover:text-[#1A1D21] transition-all duration-200">
-                  New Flow
+                  New Canvas
                 </span>
               </button>
 
@@ -185,9 +280,13 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                         color: "#D4AF7F",
                         count: 0,
                       })) || [],
+                    isPublic: flow.metadata?.isPublic || false,
+                    category: flow.metadata?.category,
                   }}
                   onClick={() => handleFlowClick(flow.id)}
                   onDelete={() => handleDeleteFlow(flow.id)}
+                  onPublish={isTemplateAdmin ? () => handleOpenPublishDialog(flow) : undefined}
+                  isTemplateAdmin={isTemplateAdmin}
                 />
               ))}
             </div>
@@ -210,10 +309,10 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                 </svg>
               </div>
               <h2 className="text-[24px] font-bold text-[#1A1D21] mb-2">
-                Create your first workflow
+                Create your first canvas
               </h2>
               <p className="text-[15px] text-[#6B7280] mb-6 max-w-md text-center">
-                Build AI-powered workflows with drag-and-drop nodes. Connect
+                Build AI-powered canvas with drag-and-drop nodes. Connect
                 YouTube videos, PDFs, images, and more.
               </p>
               <Button
@@ -224,7 +323,7 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                 }}
               >
                 <Plus className="h-5 w-5 mr-2" />
-                Create New Workflow
+                Create New Canvas
               </Button>
             </div>
           )}
@@ -237,7 +336,7 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                   <Search className="h-8 w-8 text-[#9CA3AF]" />
                 </div>
                 <h3 className="text-[18px] font-semibold text-[#1A1D21] mb-2">
-                  No flows found
+                  No canvas found
                 </h3>
                 <p className="text-[14px] text-[#6B7280] mb-6">
                   Try adjusting your search or create a new flow to get started
@@ -247,13 +346,28 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                   className="bg-[#095D40] text-white hover:bg-[#074030] transition-all duration-150 rounded-lg"
                 >
                   <Plus className="h-4 w-4 mr-1.5" />
-                  Create New Flow
+                  Create New Canvas
                 </Button>
               </div>
             </div>
           )}
         </div>
       </main>
+
+      {/* Publish Template Dialog */}
+      {selectedWorkflow && (
+        <PublishTemplateDialog
+          open={publishDialogOpen}
+          onOpenChange={setPublishDialogOpen}
+          workflowId={selectedWorkflow.id}
+          workflowName={selectedWorkflow.name}
+          currentCategory={selectedWorkflow.metadata?.category}
+          currentTags={selectedWorkflow.metadata?.tags}
+          isPublished={selectedWorkflow.metadata?.isPublic}
+          onPublish={handlePublish}
+          onUnpublish={handleUnpublish}
+        />
+      )}
     </div>
   );
 }

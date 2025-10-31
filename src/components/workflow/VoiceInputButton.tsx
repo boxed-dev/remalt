@@ -196,11 +196,11 @@ export function VoiceInputButton({
         type="button"
         onClick={handleStartRecording}
         disabled={disabled}
-        className={`${sizeClasses} flex items-center justify-center rounded-full border border-[#D6E2FF] bg-[#EEF3FF] hover:bg-[#E0EAFF] hover:border-[#155EEF] transition-all disabled:opacity-40 disabled:cursor-not-allowed group shadow-sm`}
+        className={`${sizeClasses} flex items-center justify-center rounded-full border border-[#095D40]/20 bg-[#095D40]/5 hover:bg-[#095D40]/10 hover:border-[#095D40] transition-all disabled:opacity-40 disabled:cursor-not-allowed group shadow-sm`}
         title={error ? error : 'Voice input (click to record)'}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <Mic className={`${iconSize} text-[#155EEF] group-hover:text-[#0B3FBF] transition-colors`} />
+        <Mic className={`${iconSize} text-[#095D40] group-hover:text-[#074830] transition-colors`} />
       </button>
     );
   }

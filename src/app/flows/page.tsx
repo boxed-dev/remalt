@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { FlowsClient } from "@/components/flows/flows-client";
+import { FlowsSidebar } from "@/components/flows/flows-sidebar";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWorkflowsSummary } from "@/lib/supabase/workflows";
 import { redirect } from "next/navigation";
@@ -24,12 +25,17 @@ async function FlowsContent() {
   // Fetch workflow summaries (optimized query)
   const workflows = await getUserWorkflowsSummary(supabase);
 
-  return <FlowsClient initialWorkflows={workflows} />;
+  return (
+    <div className="flex">
+      <FlowsSidebar />
+      <FlowsClient initialWorkflows={workflows} />
+    </div>
+  );
 }
 
 export default function FlowsPage() {
   return (
-    <Suspense fallback={<LoadingScreen message="Loading your flows..." />}>
+    <Suspense fallback={<LoadingScreen message="Loading your canvas..." />}>
       <FlowsContent />
     </Suspense>
   );

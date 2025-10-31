@@ -701,15 +701,6 @@ export const YouTubeNode = memo(
 
         {/* Actions */}
         <div className="flex flex-wrap gap-1.5 pt-1 text-[11px]">
-          <button
-            onClick={(event) => {
-              stopPropagation(event);
-              setIsEditing(true);
-            }}
-            className="rounded-md px-2.5 py-1 text-[#475569] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
-          >
-            Edit link
-          </button>
           {data.url && (
             <button
               onClick={openVideo}
@@ -778,15 +769,6 @@ export const YouTubeNode = memo(
               </div>
             )}
             <div className="flex flex-wrap gap-1.5 pt-1 text-[11px]">
-              <button
-                onClick={(event) => {
-                  stopPropagation(event);
-                  setIsEditing(true);
-                }}
-                className="rounded-md px-2.5 py-1 text-[#475569] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
-              >
-                Edit link
-              </button>
               {data.url && (
                 <button
                   onClick={openVideo}

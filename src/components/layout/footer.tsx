@@ -5,7 +5,7 @@ const footerLinks = {
   Product: [
     { label: "Features", href: "/features" },
     { label: "Pricing", href: "/pricing" },
-    { label: "Workflows", href: "/workflows" },
+    { label: "Canvas", href: "/workflows" },
     { label: "Templates", href: "/templates" },
   ],
   Company: [
@@ -50,7 +50,7 @@ export function Footer() {
                 <span className="text-xl font-semibold">Remalt</span>
               </Link>
               <p className="text-gray-600 mb-6 max-w-sm">
-                Build AI workflows that actually work. Automate your processes
+                Build AI canvas that actually work. Automate your processes
                 with our intuitive visual builder.
               </p>
               <div className="flex space-x-4">
