@@ -47,7 +47,7 @@ export function Hero() {
           {/* CTA Buttons - Clear hierarchy */}
           <div className={`flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 ${mounted ? 'animate-slide-up-delay-2' : 'opacity-0'}`}>
             <Button asChild size="lg" className="bg-[#095D40] hover:bg-[#074030] text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto">
-              <Link href="/flows/new">
+              <Link href="/flows">
                 Start Building Free
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
