@@ -4,7 +4,6 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import "@uploadcare/react-uploader/core.css";
 import { GlobalHeader } from "@/components/layout/global-header";
-import { SmoothScrollProvider } from "@/components/layout/smooth-scroll-provider";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
@@ -23,13 +22,11 @@ export default function RootLayout({
         className="font-sans antialiased"
         suppressHydrationWarning
       >
-        <SmoothScrollProvider>
-          <GlobalHeader />
-          <main className="pt-14">
-            {children}
-          </main>
-          <Toaster position="bottom-right" richColors expand={true} />
-        </SmoothScrollProvider>
+        <GlobalHeader />
+        <main className="pt-14">
+          {children}
+        </main>
+        <Toaster position="bottom-right" richColors expand={true} />
       </body>
     </html>
   );

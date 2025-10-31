@@ -75,7 +75,7 @@ export function Pricing() {
           {plans.map((plan, index) => (
             <Card
               key={index}
-              className={`relative border-2 transition-all duration-300 hover:shadow-xl ${
+              className={`relative border-2 transition-all duration-150 hover:shadow-xl ${
                 plan.popular
                   ? "border-[#095D40]/20 shadow-lg scale-105"
                   : "border-gray-100 hover:border-gray-200"

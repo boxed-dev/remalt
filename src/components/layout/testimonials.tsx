@@ -66,7 +66,7 @@ export function Testimonials() {
           {testimonials.map((testimonial, index) => (
             <div
               key={testimonial.name}
-              className={`bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 ${
+              className={`bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-150 ${
                 isVisible ? `animate-slide-up-${index}` : 'opacity-0'
               }`}
             >

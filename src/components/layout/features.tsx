@@ -87,7 +87,7 @@ export function Features() {
           {features.map((feature, index) => (
             <div
               key={feature.title}
-              className={`group p-8 rounded-2xl border border-[#E8ECEF] hover:border-[#095D40]/30 hover:shadow-xl transition-all duration-300 ${
+              className={`group p-8 rounded-2xl border border-[#E8ECEF] hover:border-[#095D40]/30 hover:shadow-xl transition-all duration-150 ${
                 isVisible ? `animate-slide-up-${index}` : 'opacity-0'
               }`}
             >
@@ -122,7 +122,7 @@ export function Features() {
                 key={node.label}
                 className={`group cursor-pointer ${isVisible ? `animate-pop-${index}` : 'opacity-0'}`}
               >
-                <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-150 hover:-translate-y-2">
                   <node.icon
                     className="w-10 h-10 mb-3 mx-auto"
                     style={{ color: node.color }}

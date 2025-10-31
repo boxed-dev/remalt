@@ -230,10 +230,6 @@
     font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
   }
 
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
-  }
 
   /* Glass morphism effect */
   .glass {
@@ -462,15 +458,3 @@
   }
 }
 
-html.lenis-enabled,
-body.lenis-enabled {
-  height: auto;
-}
-
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
