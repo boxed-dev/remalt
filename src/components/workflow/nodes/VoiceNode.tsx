@@ -26,7 +26,7 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
   const hasTranscript = useMemo(() => data.transcriptStatus === 'success' && !!data.transcript, [data.transcriptStatus, data.transcript]);
-  const hasAudio = useMemo(() => !!data.audioUrl || !!data.uploadcareCdnUrl, [data.audioUrl, data.uploadcareCdnUrl]);
+  const hasAudio = useMemo(() => !!data.audioUrl || !!data.storageUrl, [data.audioUrl, data.storageUrl]);
   const transcriptWordCount = useMemo(() => {
     if (!data.transcript)
       return 0;
@@ -230,7 +230,7 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
 
   const downloadAudio = (event: React.MouseEvent<HTMLButtonElement>) => {
     stopPropagation(event);
-    const audioSrc = data.uploadcareCdnUrl || data.audioUrl;
+    const audioSrc = data.storageUrl || data.audioUrl;
     if (!audioSrc) return;
 
     const link = document.createElement('a');
@@ -268,7 +268,7 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
         updateNodeData(id, {
           uploadcareCdnUrl: firstCompleted.cdnUrl,
           uploadcareUuid: firstCompleted.uuid,
-          uploadSource: 'uploadcare',
+          uploadSource: 'storage',
           transcriptStatus: 'transcribing',
           transcriptError: undefined,
           audioUrl: undefined,
@@ -329,9 +329,8 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
 
   const openUploader = async (event: React.MouseEvent) => {
     stopPropagation(event);
-    const { FileUploaderRegular } = await import('@uploadcare/react-uploader/next');
-    setUploader(() => FileUploaderRegular);
-    setMode('upload');
+    // Use native file input instead
+    fileInputRef.current?.click();
   };
 
   const closeUploader = (event: React.MouseEvent) => {
@@ -494,8 +493,8 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
         {hasAudio && !showRecordingUI && mode === 'idle' && (
           <div className="space-y-2">
             <div className="rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-3">
-              {data.uploadcareCdnUrl && (
-                <div className="text-[10px] text-[#8B5CF6] mb-2 truncate" title={data.uploadcareCdnUrl}>
+              {data.storageUrl && (
+                <div className="text-[10px] text-[#8B5CF6] mb-2 truncate" title={data.storageUrl}>
                   Uploadcare CDN
                 </div>
               )}
@@ -515,8 +514,8 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
                   }
                 }}
               >
-                <source src={data.uploadcareCdnUrl || data.audioUrl!} type="audio/webm" />
-                <source src={data.uploadcareCdnUrl || data.audioUrl!} type="audio/mpeg" />
+                <source src={data.storageUrl || data.audioUrl!} type="audio/webm" />
+                <source src={data.storageUrl || data.audioUrl!} type="audio/mpeg" />
                 Your browser does not support the audio element.
               </audio>
             </div>

@@ -78,7 +78,7 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
     if (!url) return '';
 
     // UploadCare URLs can be used directly (no proxy needed)
-    if (url.includes('ucarecdn.com')) {
+    if (url.includes('.supabase.co/storage/v1/object/public/media/')) {
       return url;
     }
 
@@ -94,7 +94,7 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
   // This gives us permanent storage benefits while ensuring previews always work
   const [thumbnailSrc, setThumbnailSrc] = useState(() => {
     // Try Uploadcare URLs first for permanent storage benefits
-    const uploadcareUrl = data.isVideo ? data.uploadcareThumbnailUrl : data.uploadcareCdnUrl;
+    const uploadcareUrl = data.isVideo ? data.uploadcareThumbnailUrl : data.storageUrl;
     if (uploadcareUrl) {
       // We'll validate this loads correctly, with fallback to Instagram
       return uploadcareUrl;
@@ -135,14 +135,14 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
 
   useEffect(() => {
     // Smart thumbnail selection: Try Uploadcare first (permanent), fallback to Instagram (temporary)
-    const uploadcareUrl = data.isVideo ? data.uploadcareThumbnailUrl : data.uploadcareCdnUrl;
+    const uploadcareUrl = data.isVideo ? data.uploadcareThumbnailUrl : data.storageUrl;
     const instagramUrl = getProxiedThumbnail(data.thumbnail);
     const fallbackUrl = data.thumbnailFallback || '';
     
     // Priority: Uploadcare (permanent) > Instagram (temporary) > Fallback
     const nextThumbnail = uploadcareUrl || instagramUrl || fallbackUrl;
     setThumbnailSrc(nextThumbnail);
-  }, [data.isVideo, data.uploadcareCdnUrl, data.uploadcareThumbnailUrl, data.thumbnail, data.thumbnailFallback, getProxiedThumbnail]);
+  }, [data.isVideo, data.storageUrl, data.uploadcareThumbnailUrl, data.thumbnail, data.thumbnailFallback, getProxiedThumbnail]);
 
   // Reset carousel index when URL changes
   useEffect(() => {
@@ -215,8 +215,8 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
         expiresAt: result.expiresAt,
         permalink: result.permalink,
         // UploadCare backup fields (from new nested structure)
-        uploadcareCdnUrl: result.uploadcare?.primaryCdnUrl,
-        uploadcareUuid: result.uploadcare?.primaryUuid,
+        storageUrl: result.uploadcare?.primaryCdnUrl,
+        storagePath: result.uploadcare?.primaryUuid,
         uploadcareThumbnailUrl: result.uploadcare?.thumbnailCdnUrl,
         uploadcareThumbnailUuid: result.uploadcare?.thumbnailUuid,
         uploadcareImages: result.uploadcare?.carouselUrls,
@@ -401,7 +401,7 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
 
                         // Smart fallback chain: Uploadcare → Instagram → Microlink
                         // 1. If Uploadcare failed, try original Instagram URL (data.originalThumbnail)
-                        if (target.src.includes('ucarecdn.com') && data.originalThumbnail) {
+                        if (target.src.includes('.supabase.co/storage/v1/object/public/media/') && data.originalThumbnail) {
                           const instagramUrl = getProxiedThumbnail(data.originalThumbnail);
                           console.log('[InstagramNode] Uploadcare failed, trying Instagram URL:', instagramUrl);
                           target.src = instagramUrl;

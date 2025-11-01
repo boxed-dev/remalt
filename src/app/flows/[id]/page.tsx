@@ -7,6 +7,7 @@ import { WorkflowCanvas } from "@/components/workflow/WorkflowCanvas";
 import { DifyWorkflowHeader } from "@/components/workflow/DifyWorkflowHeader";
 import { DifyWorkflowSidebar } from "@/components/workflow/DifyWorkflowSidebar";
 import { NotesPanel } from "@/components/workflow/NotesPanel";
+import { UploadMediaDialog } from "@/components/workflow/UploadMediaDialog";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
 import { useNotesStore } from "@/lib/stores/notes-store";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
@@ -27,7 +28,9 @@ export default function WorkflowEditorPage() {
 
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  
+  const [uploadMediaDialogOpen, setUploadMediaDialogOpen] = useState(false);
+  const [uploadMediaType, setUploadMediaType] = useState<'image' | 'pdf'>('image');
+
   // Use notes store for panel state
   const { isOpen: isNotesPanelOpen, setOpen: setIsNotesPanelOpen } = useNotesStore();
   
@@ -266,10 +269,18 @@ export default function WorkflowEditorPage() {
     c: () => addNodeAtCursor("chat"),
     s: () => addNodeAtCursor("template"),
     r: () => addNodeAtCursor("voice"),
-    i: () => addNodeAtCursor("image"),
+    i: () => {
+      // Open upload dialog for images
+      setUploadMediaType('image');
+      setUploadMediaDialogOpen(true);
+    },
     a: () => addNodeAtCursor("connector"),
     w: () => addNodeAtCursor("webpage"),
-    d: () => addNodeAtCursor("pdf"),
+    d: () => {
+      // Open upload dialog for PDFs
+      setUploadMediaType('pdf');
+      setUploadMediaDialogOpen(true);
+    },
     // Zoom shortcuts
     "=": () => {
       // Will be handled by ReactFlow controls
@@ -362,6 +373,13 @@ export default function WorkflowEditorPage() {
           />
         )}
       </div>
+
+      {/* Upload Media Dialog - triggered by shortcuts or sidebar */}
+      <UploadMediaDialog
+        open={uploadMediaDialogOpen}
+        onOpenChange={setUploadMediaDialogOpen}
+        mediaType={uploadMediaType}
+      />
     </div>
   );
 }

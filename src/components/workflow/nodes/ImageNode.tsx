@@ -1,30 +1,27 @@
 "use client";
 
-import { memo, useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { memo, useState, useEffect, useMemo, useCallback } from 'react';
 import { Image as ImageIcon, Loader2, Eye, CheckCircle2, AlertCircle, Upload, X } from 'lucide-react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
+import { UploadMediaDialog } from '../UploadMediaDialog';
 import type { NodeProps } from '@xyflow/react';
 import type { ImageNodeData } from '@/types/workflow';
 import { AIInstructionsInline } from './AIInstructionsInline';
 
 export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>) => {
-  const [mode, setMode] = useState<'choose' | 'url' | 'upload'>('choose');
-  const [url, setUrl] = useState(data.imageUrl || '');
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [UploaderComponent, setUploader] = useState<React.ComponentType<any> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
-  const safeImageUrl = useMemo(() => data.imageUrl || data.thumbnail, [data.imageUrl, data.thumbnail]);
+  const safeImageUrl = useMemo(() => data.storageUrl || data.imageUrl || data.thumbnail, [data.storageUrl, data.imageUrl, data.thumbnail]);
 
   // Reset error state when image URL changes
   useEffect(() => {
     setImageError(false);
     setImageLoading(true);
-  }, [data.imageUrl, data.thumbnail]);
+  }, [data.imageUrl, data.storageUrl, data.thumbnail]);
 
   const fileToBase64 = async (file: File) => await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -41,17 +38,17 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
         if (data.imageFile) {
           const base64 = await fileToBase64(data.imageFile as File);
           analysisSource = { kind: 'base64', payload: base64 };
-        } else if (data.imageUrl) {
-          analysisSource = { kind: 'url', payload: data.imageUrl };
+        } else if (safeImageUrl) {
+          analysisSource = { kind: 'url', payload: safeImageUrl };
         }
       }
 
       if (!analysisSource) {
-        console.warn('No analysis source available');
+        console.warn('[ImageNode] No analysis source available');
         return;
       }
 
-      console.log('🔍 Starting image analysis...', analysisSource.kind === 'url' ? analysisSource.payload : 'base64');
+      console.log('[ImageNode] Starting image analysis...', analysisSource.kind === 'url' ? analysisSource.payload : 'base64');
 
       updateNodeData(id, {
         analysisStatus: 'analyzing',
@@ -72,7 +69,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
       const result = await response.json();
 
       if (response.ok) {
-        console.log('✅ Image analysis completed successfully');
+        console.log('[ImageNode] Image analysis completed successfully');
         updateNodeData(id, {
           ocrText: result.ocrText,
           analysisData: {
@@ -84,66 +81,37 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
           analysisError: undefined,
         } as Partial<ImageNodeData>);
       } else {
-        console.error('❌ Image analysis failed:', result.error);
+        console.error('[ImageNode] Image analysis failed:', result.error);
         updateNodeData(id, {
           analysisStatus: 'error',
           analysisError: result.error,
         } as Partial<ImageNodeData>);
       }
     } catch (error) {
-      console.error('❌ Image analysis exception:', error);
+      console.error('[ImageNode] Image analysis exception:', error);
       updateNodeData(id, {
         analysisStatus: 'error',
         analysisError: 'Failed to analyze image',
       } as Partial<ImageNodeData>);
     }
-  }, [data.imageFile, data.imageUrl, id, updateNodeData]);
+  }, [data.imageFile, safeImageUrl, id, updateNodeData]);
 
   // Auto-trigger analysis when image is uploaded
   useEffect(() => {
     if (safeImageUrl && (data.analysisStatus === 'idle' || data.analysisStatus === 'loading')) {
-      console.log('Auto-triggering analysis for image:', safeImageUrl);
+      console.log('[ImageNode] Auto-triggering analysis for image:', safeImageUrl);
       void triggerAnalysis({ kind: 'url', payload: safeImageUrl });
     }
   }, [safeImageUrl, data.analysisStatus, triggerAnalysis]);
 
-  const handleUrlSave = async () => {
-    if (!url.trim()) {
-      setMode('choose');
-      return;
-    }
-
-    // Basic URL validation
-    try {
-      new URL(url.trim());
-    } catch {
-      updateNodeData(id, {
-        analysisStatus: 'error',
-        analysisError: 'Invalid URL format',
-      } as Partial<ImageNodeData>);
-      return;
-    }
-
-    updateNodeData(id, {
-      imageUrl: url,
-      thumbnail: url,
-      uploadcareCdnUrl: undefined,
-      uploadSource: 'url',
-      analysisStatus: 'loading',
-      analysisError: undefined,
-    } as Partial<ImageNodeData>);
-    setMode('choose');
-  };
-
   const resetNode = () => {
-    setMode('choose');
-    setUrl('');
     setImageError(false);
     setImageLoading(true);
     updateNodeData(id, {
       imageUrl: undefined,
       thumbnail: undefined,
-      uploadcareCdnUrl: undefined,
+      storagePath: undefined,
+      storageUrl: undefined,
       uploadSource: undefined,
       analysisStatus: 'idle',
       analysisData: undefined,
@@ -186,46 +154,23 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
 
   const openFullImage = (event: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
     stopPropagation(event);
-    if (data.imageUrl)
-      window.open(data.imageUrl, '_blank', 'noopener,noreferrer');
+    if (safeImageUrl)
+      window.open(safeImageUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const handleUploaderChange = useCallback(({ allEntries }: { allEntries?: Array<{ status: string; cdnUrl?: string }> }) => {
-    const firstCompleted = allEntries?.find((entry) => entry.status === 'success' && entry.cdnUrl);
-    if (firstCompleted?.cdnUrl) {
-      console.log('✅ Image uploaded to Uploadcare:', firstCompleted.cdnUrl);
-      setIsUploading(false);
-      setMode('choose');
-      updateNodeData(id, {
-        imageUrl: firstCompleted.cdnUrl,
-        thumbnail: firstCompleted.cdnUrl,
-        uploadcareCdnUrl: firstCompleted.cdnUrl,
-        uploadSource: 'uploadcare',
-        analysisStatus: 'loading',
-        analysisError: undefined,
-      } as Partial<ImageNodeData>);
-    } else if (allEntries && allEntries.some((entry) => entry.status === 'uploading')) {
-      setIsUploading(true);
-    }
-  }, [id, updateNodeData]);
-
-  const openUploader = async (event: React.MouseEvent) => {
+  const openFileDialog = (event: React.MouseEvent) => {
     stopPropagation(event);
-    const { FileUploaderRegular } = await import('@uploadcare/react-uploader/next');
-    setUploader(() => FileUploaderRegular);
-    setMode('upload');
-  };
-
-  const closeUploader = (event: React.MouseEvent) => {
-    stopPropagation(event);
-    if (!isUploading) {
-      setMode('choose');
-      setUploader(null);
-    }
+    setShowUploadDialog(true);
   };
 
   return (
     <BaseNode id={id} parentId={parentId}>
+      <UploadMediaDialog
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        mediaType="image"
+        selectedNodeIds={[id]}
+      />
       <div className="w-[280px] space-y-2">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
@@ -296,107 +241,29 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
             )}
 
             {/* Actions */}
-            {data.imageUrl && (
-              <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
-                <button
-                  onClick={openFullImage}
-                  onMouseDown={stopPropagation}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21] transition-colors cursor-pointer"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  Open
-                </button>
-              </div>
-            )}
-          </div>
-        ) : mode === 'choose' ? (
-          /* Choose mode - initial state */
-          <div className="space-y-2">
-            <button
-              onClick={openUploader}
-              onMouseDown={stopPropagation}
-              className="w-full p-3 border border-dashed border-[#E5E7EB] rounded-lg hover:border-[#F59E0B] hover:bg-[#FEF3C7] transition-colors group cursor-pointer"
-            >
-              <Upload className="h-6 w-6 text-[#F59E0B] mx-auto mb-1.5" />
-              <div className="text-[11px] font-medium text-[#1A1D21] text-center">Upload Image</div>
-              <div className="text-[10px] text-[#6B7280] text-center mt-0.5">Local, camera, Drive, or Facebook</div>
-            </button>
-            <button
-              onClick={() => {
-                setMode('url');
-                setUrl('');
-              }}
-              onMouseDown={stopPropagation}
-              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg hover:border-[#F59E0B] hover:text-[#F59E0B] transition-colors text-center text-[11px] text-[#6B7280] cursor-pointer"
-            >
-              Paste URL
-            </button>
-          </div>
-        ) : mode === 'upload' ? (
-          /* Upload mode - Uploadcare uploader */
-          <div className="space-y-2">
-            <div className="rounded-lg border border-[#E5E7EB] bg-white p-3">
-              {UploaderComponent ? (
-                <UploaderComponent
-                  pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY!}
-                  classNameUploader="uc-light uc-purple"
-                  sourceList="local, camera, gdrive, facebook"
-                  filesViewMode="grid"
-                  imagesOnly={true}
-                  accept="image/*"
-                  userAgentIntegration="remalt-next"
-                  onChange={handleUploaderChange}
-                />
-              ) : (
-                <div className="flex h-32 items-center justify-center text-[11px] text-[#6B7280]">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Loading...
-                </div>
-              )}
+            <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
+              <button
+                onClick={openFullImage}
+                onMouseDown={stopPropagation}
+                className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21] transition-colors cursor-pointer"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Open
+              </button>
             </div>
-            <button
-              onClick={closeUploader}
-              onMouseDown={stopPropagation}
-              disabled={isUploading}
-              className="w-full px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {isUploading ? 'Uploading...' : 'Cancel'}
-            </button>
           </div>
         ) : (
-          /* URL mode - paste URL input */
-          <div className="space-y-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleUrlSave();
-                if (e.key === 'Escape') setMode('choose');
-              }}
-              placeholder="https://example.com/image.jpg"
-              className="w-full px-3 py-2 text-[12px] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] transition-all"
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => setMode('choose')}
-                onMouseDown={stopPropagation}
-                className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors cursor-pointer"
-              >
-                Back
-              </button>
-              <button
-                onClick={handleUrlSave}
-                onMouseDown={stopPropagation}
-                disabled={!url.trim()}
-                className="flex-1 px-3 py-2 text-[11px] bg-[#F59E0B] text-white rounded-lg hover:bg-[#D97706] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-              >
-                Add URL
-              </button>
-            </div>
-          </div>
+          /* Choose mode - initial state */
+          <button
+            onClick={openFileDialog}
+            onMouseDown={stopPropagation}
+            disabled={isUploading}
+            className="w-full p-3 border border-dashed border-[#E5E7EB] rounded-lg hover:border-[#F59E0B] hover:bg-[#FEF3C7] transition-colors group cursor-pointer disabled:opacity-50"
+          >
+            <Upload className="h-6 w-6 text-[#F59E0B] mx-auto mb-1.5" />
+            <div className="text-[11px] font-medium text-[#1A1D21] text-center">Upload Image</div>
+            <div className="text-[10px] text-[#6B7280] text-center mt-0.5">Click to upload or paste URL</div>
+          </button>
         )}
 
         {/* AI Instructions */}

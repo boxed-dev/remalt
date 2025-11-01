@@ -13,6 +13,28 @@ import { usePageVisibility } from "./use-page-visibility";
 const activeSaves = new Map<string, Promise<void>>();
 const saveLocks = new Map<string, boolean>();
 
+// Sanitize string to remove problematic Unicode sequences and control characters
+function sanitizeString(value: unknown): unknown {
+  if (typeof value === 'string') {
+    // Remove control characters except newline, tab, and carriage return
+    // Also escape backslashes that could create invalid escape sequences
+    return value
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control chars
+      .replace(/\\(?![nrtbfv'"\\])/g, '\\\\'); // Escape invalid backslashes
+  }
+  if (Array.isArray(value)) {
+    return value.map(sanitizeString);
+  }
+  if (value !== null && typeof value === 'object') {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(value)) {
+      sanitized[key] = sanitizeString(val);
+    }
+    return sanitized;
+  }
+  return value;
+}
+
 // Hash-based workflow comparison for performance
 function hashWorkflow(workflow: Workflow | null): string {
   if (!workflow) return "";
@@ -125,6 +147,23 @@ export function useWorkflowPersistence({
 
       const savePromise = (async () => {
         try {
+          // Check authentication first
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            console.error("❌ No active session - user not authenticated");
+            toast.error("You must be logged in to save workflows");
+            throw new Error("Not authenticated - please log in");
+          }
+
+          // Verify userId matches session
+          if (session.user.id !== userId) {
+            console.error("❌ User ID mismatch:", { sessionId: session.user.id, userId });
+            toast.error("Authentication error - please refresh the page");
+            throw new Error("User ID mismatch");
+          }
+
+          console.log("✅ Authentication verified:", session.user.id);
+
           // First, validate the workflow structure
           const validationResult = WorkflowSchema.safeParse(workflow);
 
@@ -133,35 +172,61 @@ export function useWorkflowPersistence({
               "❌ Validation failed:",
               validationResult.error.issues
             );
+            toast.error("Invalid workflow data");
             throw validationResult.error;
           }
 
           const workflowToPersist = validationResult.data;
+
+          console.log("🔄 Upserting workflow to database:", {
+            id: workflowToPersist.id,
+            userId,
+            nodeCount: workflowToPersist.nodes.length,
+          });
+
+          // Sanitize all workflow data to remove problematic characters
+          const sanitizedNodes = sanitizeString(workflowToPersist.nodes);
+          const sanitizedEdges = sanitizeString(workflowToPersist.edges);
+          const sanitizedMetadata = sanitizeString(workflowToPersist.metadata);
+          const sanitizedName = sanitizeString(workflowToPersist.name);
+          const sanitizedDescription = workflowToPersist.description
+            ? sanitizeString(workflowToPersist.description)
+            : null;
 
           const { data, error } = await supabase
             .from("workflows")
             .upsert({
               id: workflowToPersist.id,
               user_id: userId,
-              name: workflowToPersist.name,
-              description: workflowToPersist.description || null,
-              nodes: workflowToPersist.nodes as any,
-              edges: workflowToPersist.edges as any,
+              name: sanitizedName as string,
+              description: sanitizedDescription as string | null,
+              nodes: sanitizedNodes as any,
+              edges: sanitizedEdges as any,
               viewport: workflowToPersist.viewport as any,
-              metadata: workflowToPersist.metadata as any,
+              metadata: sanitizedMetadata as any,
               // Note: updated_at is auto-set by database trigger
             })
             .select()
             .single();
 
           if (error) {
-            console.error("❌ Supabase error:", {
-              message: error.message,
-              details: error.details,
-              hint: error.hint,
-              code: error.code,
+            console.error("❌ Supabase upsert error:", error);
+            console.error("❌ Error details:", {
+              message: error?.message || 'No message',
+              details: error?.details || 'No details',
+              hint: error?.hint || 'No hint',
+              code: error?.code || 'No code',
             });
-            throw error;
+            console.error("❌ Workflow being saved:", {
+              id: workflowToPersist.id,
+              name: workflowToPersist.name,
+              nodeCount: workflowToPersist.nodes.length,
+              edgeCount: workflowToPersist.edges.length,
+            });
+
+            // Show user-friendly error
+            toast.error(`Failed to save workflow: ${error?.message || 'Unknown error'}`);
+            throw new Error(`Supabase save failed: ${error?.message || JSON.stringify(error)}`);
           }
 
           // Verify save by checking returned data

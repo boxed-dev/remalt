@@ -99,10 +99,9 @@ export interface PDFNodeData extends BaseNodeData {
   file?: File;
   fileName?: string;
   fileSize?: number;
-  storagePath?: string; // Path in Supabase storage
-  uploadcareCdnUrl?: string; // Uploadcare CDN URL
-  uploadcareUuid?: string; // Uploadcare file UUID for transformations
-  uploadSource?: 'url' | 'uploadcare' | 'supabase'; // Track upload source
+  storagePath?: string; // Path in Supabase storage (e.g., "userId/pdfs/uuid-file.pdf")
+  storageUrl?: string; // Public URL from Supabase Storage
+  uploadSource?: 'url' | 'storage'; // Track upload source (storage = Supabase Storage)
   pageCount?: number; // Total number of pages
   parsedText?: string;
   headings?: string[];
@@ -117,12 +116,10 @@ export interface PDFNodeData extends BaseNodeData {
 }
 // Voice Note Node
 export interface VoiceNodeData extends BaseNodeData {
-  audioUrl?: string;
-  audioStoragePath?: string;
-  audioSignedUrlExpiresAt?: string;
-  uploadcareCdnUrl?: string; // Uploadcare CDN URL for uploaded audio
-  uploadcareUuid?: string; // Uploadcare file UUID
-  uploadSource?: 'recording' | 'uploadcare' | 'supabase'; // Track audio source
+  audioUrl?: string; // Blob URL for local playback or Supabase Storage URL
+  storagePath?: string; // Path in Supabase storage (e.g., "userId/audio/uuid-file.mp3")
+  storageUrl?: string; // Public URL from Supabase Storage
+  uploadSource?: 'recording' | 'storage'; // Track audio source (storage = Supabase Storage)
   uploadStatus?: 'idle' | 'uploading' | 'success' | 'error';
   audioFile?: File;
   duration?: number;
@@ -179,12 +176,13 @@ export interface YouTubeNodeData extends BaseNodeData {
 
 // Image Node
 export interface ImageNodeData extends BaseNodeData {
-  imageUrl?: string;
+  imageUrl?: string; // URL input or Supabase Storage URL
   imageFile?: File;
   thumbnail?: string;
   caption?: string;
-  uploadcareCdnUrl?: string;
-  uploadSource?: 'url' | 'uploadcare';
+  storagePath?: string; // Path in Supabase storage (e.g., "userId/images/uuid-file.jpg")
+  storageUrl?: string; // Public URL from Supabase Storage
+  uploadSource?: 'url' | 'storage'; // Track upload source (storage = Supabase Storage)
   ocrText?: string;
   analysisData?: {
     description: string;
@@ -230,13 +228,13 @@ export interface InstagramNodeData extends BaseNodeData {
   fullAnalysis?: string; // Complete Gemini video/image analysis
   ocrText?: string; // Text extracted from image posts
   analysisError?: string;
-  // UploadCare permanent storage (primary media)
-  uploadcareCdnUrl?: string; // Permanent UploadCare URL for video or primary image
-  uploadcareUuid?: string; // UploadCare file UUID for video or primary image
-  uploadcareThumbnailUrl?: string; // Permanent UploadCare thumbnail URL (for videos)
-  uploadcareThumbnailUuid?: string; // UploadCare thumbnail UUID (for videos)
-  uploadcareImages?: string[]; // Permanent UploadCare URLs for carousel images
-  uploadcareImageUuids?: string[]; // UploadCare UUIDs for carousel images
+  // Supabase Storage permanent backup (primary media)
+  storagePath?: string; // Storage path for video or primary image
+  storageUrl?: string; // Public URL from Supabase Storage for video or primary image
+  storageThumbnailPath?: string; // Storage path for thumbnail (for videos)
+  storageThumbnailUrl?: string; // Public thumbnail URL from Supabase Storage (for videos)
+  storageImagePaths?: string[]; // Storage paths for carousel images
+  storageImageUrls?: string[]; // Public URLs from Supabase Storage for carousel images
   backupStatus?: 'idle' | 'backing-up' | 'success' | 'partial' | 'failed'; // Media backup status
   backupError?: string; // Error message if backup fails
   // Original URLs (for fallback/reference)
@@ -322,7 +320,7 @@ export interface ChatNodeData extends BaseNodeData {
   messages: ChatMessage[];
   linkedNodes: string[];
   systemPrompt?: string;
-  model: 'gemini-2.5-flash' | 'gemini-2.5-pro';
+  model: 'gemini-flash-latest';
   temperature?: number;
   maxTokens?: number;
   contextWindow: unknown[];
@@ -338,7 +336,7 @@ export interface ChatSession {
   messages: ChatMessage[];
   createdAt: string;
   updatedAt: string;
-  model: 'gemini-flash-latest' | 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash-exp';
+  model: 'gemini-flash-latest';
 }
 
 export interface ChatMessage {

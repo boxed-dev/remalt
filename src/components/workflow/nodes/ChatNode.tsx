@@ -28,9 +28,6 @@ const CHAT_NODE_MAX_WIDTH = 2000;
 const CHAT_NODE_MAX_HEIGHT = 1600;
 const CHAT_MODELS = [
   'gemini-flash-latest',
-  'gemini-2.5-flash',
-  'gemini-2.5-pro',
-  'gemini-2.0-flash-exp',
 ] as const;
 type SupportedChatModel = typeof CHAT_MODELS[number];
 
@@ -894,10 +891,7 @@ export const ChatNode = memo(({
                     onMouseDown={(e) => stopReactFlowPropagation(e)}
                     className="appearance-none pl-3 pr-8 py-2 text-[11px] font-medium bg-white border border-[#095D40]/20 rounded-lg cursor-pointer hover:border-[#095D40] transition-colors focus:outline-none focus:ring-2 focus:ring-[#095D40] text-[#095D40]"
                   >
-                    <option value="gemini-flash-latest">GPT-4.1</option>
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                    <option value="gemini-flash-latest">Gemini Flash Latest</option>
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#095D40]/60 pointer-events-none" />
                 </div>

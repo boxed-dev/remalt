@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { DifyCanvasToolbar } from "./DifyCanvasToolbar";
 import type { DragEvent as ReactDragEvent } from "react";
 import {
   ReactFlow,
@@ -1710,8 +1711,6 @@ function WorkflowCanvasInner() {
     </div>
   );
 }
-
-import { DifyCanvasToolbar } from "./DifyCanvasToolbar";
 
 export function WorkflowCanvas() {
   return (

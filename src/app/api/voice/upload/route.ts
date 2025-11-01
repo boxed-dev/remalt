@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
 
     const { error: uploadError } = await supabase.storage
-      .from('workflow-audio')
+      .from('media')
       .upload(objectName, buffer, {
         contentType: mimeType,
         upsert: true,
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: signedData, error: signedError } = await supabase.storage
-      .from('workflow-audio')
+      .from('media')
       .createSignedUrl(objectName, SIGNED_URL_TTL_SECONDS);
 
     if (signedError || !signedData) {

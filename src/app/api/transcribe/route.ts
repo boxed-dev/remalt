@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { transcriptCache } from '@/lib/cache/transcript-cache';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
-import { getRobustTranscript } from '@/lib/youtube/robust-transcription';
+import { fetchSupadataTranscript } from '@/lib/api/supadata';
 
 // Extract YouTube video ID from URL
 function extractYouTubeId(url: string): string | null {
@@ -55,46 +55,40 @@ export async function POST(req: NextRequest) {
       console.log(`[Result] ✅ Success via Cache\n`);
       return NextResponse.json({
         transcript: cachedTranscript,
-        method: 'cache',
+        method: 'supadata',
         videoId,
         cached: true,
       });
     }
 
-    // Use robust transcription pipeline with all fallback methods
-    try {
-      const result = await getRobustTranscript(url, videoId);
+    // Fetch transcript using Supadata API
+    const startTime = Date.now();
+    const result = await fetchSupadataTranscript(url);
+    const elapsed = Date.now() - startTime;
 
-      // Cache the successful result
-      transcriptCache.set(result.videoId, result.transcript);
-      console.log(`[Cache] Stored transcript for ${result.videoId}`);
-      console.log(`[Result] ✅ Success via ${result.method}\n`);
-
-      return NextResponse.json({
-        transcript: result.transcript,
-        method: result.method,
-        language: result.language,
-        videoId: result.videoId,
-        cached: false,
-        elapsed_ms: result.elapsed_ms,
-      });
-    } catch (pipelineError) {
-      // All methods in the pipeline failed
-      console.log('[Result] ❌ All transcription methods failed\n');
-
-      const errorMessage = pipelineError instanceof Error
-        ? pipelineError.message
-        : 'All transcription methods exhausted';
-
+    if (!result.success) {
+      console.log('[Result] ❌ Supadata transcription failed:', result.error);
       return NextResponse.json(
         {
-          error: 'Transcription failed',
-          details: errorMessage,
+          error: result.error || 'Transcription failed',
           videoId,
         },
         { status: 500 }
       );
     }
+
+    // Cache the successful result
+    transcriptCache.set(videoId, result.transcript!);
+    console.log(`[Cache] Stored transcript for ${videoId}`);
+    console.log(`[Result] ✅ Success via Supadata (${elapsed}ms)\n`);
+
+    return NextResponse.json({
+      transcript: result.transcript,
+      method: 'supadata',
+      videoId,
+      cached: false,
+      elapsed_ms: elapsed,
+    });
 
   } catch (error) {
     console.error('Transcription API Error:', error);

@@ -151,11 +151,10 @@ function ChatNodeProperties({ nodeId, data }: { nodeId: string; data: ChatNodeDa
         <label className="block text-[13px] font-medium text-[#1A1D21] mb-2">AI Model</label>
         <select
           value={data.model}
-          onChange={(e) => updateNodeData(nodeId, { model: e.target.value as 'gemini-2.5-flash' | 'gemini-2.5-pro' })}
+          onChange={(e) => updateNodeData(nodeId, { model: e.target.value as 'gemini-flash-latest' })}
           className="w-full px-3 py-2 text-[13px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] bg-white"
         >
-          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-          <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+          <option value="gemini-flash-latest">Gemini Flash Latest</option>
         </select>
       </div>
 

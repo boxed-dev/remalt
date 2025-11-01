@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     const fileBuffer = await file.arrayBuffer();
 
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('workflow-pdfs')
+      .from('media')
       .upload(filePath, fileBuffer, {
         contentType: 'application/pdf',
         cacheControl: '3600',
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     // Get public URL (for signed URLs, we'll generate on-demand in the component)
     const { data: urlData } = supabase.storage
-      .from('workflow-pdfs')
+      .from('media')
       .getPublicUrl(filePath);
 
     return NextResponse.json({

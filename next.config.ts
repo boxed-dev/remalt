@@ -27,15 +27,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'ucarecdn.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '**.ucarecdn.com',
+        hostname: '**.supabase.co',
+        pathname: '/storage/v1/object/public/**',
       },
     ],
   },
-  transpilePackages: ['@uploadcare/react-uploader', '@deepgram/sdk'],
+  transpilePackages: ['@deepgram/sdk'],
   webpack: (config, { isServer }) => {
     // Exclude Node.js-only modules from browser bundle
     if (!isServer) {

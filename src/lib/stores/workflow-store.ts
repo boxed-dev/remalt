@@ -231,7 +231,7 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
         ...baseData,
         messages: [],
         linkedNodes: [],
-        model: "gemini-2.5-flash",
+        model: "gemini-flash-latest",
         contextWindow: [],
       } as NodeData;
     case "connector":

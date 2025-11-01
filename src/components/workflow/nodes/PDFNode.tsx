@@ -1,71 +1,31 @@
 import { memo } from 'react';
 import { FileText, Upload, Loader2, CheckCircle2, AlertCircle, Download, AlertTriangle, ExternalLink } from 'lucide-react';
-import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
+import { UploadMediaDialog } from '../UploadMediaDialog';
 import { AIInstructionsInline } from './AIInstructionsInline';
 import type { NodeProps } from '@xyflow/react';
 import type { PDFNodeData } from '@/types/workflow';
 
-// Maximum file size: 50MB
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
-
 export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => {
-  const [mode, setMode] = useState<'choose' | 'url' | 'upload'>('choose');
-  const [url, setUrl] = useState(data.url || '');
-  const [isUploading, setIsUploading] = useState(false);
-  const [UploaderComponent, setUploader] = useState<React.ComponentType<any> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
   const hasParsedContent = useMemo(() => data.parseStatus === 'success' && (data.parsedText || (data.segments?.length ?? 0) > 0), [data.parseStatus, data.parsedText, data.segments]);
 
   const pdfUrl = useMemo(() => {
-    if (data.uploadcareCdnUrl) return data.uploadcareCdnUrl;
+    if (data.storageUrl) return data.storageUrl;
     if (data.url) return data.url;
     return null;
-  }, [data.uploadcareCdnUrl, data.url]);
-
-  const handleUrlSave = async () => {
-    if (!url.trim()) {
-      setMode('choose');
-      return;
-    }
-
-    // Basic URL validation
-    try {
-      new URL(url.trim());
-    } catch {
-      updateNodeData(id, {
-        parseStatus: 'error',
-        parseError: 'Invalid URL format',
-      } as Partial<PDFNodeData>);
-      return;
-    }
-
-    updateNodeData(id, {
-      url,
-      fileName: url.split('/').pop() || 'Document',
-      uploadSource: 'url',
-      parseStatus: 'parsing',
-      parseError: undefined,
-      uploadcareCdnUrl: undefined,
-      uploadcareUuid: undefined,
-    } as Partial<PDFNodeData>);
-
-    await triggerParsing({ kind: 'url', payload: url });
-    setMode('choose');
-  };
+  }, [data.storageUrl, data.url]);
 
   const resetNode = () => {
-    setMode('choose');
-    setUrl('');
     updateNodeData(id, {
       fileName: undefined,
       url: undefined,
       storagePath: undefined,
-      uploadcareCdnUrl: undefined,
-      uploadcareUuid: undefined,
+      storageUrl: undefined,
       uploadSource: undefined,
       parsedText: undefined,
       segments: undefined,
@@ -74,14 +34,14 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
     } as Partial<PDFNodeData>);
   };
 
-  const triggerParsing = async (source?: { kind: 'uploadcare' | 'url'; payload: string }) => {
+  const triggerParsing = async (source?: { kind: 'storage' | 'url'; payload: string }) => {
     try {
       let parseSource = source;
 
       // If no source provided, use existing data
       if (!parseSource) {
-        if (data.uploadcareCdnUrl) {
-          parseSource = { kind: 'uploadcare', payload: data.uploadcareCdnUrl };
+        if (data.storageUrl) {
+          parseSource = { kind: 'storage', payload: data.storageUrl };
         } else if (data.url) {
           parseSource = { kind: 'url', payload: data.url };
         } else {
@@ -97,11 +57,11 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
         parseError: undefined,
       } as Partial<PDFNodeData>);
 
-      // Prepare request body based on source (include uploadcareUuid for caching)
-      const body = parseSource.kind === 'uploadcare'
+      // Prepare request body based on source
+      const body = parseSource.kind === 'storage'
         ? {
-            uploadcareCdnUrl: parseSource.payload,
-            uploadcareUuid: data.uploadcareUuid // Include UUID for cache lookup
+            storageUrl: parseSource.payload,
+            storagePath: data.storagePath
           }
         : { pdfUrl: parseSource.payload };
 
@@ -219,26 +179,18 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
 
   // Auto-trigger parsing when PDF is uploaded
   useEffect(() => {
-    const hasPdfUrl = data.uploadcareCdnUrl || data.url;
+    const hasPdfUrl = data.storageUrl || data.url;
     if (hasPdfUrl && data.parseStatus === 'parsing') {
-      console.log('[PDFNode] Auto-triggering parse for:', data.uploadcareCdnUrl || data.url);
+      console.log('[PDFNode] Auto-triggering parse for:', data.storageUrl || data.url);
       void triggerParsing();
     }
-  }, [data.uploadcareCdnUrl, data.url, data.parseStatus, triggerParsing]);
+  }, [data.storageUrl, data.url, data.parseStatus, triggerParsing]);
 
   const stopPropagation = (event: React.MouseEvent | React.TouchEvent) => {
     event.stopPropagation();
   };
 
   const renderStatus = () => {
-    if (data.parseStatus === 'uploading')
-      return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2 py-1 text-[10px] text-[#1D4ED8]">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Uploading</span>
-        </div>
-      );
-
     if (data.parseStatus === 'parsing')
       return (
         <div className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2 py-1 text-[10px] text-[#1D4ED8]">
@@ -284,54 +236,19 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
     return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
   };
 
-  const handleUploaderChange = useCallback(({ allEntries }: { allEntries?: Array<{ status: string; cdnUrl?: string; uuid?: string; name?: string; size?: number }> }) => {
-    console.log('[PDFNode] Uploader change event:', allEntries);
-
-    const firstCompleted = allEntries?.find((entry) => entry.status === 'success' && entry.cdnUrl);
-
-    if (firstCompleted?.cdnUrl) {
-      console.log('[PDFNode] Upload complete:', firstCompleted.cdnUrl);
-      setIsUploading(false);
-      setMode('choose');
-
-      updateNodeData(id, {
-        fileName: firstCompleted.name || 'Document.pdf',
-        fileSize: firstCompleted.size,
-        uploadcareCdnUrl: firstCompleted.cdnUrl,
-        uploadcareUuid: firstCompleted.uuid,
-        uploadSource: 'uploadcare',
-        parseStatus: 'parsing',
-        parseError: undefined,
-        url: undefined,
-        storagePath: undefined,
-      } as Partial<PDFNodeData>);
-
-      // Trigger parsing with Uploadcare URL
-      void triggerParsing({ kind: 'uploadcare', payload: firstCompleted.cdnUrl });
-    } else if (allEntries && allEntries.some((entry) => entry.status === 'uploading')) {
-      setIsUploading(true);
-      updateNodeData(id, {
-        parseStatus: 'uploading',
-      } as Partial<PDFNodeData>);
-    }
-  }, [id, updateNodeData]);
-
-  const openUploader = async (event: React.MouseEvent) => {
+  const openFileDialog = (event: React.MouseEvent) => {
     stopPropagation(event);
-    const { FileUploaderRegular } = await import('@uploadcare/react-uploader/next');
-    setUploader(() => FileUploaderRegular);
-    setMode('upload');
-  };
-
-  const closeUploader = (event: React.MouseEvent) => {
-    stopPropagation(event);
-    if (!isUploading) {
-      setMode('choose');
-    }
+    setShowUploadDialog(true);
   };
 
   return (
     <BaseNode id={id} showTargetHandle={false} parentId={parentId}>
+      <UploadMediaDialog
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        mediaType="pdf"
+        selectedNodeIds={[id]}
+      />
       <div className="w-[280px] space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -393,7 +310,6 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
               </div>
             )}
 
-
             {hasParsedContent && data.parsedText && (
               <button
                 onClick={downloadParsedText}
@@ -404,88 +320,25 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
                 Export parsed text
               </button>
             )}
-          </div>
-        ) : mode === 'choose' ? (
-          <div className="space-y-2">
+
             <button
-              onClick={openUploader}
+              onClick={resetNode}
               onMouseDown={stopPropagation}
-              className="w-full p-3 border border-dashed border-[#E5E7EB] rounded-lg hover:border-[#EF4444] hover:bg-[#FEF2F2] transition-colors group cursor-pointer"
+              className="w-full px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors cursor-pointer"
             >
-              <Upload className="h-6 w-6 text-[#EF4444] mx-auto mb-1.5" />
-              <div className="text-[11px] font-medium text-[#1A1D21] text-center">Upload PDF</div>
-              <div className="text-[10px] text-[#6B7280] text-center mt-0.5">Local, URL, Drive, or Dropbox</div>
-            </button>
-            <button
-              onClick={() => setMode('url')}
-              onMouseDown={stopPropagation}
-              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg hover:border-[#EF4444] hover:text-[#EF4444] transition-colors text-center text-[11px] text-[#6B7280] cursor-pointer"
-            >
-              Paste URL
-            </button>
-          </div>
-        ) : mode === 'upload' ? (
-          <div className="space-y-2">
-            <div className="rounded-lg border border-[#E5E7EB] bg-white p-3">
-              {UploaderComponent ? (
-                <UploaderComponent
-                  pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY!}
-                  classNameUploader="uc-light uc-purple"
-                  sourceList="local, url, gdrive, dropbox"
-                  accept="application/pdf"
-                  maxFileSize={MAX_FILE_SIZE}
-                  userAgentIntegration="remalt-next"
-                  onChange={handleUploaderChange}
-                />
-              ) : (
-                <div className="flex h-32 items-center justify-center text-[11px] text-[#6B7280]">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Loading...
-                </div>
-              )}
-            </div>
-            <button
-              onClick={closeUploader}
-              onMouseDown={stopPropagation}
-              disabled={isUploading}
-              className="w-full px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {isUploading ? 'Uploading...' : 'Cancel'}
+              Remove PDF
             </button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleUrlSave();
-                if (e.key === 'Escape') setMode('choose');
-              }}
-              placeholder="https://example.com/document.pdf"
-              className="w-full px-3 py-2 text-[12px] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#EF4444] focus:ring-1 focus:ring-[#EF4444] transition-all"
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => setMode('choose')}
-                onMouseDown={stopPropagation}
-                className="flex-1 px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors cursor-pointer"
-              >
-                Back
-              </button>
-              <button
-                onClick={handleUrlSave}
-                onMouseDown={stopPropagation}
-                disabled={!url.trim()}
-                className="flex-1 px-3 py-2 text-[11px] bg-[#EF4444] text-white rounded-lg hover:bg-[#DC2626] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-              >
-                Add URL
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={openFileDialog}
+            onMouseDown={stopPropagation}
+            className="w-full p-3 border border-dashed border-[#E5E7EB] rounded-lg hover:border-[#EF4444] hover:bg-[#FEF2F2] transition-colors group cursor-pointer"
+          >
+            <Upload className="h-6 w-6 text-[#EF4444] mx-auto mb-1.5" />
+            <div className="text-[11px] font-medium text-[#1A1D21] text-center">Upload PDF</div>
+            <div className="text-[10px] text-[#6B7280] text-center mt-0.5">Click to upload or paste URL</div>
+          </button>
         )}
 
         <AIInstructionsInline

@@ -9,19 +9,18 @@ Remalt is a Next.js 15 AI workflow builder platform with a visual node-based edi
 
 ```bash
 # Development server with Turbopack
-npm run dev
+pnpm dev
 
 # Production build with Turbopack
-npm run build
+pnpm build
 
 # Start production server
-npm start
+pnpm start
 
 # Run linter
-npm run lint
+pnpm lint
 
-# Python API for YouTube transcription (separate terminal)
-python3 transcript_api.py
+# Note: YouTube transcription now uses Supadata API (no Python API needed)
 ```
 
 ## Architecture Overview
@@ -37,7 +36,7 @@ python3 transcript_api.py
 - **Authentication**: Supabase Auth with SSR support (Email + Google OAuth)
 - **Database**: Supabase PostgreSQL with Row Level Security
 - **AI Services**: Google Generative AI (Gemini 2.5 Flash/Pro), Deepgram SDK
-- **Media Storage**: Uploadcare CDN for permanent file storage
+- **Media Storage**: Supabase Storage for permanent file storage
 - **Layout**: ELK.js for automatic graph layout
 
 ### Project Structure
@@ -94,11 +93,10 @@ src/
 NEXT_PUBLIC_SUPABASE_URL=           # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=      # Supabase anonymous key
 GEMINI_API_KEY=                     # Google Gemini API key
-NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY=  # Uploadcare public key for CDN uploads
 
 # Optional
 DEEPGRAM_API_KEY=                   # Voice transcription
-PYTHON_API_URL=                     # Python API URL (default: http://localhost:5001)
+SUPADATA_API_KEY=                   # YouTube transcription via Supadata API
 APIFY_API_TOKEN=                    # Apify API token (Instagram + LinkedIn nodes)
 JINA_API_KEY=                       # Web scraping (20 RPM free, 200 RPM with key)
 SCREENSHOTONE_API_KEY=              # Screenshot provider (Priority 1)
@@ -206,11 +204,13 @@ Streaming AI chat endpoint using Gemini 2.5 Flash:
 - Context builder assembles data from connected nodes
 
 ### `/api/transcribe` (POST)
-YouTube transcription via Python API:
+YouTube transcription via Supadata API:
+- **Authentication**: Required
 - Accepts: `url` (YouTube video URL)
-- Returns: `transcript`, `method`, `language`, `videoId`, `cached`, `elapsed_ms`
-- In-memory caching prevents duplicate API calls (24hr TTL in Python, 24hr in Next.js)
-- Calls Python API at `PYTHON_API_URL` (default: http://localhost:5001)
+- Returns: `transcript`, `method` (supadata), `videoId`, `cached`, `elapsed_ms`
+- In-memory caching prevents duplicate API calls (24hr TTL)
+- Uses Supadata API with native transcript extraction (no Python backend required)
+- **Requires**: `SUPADATA_API_KEY` environment variable
 
 ### `/api/voice/transcribe` (POST)
 Voice transcription via Deepgram SDK:
@@ -365,11 +365,10 @@ Group nodes can contain other nodes and optionally enable group chat:
 8. Voice node created with audio blob and transcript
 
 ### Transcript Caching
-YouTube transcripts cached at two levels:
-- **Python API**: In-memory cache with 24hr TTL
-- **Next.js**: In-memory cache ([transcript-cache.ts](src/lib/cache/transcript-cache.ts)) with 24hr TTL
+YouTube transcripts cached in Next.js:
+- **In-memory cache**: ([transcript-cache.ts](src/lib/cache/transcript-cache.ts)) with 24hr TTL
 - Cache key: `videoId`
-- Prevents duplicate API calls for same video
+- Prevents duplicate API calls to Supadata for same video
 - Returns `cached: true` when serving from cache
 
 ### Sanitization for Persistence
@@ -386,14 +385,14 @@ Screenshot API uses multi-provider fallback:
 - No single point of failure
 - Same pattern can be applied to other external services
 
-### Python API Server
-YouTube transcription requires Python API server:
-- Flask server in [transcript_api.py](transcript_api.py)
-- Dependencies: `flask`, `flask-cors`, `youtube-transcript-api`, `gunicorn`
-- Install: `pip install -r requirements.txt`
-- Run locally: `python3 transcript_api.py` (default port 5001)
-- Endpoints: `/api/transcribe` (POST), `/health` (GET), `/api/clear-cache` (POST)
-- Production mode auto-detected via `RAILWAY_ENVIRONMENT` env var
+### Supadata Transcription Service
+YouTube transcription powered by Supadata API:
+- **Service Location**: [supadata.ts](src/lib/api/supadata.ts)
+- **API Endpoint**: `https://api.supadata.ai/v1/transcript`
+- **Features**: Native transcript extraction, multi-language support, fast response times
+- **No Backend Required**: Direct API integration, no Python server needed
+- **Response Format**: Returns `content` field with full transcript text
+- **Error Handling**: Graceful fallback with detailed error messages
 
 ### Uploadcare Media Storage
 Permanent media storage handled via Uploadcare CDN:

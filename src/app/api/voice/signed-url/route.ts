@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createClient();
     const { data, error: signedError } = await supabase.storage
-      .from('workflow-audio')
+      .from('media')
       .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
 
     if (signedError || !data) {

@@ -43,7 +43,6 @@
     "@tiptap/starter-kit": "^2.10.5",
     "@tiptap/suggestion": "^2.10.5",
     "@types/react-syntax-highlighter": "^15.5.13",
-    "@uploadcare/react-uploader": "^1.10.2",
     "@xyflow/react": "^12.8.6",
     "apify-client": "^2.17.0",
     "axios": "^1.7.7",

@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       url,
       postId: postData.postId || postData.activityId || extractPostId(url),
       content: postData.text || postData.commentary || postData.content || '',
-      imageUrl: postData.imageUrl || postData.images?.[0] || undefined,
+      imageUrl: postData.imageUrl || selectBestImage(postData.images) || undefined,
       videoUrl: postData.videoUrl || postData.video || undefined,
       author: {
         name: postData.authorName || postData.author?.name || undefined,
@@ -89,6 +89,38 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+function selectBestImage(images?: string[]): string | undefined {
+  if (!images || images.length === 0) return undefined;
+
+  // LinkedIn image URLs contain size hints in the path
+  // Priority order: shrink_2048 > shrink_1280 > shrink_800 > shrink_480 > shrink_160 > shrink_20
+  // We want the largest available image for best quality
+
+  const sizePreference = [
+    'shrink_2048',
+    'feedshare-shrink_2048',
+    'shrink_1280',
+    'feedshare-shrink_1280',
+    'shrink_800',
+    'feedshare-shrink_800',
+    'shrink_480',
+    'feedshare-shrink_480',
+  ];
+
+  // Try to find images matching preferred sizes in order
+  for (const sizeHint of sizePreference) {
+    const found = images.find(url => url.includes(sizeHint));
+    if (found) {
+      console.log(`[LinkedIn API] Selected image with size: ${sizeHint}`);
+      return found;
+    }
+  }
+
+  // Fallback: return the first image if no size match found
+  console.log('[LinkedIn API] No size match found, using first image');
+  return images[0];
 }
 
 function extractPostId(url: string): string {

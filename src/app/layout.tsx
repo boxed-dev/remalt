@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
-import "@uploadcare/react-uploader/core.css";
 import { GlobalHeader } from "@/components/layout/global-header";
 import { Toaster } from "sonner";
 
