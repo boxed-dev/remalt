@@ -3,7 +3,6 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from '@sentry/nextjs';
-import { profilingIntegration } from '@sentry/profiling-node';
 
 const environment = process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV;
 const parseRate = (value: string | undefined, fallback: number) => {
@@ -41,7 +40,6 @@ Sentry.init({
   },
 
   integrations: [
-    profilingIntegration(),
     Sentry.consoleLoggingIntegration({ levels: ['log', 'warn', 'error'] }),
   ],
 
