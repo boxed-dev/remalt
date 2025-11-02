@@ -1419,8 +1419,21 @@ function WorkflowCanvasInner() {
     store.selectNode(groupNode.id);
   }, []);
 
-  // Set up keyboard shortcuts
+  // Handler to open social media dialog at viewport center
+  const handleOpenSocialMediaDialog = useCallback(() => {
+    const windowCenterX = window.innerWidth / 2;
+    const windowCenterY = window.innerHeight / 2;
+    
+    setSocialMediaDialogPosition({
+      x: windowCenterX,
+      y: windowCenterY,
+    });
+    setSocialMediaDialogOpen(true);
+  }, []);
+
+  // Set up keyboard shortcuts (most node creation shortcuts handled in page.tsx)
   useKeyboardShortcuts({
+    "s": handleOpenSocialMediaDialog, // S for Social Media
     "mod+g": createGroupFromSelection, // Ctrl+G / Cmd+G to group selected nodes
     "mod+shift+g": ungroupSelectedNodes, // Ctrl+Shift+G / Cmd+Shift+G to ungroup
     "mod+shift+c": selectGroupChildren, // Ctrl+Shift+C / Cmd+Shift+C to select group children

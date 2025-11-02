@@ -56,6 +56,17 @@ export function DifyWorkflowSidebar() {
   const [uploadMediaDialogOpen, setUploadMediaDialogOpen] = useState(false);
   const [uploadNodeType, setUploadNodeType] = useState<'image' | 'pdf'>('image');
 
+  // Calculate center position for uploaded nodes
+  const getCenterPosition = () => {
+    const viewport = workflow?.viewport || { x: 0, y: 0, zoom: 1 };
+    const windowCenterX = window.innerWidth / 2;
+    const windowCenterY = window.innerHeight / 2;
+    return {
+      x: (windowCenterX - viewport.x) / viewport.zoom,
+      y: (windowCenterY - viewport.y) / viewport.zoom - 100,
+    };
+  };
+
   const handleDragStart = (e: React.DragEvent, nodeType: NodeType) => {
     console.log('🎯 Drag started for:', nodeType);
     setDraggedNode(nodeType);
@@ -133,61 +144,6 @@ export function DifyWorkflowSidebar() {
     }
   };
 
-  const handleUploadMediaAdd = (files: Array<{ cdnUrl: string; uuid?: string; name?: string; size?: number }>) => {
-    // Calculate center of current viewport
-    const viewport = workflow?.viewport || { x: 0, y: 0, zoom: 1 };
-    const windowCenterX = window.innerWidth / 2;
-    const windowCenterY = window.innerHeight / 2;
-    const centerPosition = {
-      x: (windowCenterX - viewport.x) / viewport.zoom,
-      y: (windowCenterY - viewport.y) / viewport.zoom - 100,
-    };
-
-    // Grid layout configuration
-    const GRID_SPACING_X = 320; // Horizontal spacing between nodes
-    const GRID_SPACING_Y = 280; // Vertical spacing between nodes
-    const COLUMNS = 3; // 3 nodes per row
-
-    // Create a node for each uploaded file
-    files.forEach((file, index) => {
-      const row = Math.floor(index / COLUMNS);
-      const col = index % COLUMNS;
-
-      const position = {
-        x: centerPosition.x + (col * GRID_SPACING_X),
-        y: centerPosition.y + (row * GRID_SPACING_Y),
-      };
-
-      // Create the node
-      const newNode = addNode(uploadNodeType, position);
-
-      // Update node data based on type
-      if (uploadNodeType === 'image') {
-        updateNodeData(newNode.id, {
-          imageUrl: file.cdnUrl,
-          thumbnail: file.cdnUrl,
-          uploadcareCdnUrl: file.cdnUrl,
-          uploadSource: 'uploadcare',
-          analysisStatus: 'loading',
-        });
-      } else if (uploadNodeType === 'pdf') {
-        updateNodeData(newNode.id, {
-          fileName: file.name || 'Document.pdf',
-          fileSize: file.size,
-          uploadcareCdnUrl: file.cdnUrl,
-          uploadcareUuid: file.uuid,
-          uploadSource: 'uploadcare',
-          parseStatus: 'parsing',
-          parseError: undefined,
-          url: undefined,
-          storagePath: undefined,
-        });
-      }
-    });
-
-    console.log(`✅ Created ${files.length} ${uploadNodeType} node(s)`);
-  };
-
   return (
     <>
       <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 flex items-center pointer-events-none">
@@ -202,24 +158,24 @@ export function DifyWorkflowSidebar() {
                   e.stopPropagation();
                   setSocialMediaDialogOpen(true);
                 }}
-                className="peer/social relative flex items-stretch w-12 h-12 justify-center p-1 group"
+                className="peer/social relative flex items-stretch w-12 h-12 justify-center items-center group overflow-hidden"
                 title="Social Media"
               >
-                <div className="rounded-lg p-[2px] flex-1 flex items-center justify-center flex-col gap-[2px] group-hover:border-[#D4E5DF] group-hover:bg-[#D4E5DF] transition-colors border border-gray-200">
-                  <div className="flex flex-row gap-[2px]">
-                    <div className="p-[3px] bg-gray-100 rounded-full group-hover:bg-[#B8D5C9] transition-colors">
-                      <YoutubeLogo size={10} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                <div className="flex items-center justify-center flex-col gap-0.5 group-hover:scale-105 transition-transform">
+                  <div className="flex flex-row gap-0.5">
+                    <div className="p-0.5 bg-gray-100 rounded group-hover:bg-[#B8D5C9] transition-colors">
+                      <YoutubeLogo size={13} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
                     </div>
-                    <div className="p-[3px] bg-gray-100 rounded-full group-hover:bg-[#B8D5C9] transition-colors">
-                      <InstagramLogo size={10} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                    <div className="p-0.5 bg-gray-100 rounded group-hover:bg-[#B8D5C9] transition-colors">
+                      <InstagramLogo size={13} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
                     </div>
                   </div>
-                  <div className="flex flex-row gap-[2px]">
-                    <div className="p-[3px] bg-gray-100 rounded-full group-hover:bg-[#B8D5C9] transition-colors">
-                      <LinkedinLogo size={10} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                  <div className="flex flex-row gap-0.5">
+                    <div className="p-0.5 bg-gray-100 rounded group-hover:bg-[#B8D5C9] transition-colors">
+                      <LinkedinLogo size={13} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
                     </div>
-                    <div className="p-[3px] bg-gray-100 rounded-full group-hover:bg-[#B8D5C9] transition-colors">
-                      <Globe size={10} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                    <div className="p-0.5 bg-gray-100 rounded group-hover:bg-[#B8D5C9] transition-colors">
+                      <Globe size={13} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
                     </div>
                   </div>
                 </div>
@@ -289,8 +245,8 @@ export function DifyWorkflowSidebar() {
     <UploadMediaDialog
       open={uploadMediaDialogOpen}
       onOpenChange={setUploadMediaDialogOpen}
-      nodeType={uploadNodeType}
-      onAddNodes={handleUploadMediaAdd}
+      mediaType={uploadNodeType}
+      position={getCenterPosition()}
     />
     </>
   );

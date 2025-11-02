@@ -7,13 +7,15 @@ import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { UploadMediaDialog } from '../UploadMediaDialog';
 import type { NodeProps } from '@xyflow/react';
 import type { ImageNodeData } from '@/types/workflow';
-import { AIInstructionsInline } from './AIInstructionsInline';
+import { FloatingAIInstructions } from './FloatingAIInstructions';
 
 export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+  
+  const isUploading = data.analysisStatus === 'loading' || data.analysisStatus === 'analyzing';
 
   const safeImageUrl = useMemo(() => data.storageUrl || data.imageUrl || data.thumbnail, [data.storageUrl, data.imageUrl, data.thumbnail]);
 
@@ -191,14 +193,15 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
   };
 
   return (
-    <BaseNode id={id} parentId={parentId}>
-      <UploadMediaDialog
-        open={showUploadDialog}
-        onOpenChange={setShowUploadDialog}
-        mediaType="image"
-        selectedNodeIds={[id]}
-      />
-      <div className="w-[280px] space-y-2">
+    <div className="relative">
+      <BaseNode id={id} parentId={parentId}>
+        <UploadMediaDialog
+          open={showUploadDialog}
+          onOpenChange={setShowUploadDialog}
+          mediaType="image"
+          selectedNodeIds={[id]}
+        />
+        <div className="w-[280px] space-y-2">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -292,16 +295,17 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
             <div className="text-[10px] text-[#6B7280] text-center mt-0.5">Click to upload or paste URL</div>
           </button>
         )}
+        </div>
+      </BaseNode>
 
-        {/* AI Instructions */}
-        <AIInstructionsInline
-          value={data.aiInstructions}
-          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ImageNodeData>)}
-          nodeId={id}
-          nodeType="image"
-        />
-      </div>
-    </BaseNode>
+      {/* Floating AI Instructions */}
+      <FloatingAIInstructions
+        value={data.aiInstructions}
+        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ImageNodeData>)}
+        nodeId={id}
+        nodeType="image"
+      />
+    </div>
   );
 });
 

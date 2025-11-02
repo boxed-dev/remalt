@@ -52,10 +52,10 @@ export function TemplatesClient({ initialTemplates, currentUser }: TemplatesClie
   }, [templates, selectedCategory, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-[#FAFBFC] flex-1">
+    <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-[#F3F4F6] flex-1">
       {/* Main Content */}
       <main className="min-h-screen">
-        <div className="max-w-full mx-auto px-8 py-8">
+        <div className="w-full px-8 py-10">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-2">
@@ -98,7 +98,7 @@ export function TemplatesClient({ initialTemplates, currentUser }: TemplatesClie
           {templates.length > 0 ? (
             <>
               {filteredTemplates.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-4 gap-5">
                   {filteredTemplates.map((template) => (
                     <TemplateCard
                       key={template.id}

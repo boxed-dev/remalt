@@ -984,12 +984,15 @@ export const ChatNode = memo(({
                 </div>
               </div>
 
-              <div onMouseDown={(e) => stopReactFlowPropagation(e)}>
+              <div 
+                onMouseDown={(e) => stopReactFlowPropagation(e)}
+                className="border border-gray-200 rounded-xl bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-all duration-200 px-2 py-1.5"
+              >
                 <VoiceInputBar
                   value={input}
                   onChange={setInput}
                   onSend={handleSend}
-                  placeholder="Ask anything..."
+                  placeholder="Ask anything or press / for actions"
                   disabled={isLoading}
                   voiceMode="replace"
                   showAddButton={false}

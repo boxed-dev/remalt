@@ -6,7 +6,7 @@ import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { buildChatContext } from '@/lib/workflow/context-builder';
 import type { NodeProps } from '@xyflow/react';
 import type { TemplateNodeData } from '@/types/workflow';
-import { AIInstructionsInline } from './AIInstructionsInline';
+import { FloatingAIInstructions } from './FloatingAIInstructions';
 
 const templateLabels: Record<TemplateNodeData['templateType'], string> = {
   'youtube-script': 'YouTube Script',
@@ -96,8 +96,9 @@ export const TemplateNode = memo(({ id, data, parentId }: NodeProps<TemplateNode
   };
 
   return (
-    <BaseNode id={id} parentId={parentId}>
-      <div className="space-y-3 w-[280px]">
+    <div className="relative">
+      <BaseNode id={id} parentId={parentId}>
+        <div className="space-y-3 w-[280px]">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-[#10B981]" />
           <span className="text-[13px] font-medium text-[#1A1D21]">Template</span>
@@ -177,13 +178,16 @@ export const TemplateNode = memo(({ id, data, parentId }: NodeProps<TemplateNode
             )}
           </div>
         )}
-        <AIInstructionsInline
-          value={data.aiInstructions}
-          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<TemplateNodeData>)}
-          nodeId={id}
-          nodeType="template"
-        />
-      </div>
-    </BaseNode>
+        </div>
+      </BaseNode>
+
+      {/* Floating AI Instructions */}
+      <FloatingAIInstructions
+        value={data.aiInstructions}
+        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<TemplateNodeData>)}
+        nodeId={id}
+        nodeType="template"
+      />
+    </div>
   );
 });

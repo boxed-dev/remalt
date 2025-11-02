@@ -6,7 +6,7 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { WebpageNodeData } from '@/types/workflow';
-import { AIInstructionsInline } from './AIInstructionsInline';
+import { FloatingAIInstructions } from './FloatingAIInstructions';
 
 const CACHE_TTL_MS = 1000 * 60 * 10; // 10 minutes
 
@@ -389,8 +389,9 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
   }, [data.url, fetchPreview, id, triggerScrape, updateNodeData, url]);
 
   return (
-    <BaseNode id={id} showTargetHandle={false} parentId={parentId}>
-      <div className="w-[280px] space-y-2">
+    <div className="relative">
+      <BaseNode id={id} showTargetHandle={false} parentId={parentId}>
+        <div className="w-[280px] space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-[#095D40]" />
@@ -520,13 +521,16 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
             <div className="text-[11px] text-[#9CA3AF]">Enter URL</div>
           </div>
         )}
-        <AIInstructionsInline
-          value={data.aiInstructions}
-          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<WebpageNodeData>)}
-          nodeId={id}
-          nodeType="webpage"
-        />
-      </div>
-    </BaseNode>
+        </div>
+      </BaseNode>
+
+      {/* Floating AI Instructions */}
+      <FloatingAIInstructions
+        value={data.aiInstructions}
+        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<WebpageNodeData>)}
+        nodeId={id}
+        nodeType="webpage"
+      />
+    </div>
   );
 });

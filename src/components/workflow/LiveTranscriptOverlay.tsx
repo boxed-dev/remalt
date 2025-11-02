@@ -205,16 +205,12 @@ export function LiveTranscriptOverlay({ onComplete, onCancel }: LiveTranscriptOv
                         : 'Waiting...'}
                     </div>
                   ) : (
-                    <div className="space-y-2 text-[13px] leading-relaxed">
-                      {finalTranscripts.map((transcript, index) => (
-                        <div key={index} className="text-[#1F2937]">
-                          {transcript}
-                        </div>
-                      ))}
+                    <div className="text-[13px] leading-relaxed text-[#1F2937]">
+                      <span>{finalTranscripts.join(' ')}</span>
                       {interimTranscript && (
-                        <div className="text-[#6B7280] italic animate-pulse">
-                          {interimTranscript}
-                        </div>
+                        <span className="text-[#6B7280] italic animate-pulse">
+                          {' '}{interimTranscript}
+                        </span>
                       )}
                       <div ref={transcriptEndRef} />
                     </div>

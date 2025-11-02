@@ -1,4 +1,5 @@
 import { Handle, Position, useReactFlow } from '@xyflow/react';
+import { useCallback } from 'react';
 import type { ReactNode, CSSProperties } from 'react';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 
@@ -61,36 +62,59 @@ export function BaseNode({
   const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
   const setActiveNode = useWorkflowStore((state) => state.setActiveNode);
   const isActive = activeNodeId === id;
-  
+
   // Get the actual parentId from React Flow's internal state
   // This is more reliable than relying on props which may not be passed correctly
   const { getNode } = useReactFlow();
   const node = getNode(id);
   const actualParentId = node?.parentId || parentId || parentNode;
 
-  const handleActivationClick = (e: React.MouseEvent) => {
-    if (!isActive) {
-      e.stopPropagation();
-
-      // Activate the node
-      setActiveNode(id);
-
-      // Find the element underneath the overlay at click position
-      const overlay = e.currentTarget as HTMLElement;
-      overlay.style.pointerEvents = 'none';
-      const targetElement = document.elementFromPoint(e.clientX, e.clientY);
-      overlay.style.pointerEvents = 'auto';
-
-      // Simulate click on the underlying element after a brief moment to allow React to re-render
-      if (targetElement && targetElement !== overlay) {
-        setTimeout(() => {
-          if (targetElement instanceof HTMLElement) {
-            targetElement.click();
-          }
-        }, 0);
-      }
+  const handleActivationPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (isActive) {
+      return;
     }
-  };
+
+    const overlay = event.currentTarget;
+
+    setActiveNode(id);
+
+    overlay.style.pointerEvents = 'none';
+
+    if (typeof window !== 'undefined') {
+      const restorePointerEvents = () => {
+        window.removeEventListener('pointerup', restorePointerEvents, true);
+        window.removeEventListener('pointercancel', restorePointerEvents, true);
+        if (overlay.isConnected) {
+          overlay.style.pointerEvents = 'auto';
+        }
+      };
+
+      window.addEventListener('pointerup', restorePointerEvents, true);
+      window.addEventListener('pointercancel', restorePointerEvents, true);
+    }
+  }, [id, isActive, setActiveNode]);
+
+  const handleActivationClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (isActive) {
+      return;
+    }
+
+    setActiveNode(id);
+
+    const overlay = event.currentTarget;
+    overlay.style.pointerEvents = 'none';
+    const targetElement = document.elementFromPoint(event.clientX, event.clientY);
+
+    if (targetElement && targetElement !== overlay) {
+      setTimeout(() => {
+        if (targetElement instanceof HTMLElement) {
+          targetElement.click();
+        }
+      }, 0);
+    }
+
+    overlay.style.pointerEvents = 'auto';
+  }, [id, isActive, setActiveNode]);
 
   // Hide handles when node is inside a group
   // Use actualParentId from React Flow's getNode() for reliable parent detection
@@ -115,6 +139,7 @@ export function BaseNode({
       {/* Activation overlay for inactive nodes - blocks interaction until activated */}
       {!isActive && (
         <div
+          onPointerDown={handleActivationPointerDown}
           onClick={handleActivationClick}
           className="absolute inset-0 z-10 cursor-pointer rounded-2xl"
         />

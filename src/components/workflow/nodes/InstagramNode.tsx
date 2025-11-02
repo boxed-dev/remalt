@@ -6,7 +6,6 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { InstagramNodeData } from '@/types/workflow';
-import { AIInstructionsInline } from './AIInstructionsInline';
 
 function extractPostCode(url: string): string | null {
   // If it's already just a code (alphanumeric, ~11 chars)

@@ -6,7 +6,7 @@ import { Handle, Position, NodeResizer } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { NovelEditor } from '../NovelEditor';
-import { AIInstructionsInline } from './AIInstructionsInline';
+import { FloatingAIInstructions } from './FloatingAIInstructions';
 import type { TextNodeData } from '@/types/workflow';
 
 const TEXT_NODE_DEFAULT_WIDTH = 560;
@@ -78,18 +78,19 @@ export const TextNode = memo(({
                  TEXT_NODE_DEFAULT_HEIGHT;
 
   return (
-    <div
-      className={`
-        rounded-2xl bg-white border-2 border-[#E8ECEF] hover:border-[#D1D5DB] 
-        shadow-md hover:shadow-xl relative group
-        ${isResizing ? 'resizing !transition-none' : 'transition-all duration-200'}
-        ${selected ? 'ring-2 ring-[#095D40] ring-offset-2' : ''}
-      `}
-      style={{
-        width: typeof width === 'number' ? `${width}px` : width,
-        height: typeof height === 'number' ? `${height}px` : height,
-      }}
-    >
+    <div className="relative">
+      <div
+        className={`
+          rounded-2xl bg-white border-2 border-[#E8ECEF] hover:border-[#D1D5DB]
+          shadow-md hover:shadow-xl relative group
+          ${isResizing ? 'resizing !transition-none' : 'transition-all duration-200'}
+          ${selected ? 'ring-2 ring-[#095D40] ring-offset-2' : ''}
+        `}
+        style={{
+          width: typeof width === 'number' ? `${width}px` : width,
+          height: typeof height === 'number' ? `${height}px` : height,
+        }}
+      >
       {/* Node Resizer */}
       <NodeResizer
         minWidth={TEXT_NODE_MIN_WIDTH}
@@ -142,8 +143,8 @@ export const TextNode = memo(({
         </div>
 
         {/* Novel Editor - Notion-style inline markdown */}
-        <div 
-          className="flex-1 min-h-0 mx-5 mb-3 border border-[#E5E7EB] rounded-lg overflow-hidden bg-white"
+        <div
+          className="flex-1 min-h-0 mx-5 mb-5 border border-[#E5E7EB] rounded-lg overflow-hidden bg-white"
           style={{
             // Prevent content from shifting during resize
             contain: 'layout style paint',
@@ -157,19 +158,18 @@ export const TextNode = memo(({
             />
           </div>
         </div>
-
-        {/* AI Instructions */}
-        <div className="px-5 pb-5 flex-shrink-0">
-          <AIInstructionsInline
-            value={data.aiInstructions}
-            onChange={(value) =>
-              updateNodeData(id, { aiInstructions: value } as Partial<TextNodeData>)
-            }
-            nodeId={id}
-            nodeType="text"
-          />
-        </div>
       </div>
+      </div>
+
+      {/* Floating AI Instructions */}
+      <FloatingAIInstructions
+        value={data.aiInstructions}
+        onChange={(value) =>
+          updateNodeData(id, { aiInstructions: value } as Partial<TextNodeData>)
+        }
+        nodeId={id}
+        nodeType="text"
+      />
     </div>
   );
 });

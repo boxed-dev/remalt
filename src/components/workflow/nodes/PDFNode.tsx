@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { UploadMediaDialog } from '../UploadMediaDialog';
-import { AIInstructionsInline } from './AIInstructionsInline';
+import { FloatingAIInstructions } from './FloatingAIInstructions';
 import type { NodeProps } from '@xyflow/react';
 import type { PDFNodeData } from '@/types/workflow';
 
@@ -242,14 +242,15 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
   };
 
   return (
-    <BaseNode id={id} showTargetHandle={false} parentId={parentId}>
-      <UploadMediaDialog
-        open={showUploadDialog}
-        onOpenChange={setShowUploadDialog}
-        mediaType="pdf"
-        selectedNodeIds={[id]}
-      />
-      <div className="w-[280px] space-y-2">
+    <div className="relative">
+      <BaseNode id={id} showTargetHandle={false} parentId={parentId}>
+        <UploadMediaDialog
+          open={showUploadDialog}
+          onOpenChange={setShowUploadDialog}
+          mediaType="pdf"
+          selectedNodeIds={[id]}
+        />
+        <div className="w-[280px] space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-[#EF4444]" />
@@ -340,15 +341,17 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
             <div className="text-[10px] text-[#6B7280] text-center mt-0.5">Click to upload or paste URL</div>
           </button>
         )}
+        </div>
+      </BaseNode>
 
-        <AIInstructionsInline
-          value={data.aiInstructions}
-          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<PDFNodeData>)}
-          nodeId={id}
-          nodeType="pdf"
-        />
-      </div>
-    </BaseNode>
+      {/* Floating AI Instructions */}
+      <FloatingAIInstructions
+        value={data.aiInstructions}
+        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<PDFNodeData>)}
+        nodeId={id}
+        nodeType="pdf"
+      />
+    </div>
   );
 });
 

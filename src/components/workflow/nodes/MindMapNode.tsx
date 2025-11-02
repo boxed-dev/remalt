@@ -5,7 +5,7 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { MindMapNodeData } from '@/types/workflow';
-import { AIInstructionsInline } from './AIInstructionsInline';
+import { FloatingAIInstructions } from './FloatingAIInstructions';
 import { VoiceInput, VoiceTextarea } from '../VoiceInput';
 
 export const MindMapNode = memo(({ id, data, parentId }: NodeProps<MindMapNodeData>) => {
@@ -38,8 +38,9 @@ export const MindMapNode = memo(({ id, data, parentId }: NodeProps<MindMapNodeDa
   }, [data.concept, data.notes, isEditing]);
 
   return (
-    <BaseNode id={id} parentId={parentId}>
-      <div className="space-y-2 w-[240px]">
+    <div className="relative">
+      <BaseNode id={id} parentId={parentId}>
+        <div className="space-y-2 w-[240px]">
         <div className="flex items-center gap-2">
           <Lightbulb className="h-4 w-4 text-[#EC4899]" />
           <span className="text-[13px] font-medium text-[#1A1D21]">Idea</span>
@@ -89,13 +90,16 @@ export const MindMapNode = memo(({ id, data, parentId }: NodeProps<MindMapNodeDa
             )}
           </div>
         )}
-        <AIInstructionsInline
-          value={data.aiInstructions}
-          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<MindMapNodeData>)}
-          nodeId={id}
-          nodeType="mindmap"
-        />
-      </div>
-    </BaseNode>
+        </div>
+      </BaseNode>
+
+      {/* Floating AI Instructions */}
+      <FloatingAIInstructions
+        value={data.aiInstructions}
+        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<MindMapNodeData>)}
+        nodeId={id}
+        nodeType="mindmap"
+      />
+    </div>
   );
 });

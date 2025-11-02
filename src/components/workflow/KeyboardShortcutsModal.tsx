@@ -32,9 +32,10 @@ const generalShortcuts: ShortcutItem[] = [
 
 const addBlockShortcuts: ShortcutItem[] = [
   { label: "AI Chat", keys: "C", searchTerms: "chat assistant ai" },
-  { label: "Social media", keys: "S", searchTerms: "social media instagram linkedin" },
-  { label: "Audio recording", keys: "R", searchTerms: "audio recording voice" },
+  { label: "Social media", keys: "S", searchTerms: "social media instagram linkedin youtube" },
+  { label: "Audio recording", keys: "R or V", searchTerms: "audio recording voice" },
   { label: "Image", keys: "I", searchTerms: "image photo picture" },
+  { label: "Text note", keys: "T", searchTerms: "text note" },
   { label: "Annotation", keys: "A", searchTerms: "annotation connector" },
   { label: "Website", keys: "W", searchTerms: "website webpage url" },
   { label: "Mindmap", keys: "M", searchTerms: "mindmap mind map" },

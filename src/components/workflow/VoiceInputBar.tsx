@@ -279,141 +279,131 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
 
     return (
       <div className="relative w-full">
-        {/* Main pill container - Super minimal and clean */}
-        <div
-          className={cn(
-            'relative flex items-center gap-2 px-4 py-2 rounded-[20px] transition-all duration-200',
-            'bg-white border border-[#E5E7EB]',
-            'hover:border-[#D1D5DB]',
-            'min-h-[44px]',
-            'max-w-full',
-            isRecording && 'border-[#095D40]/40 bg-[#095D40]/[0.02]',
-            disabled && 'opacity-50 cursor-not-allowed',
-            className
-          )}
-        >
-          {/* Left: Add button */}
-          {showAddButton && (
+        {/* Main container - Thinner and centered */}
+        <div className={cn('flex flex-row items-center gap-2', className)}>
+          <div className="flex items-center flex-1 min-w-0">
+            <div className="w-full">
+              <div className="relative overflow-hidden w-full flex items-center min-h-[32px]">
+                {/* Textarea - Thinner */}
+                <textarea
+                  ref={(node) => {
+                    textareaRef.current = node;
+                    if (typeof ref === 'function') {
+                      ref(node);
+                    } else if (ref) {
+                      ref.current = node;
+                    }
+                  }}
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={disabled || isRecording}
+                  placeholder={placeholder}
+                  rows={1}
+                  className={cn(
+                    'pl-2 pr-2 py-2 max-h-[200px] w-full resize-none overflow-auto',
+                    'placeholder-gray-400 border-none bg-transparent text-gray-800 font-normal',
+                    'focus:outline-none focus:ring-0 focus:border-transparent focus:shadow-none',
+                    'focus-visible:outline-none leading-5',
+                    isRecording && 'opacity-0',
+                    disabled && 'cursor-not-allowed'
+                  )}
+                  style={{ fontSize: '14px' }}
+                  {...props}
+                />
+
+                {/* Full-width waveform during recording */}
+                {isRecording && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-4">
+                    <FullWidthWaveform frequencyData={frequencyData} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Recording controls - show tick and cross when recording */}
+          {isRecording ? (
+            <>
+              {/* Cancel button - X */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleCancelRecording();
+                }}
+                disabled={recordingState === 'processing'}
+                className={cn(
+                  'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full',
+                  'transition-all duration-200 shadow-sm',
+                  'bg-[#FF3B30] hover:bg-[#FF2D1F]',
+                  recordingState === 'processing' && 'opacity-50 cursor-not-allowed'
+                )}
+                title="Cancel recording"
+              >
+                <svg
+                  className="w-4 h-4 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Confirm button - Tick */}
+              <button
+                type="button"
+                onClick={handleConfirmRecording}
+                disabled={recordingState === 'processing'}
+                className={cn(
+                  'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full',
+                  'transition-all duration-200 shadow-sm',
+                  'bg-[#095D40] hover:bg-[#074A32]',
+                  recordingState === 'processing' && 'opacity-50 cursor-not-allowed'
+                )}
+                title="Confirm recording"
+              >
+                {recordingState === 'processing' ? (
+                  <Loader2 className="text-white w-4 h-4 animate-spin" strokeWidth={2.5} />
+                ) : (
+                  <Check className="text-white w-4 h-4" strokeWidth={2.5} />
+                )}
+              </button>
+            </>
+          ) : (
+            /* Microphone or Send button */
             <button
               type="button"
-              onClick={onAddClick}
-              disabled={disabled}
-              className="flex-shrink-0 p-1 rounded-full hover:bg-gray-100 transition-colors duration-200 disabled:cursor-not-allowed"
-              title="Add attachment"
-            >
-              <Plus className="h-4 w-4 text-gray-400 group-hover:text-gray-600" strokeWidth={2} />
-            </button>
-          )}
-
-          {/* Middle: Textarea with waveform overlay */}
-          <div className="relative flex-1 flex items-center">
-            <textarea
-              ref={(node) => {
-                textareaRef.current = node;
-                if (typeof ref === 'function') {
-                  ref(node);
-                } else if (ref) {
-                  ref.current = node;
-                }
-              }}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={disabled || isRecording}
-              placeholder={placeholder}
-              rows={1}
-              className={cn(
-                'w-full bg-transparent border-none outline-none resize-none',
-                'text-[14px] text-[#111827] placeholder:text-[#9CA3AF]',
-                'leading-[1.5] py-0',
-                'overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent',
-                'max-h-[160px]',
-                isRecording && 'opacity-40',
-                disabled && 'cursor-not-allowed'
-              )}
-              style={{
-                minHeight: '24px',
-                fieldSizing: 'content'
-              }}
-              {...props}
-            />
-
-            {/* Waveform visualization */}
-            {isRecording && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <Waveform frequencyData={frequencyData} />
-              </div>
-            )}
-          </div>
-
-          {/* Confirm button (appears during recording) */}
-          <button
-            type="button"
-            onClick={handleConfirmRecording}
-            disabled={!isRecording || recordingState === 'processing'}
-            className={cn(
-              'flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center',
-              'bg-[#095D40] hover:bg-[#074A32]',
-              'transition-all duration-200',
-              isRecording ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
-            )}
-            title="Confirm and send"
-          >
-            <Check className="h-3.5 w-3.5 text-white" strokeWidth={2} />
-          </button>
-
-          {/* Right: Mic/Send button (rightmost position) */}
-          <button
-            type="button"
-            onClick={
-              isRecording
-                ? handleConfirmRecording
-                : value.trim() && onSend
+              onClick={
+                value.trim() && onSend
                   ? onSend
                   : handleStartRecording
-            }
-            disabled={disabled || recordingState === 'processing'}
-            className={cn(
-              'flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center',
-              'transition-all duration-200',
-              !isRecording && !value.trim() && 'hover:bg-gray-100',
-              !isRecording && value.trim() && 'bg-[#095D40] hover:bg-[#074A32]',
-              isRecording && 'bg-[#095D40] hover:bg-[#074A32]',
-              disabled && 'cursor-not-allowed'
-            )}
-            title={
-              isRecording
-                ? 'Stop recording'
-                : value.trim()
-                  ? 'Send message'
-                  : 'Start voice input'
-            }
-          >
-            {recordingState === 'processing' ? (
-              <Loader2 className="h-4 w-4 text-[#095D40] animate-spin" strokeWidth={2} />
-            ) : isRecording ? (
-              <Mic className="h-4 w-4 text-white" strokeWidth={2} />
-            ) : value.trim() ? (
-              <Send className="h-4 w-4 text-white" strokeWidth={2} />
-            ) : (
-              <Mic className="h-4 w-4 text-gray-500" strokeWidth={2} />
-            )}
-          </button>
+              }
+              disabled={disabled}
+              className={cn(
+                'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full',
+                'transition-all duration-200 shadow-sm',
+                'bg-[#095D40] hover:bg-[#074A32]',
+                disabled && 'opacity-50 cursor-not-allowed'
+              )}
+              title={value.trim() ? 'Send message' : 'Start voice input'}
+            >
+              {value.trim() && onSend ? (
+                <Send className="text-white w-4 h-4" strokeWidth={2.5} />
+              ) : (
+                <Mic className="text-white w-4 h-4" strokeWidth={2.5} />
+              )}
+            </button>
+          )}
         </div>
 
-        {/* Error message */}
+        {/* Error message only */}
         {error && (
-          <div className="absolute top-full mt-2 left-0 right-0 text-center">
+          <div className="mt-2 text-center">
             <span className="text-[11px] text-red-500">{error}</span>
-          </div>
-        )}
-
-        {/* Recording hint */}
-        {showRecordingHint && isRecording && (
-          <div className="absolute top-full mt-2 left-0 right-0 text-center">
-            <span className="text-[11px] text-[#6B7280]">
-              Press ESC to cancel · Click mic or check to finish
-            </span>
           </div>
         )}
       </div>
@@ -424,32 +414,37 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
 VoiceInputBar.displayName = 'VoiceInputBar';
 
 /**
- * Real-time waveform visualization synced with actual voice input
- * Optimized with CSS transforms for better performance (16 bars, GPU-accelerated)
+ * Full-width waveform that fills the entire input box
  */
-function Waveform({ frequencyData }: { frequencyData: Uint8Array }) {
+function FullWidthWaveform({ frequencyData }: { frequencyData: Uint8Array }) {
+  // Use more bars to fill width
+  const barCount = 24;
+  const bars = Array.from({ length: barCount }, (_, i) => {
+    // Sample frequency data evenly across the array
+    const sampleIndex = Math.floor((i / barCount) * frequencyData.length);
+    return frequencyData[sampleIndex] || 0;
+  });
+
   return (
-    <div className="flex items-center justify-center gap-1.5 h-full px-4">
-      {Array.from(frequencyData).map((value, i) => {
-        // Use ACTUAL frequency value from microphone (0-255)
-        const normalizedValue = value / 255; // 0-1 range
-        const amplified = Math.min(normalizedValue * 2.5, 1); // 2.5x amplification
+    <div className="flex items-center justify-between w-full h-full gap-[2px]">
+      {bars.map((value, i) => {
+        // Normalize and amplify
+        const normalizedValue = value / 255;
+        const amplified = Math.min(normalizedValue * 2.5, 1);
 
-        // Scale Y transform instead of height for GPU-accelerated animation
-        const scaleY = amplified > 0.1 ? Math.max(0.3, amplified) : 0.2;
-
-        // Opacity based on actual audio level
-        const opacity = amplified > 0.1 ? 0.5 + (amplified * 0.4) : 0.3;
+        // Variable heights for visual interest
+        const baseHeight = 16;
+        const scaleY = amplified > 0.05 ? Math.max(0.25, amplified) : 0.2;
+        const finalHeight = baseHeight * scaleY;
 
         return (
           <div
             key={i}
-            className="w-1 h-10 bg-[#095D40] rounded-full origin-center"
+            className="flex-1 bg-[#095D40] rounded-full transition-all duration-75 ease-out"
             style={{
-              transform: `scaleY(${scaleY})`,
-              opacity: opacity,
-              transition: 'transform 50ms ease-out, opacity 50ms ease-out',
-              willChange: 'transform, opacity',
+              height: `${finalHeight}px`,
+              opacity: amplified > 0.05 ? 0.7 : 0.3,
+              minWidth: '2px',
             }}
           />
         );

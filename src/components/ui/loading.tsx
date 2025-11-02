@@ -1,66 +1,76 @@
-import { Loader2 } from "lucide-react";
-
 interface LoadingScreenProps {
   message?: string;
   showBrand?: boolean;
 }
 
-function AnimatedRemaltText() {
-  const letters = "Remalt".split("");
-
+/**
+ * Apple-inspired logo-based loader
+ * Think: Apple boot animation where the logo IS the loader
+ * Features elegant shimmer and breathing effects
+ */
+function RemaltLogoLoader() {
   return (
     <div className="relative inline-block">
-      <div className="text-[32px] font-bold text-[#095D40] mb-4 animate-heartbeat">
-        {letters.map((letter, index) => (
-          <span
-            key={index}
-            className="relative inline-block"
-            style={{
-              animationDelay: `${index * 0.1}s`,
-            }}
-          >
-            {letter}
-            {/* Particle effects */}
-            <span
-              className="absolute inset-0 text-[#095D40] opacity-0 animate-particle-disperse pointer-events-none"
-              style={{
-                animationDelay: `${index * 0.15}s`,
-                // @ts-ignore - CSS custom properties
-                "--disperse-x": `${Math.random() * 16 - 8}px`,
-                "--disperse-y": `${-Math.random() * 16}px`,
-              }}
-              aria-hidden="true"
-            >
-              {letter}
-            </span>
-            <span
-              className="absolute inset-0 text-[#095D40] opacity-0 animate-particle-disperse pointer-events-none"
-              style={{
-                animationDelay: `${index * 0.15 + 0.5}s`,
-                // @ts-ignore - CSS custom properties
-                "--disperse-x": `${-Math.random() * 16}px`,
-                "--disperse-y": `${-Math.random() * 16}px`,
-              }}
-              aria-hidden="true"
-            >
-              {letter}
-            </span>
+      {/* Main Remalt logo with shimmer effect */}
+      <div className="relative">
+        <h1 
+          className="text-[56px] font-bold text-[#095D40] tracking-tight animate-pulse-scale"
+          style={{
+            background: 'linear-gradient(110deg, #095D40 0%, #095D40 40%, #0a7550 50%, #095D40 60%, #095D40 100%)',
+            backgroundSize: '200% 100%',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          <span className="inline-block animate-shimmer" style={{
+            background: 'linear-gradient(110deg, #095D40 0%, #095D40 40%, #0a7550 50%, #095D40 60%, #095D40 100%)',
+            backgroundSize: '200% 100%',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}>
+            Remalt
           </span>
-        ))}
+        </h1>
+        
+        {/* Subtle glow beneath logo */}
+        <div 
+          className="absolute -inset-8 blur-2xl animate-pulse-scale -z-10"
+          style={{
+            background: 'radial-gradient(circle, rgba(9, 93, 64, 0.1) 0%, transparent 70%)',
+          }}
+        />
+      </div>
+      
+      {/* Minimalist loading dots beneath logo */}
+      <div className="flex items-center justify-center gap-1.5 mt-8">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#095D40] animate-loading-dot" style={{ animationDelay: '0ms' }} />
+        <div className="w-1.5 h-1.5 rounded-full bg-[#095D40] animate-loading-dot" style={{ animationDelay: '150ms' }} />
+        <div className="w-1.5 h-1.5 rounded-full bg-[#095D40] animate-loading-dot" style={{ animationDelay: '300ms' }} />
       </div>
     </div>
   );
 }
 
+/**
+ * Apple-inspired minimal loading screen
+ * The logo itself becomes the loading indicator - like Apple's boot screen
+ */
 export function LoadingScreen({
   message = "Loading your AI canvas",
   showBrand = true
 }: LoadingScreenProps = {}) {
   return (
-    <div className="h-screen flex items-center justify-center bg-[#FAFBFC]">
-      <div className="text-center">
-        {showBrand && <AnimatedRemaltText />}
-        <p className="text-[14px] text-[#6B7280]">{message}</p>
+    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-[#FAFBFC] via-[#FFFFFF] to-[#F5F5F7]">
+      <div className="text-center animate-fade-in-scale">
+        {/* Logo as the primary loader */}
+        {showBrand && <RemaltLogoLoader />}
+        
+        {/* Subtle loading message */}
+        <p className="text-[14px] text-[#6B7280] font-medium tracking-tight opacity-70 mt-6">
+          {message}
+        </p>
       </div>
     </div>
   );

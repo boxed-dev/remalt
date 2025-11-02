@@ -142,8 +142,14 @@ class RecordingManager {
         audioBitsPerSecond: 128000,
       });
 
-      // Setup Deepgram connection
-      await this.setupDeepgramConnection();
+      // Try to setup Deepgram connection (non-blocking, continues without it if it fails)
+      try {
+        await this.setupDeepgramConnection();
+        console.log('[RecordingManager] Live transcription enabled');
+      } catch (deepgramError) {
+        console.warn('[RecordingManager] Live transcription unavailable, will transcribe after recording:', deepgramError);
+        // Continue without live transcription - we'll transcribe the final audio instead
+      }
 
       // Handle audio data chunks
       this.mediaRecorder.ondataavailable = (event) => {
@@ -151,16 +157,18 @@ class RecordingManager {
           // Save for final audio blob
           this.session!.audioChunks.push(event.data);
 
-          // Send to Deepgram for real-time transcription
+          // Send to Deepgram for real-time transcription (if connected)
           if (this.deepgramConnection) {
-            const connection = this.deepgramConnection; // Capture reference
-            event.data.arrayBuffer().then(buffer => {
-              if (connection) {
-                connection.send(buffer);
-              }
-            }).catch((error: Error) => {
-              console.error('[RecordingManager] Failed to send audio chunk:', error);
-            });
+            // Convert blob to ArrayBuffer and send
+            event.data.arrayBuffer()
+              .then(buffer => {
+                if (this.deepgramConnection) {
+                  this.deepgramConnection.send(buffer);
+                }
+              })
+              .catch((error: Error) => {
+                console.error('[RecordingManager] ❌ Failed to send audio chunk:', error);
+              });
           }
         }
       };
@@ -226,9 +234,9 @@ class RecordingManager {
 
       console.log('[RecordingManager] Establishing live transcription connection...');
 
-      // Establish live transcription connection
+      // Establish live transcription connection with optimized settings
       const connection = deepgramClient.listen.live({
-        model: 'nova-2',
+        model: 'nova-3',
         language: 'en',
         smart_format: true,
         interim_results: true,
@@ -239,60 +247,101 @@ class RecordingManager {
         filler_words: false,
       });
 
-      // Store connection reference
-      this.deepgramConnection = connection;
-
       // Setup event handlers wrapped in Promise for initialization
       return new Promise((resolve, reject) => {
+        let isResolved = false;
+
         const timeout = setTimeout(() => {
-          console.error('[RecordingManager] Deepgram connection timeout after 10s');
-          reject(new Error('Deepgram connection timeout. Please check your internet connection.'));
-        }, 10000);
+          if (!isResolved) {
+            isResolved = true;
+            console.error('[RecordingManager] ⏱️ Connection timeout after 15s');
 
-        // Connection opened
+            // Clean up connection on timeout
+            try {
+              connection.finish();
+            } catch (e) {
+              console.error('[RecordingManager] Error cleaning up after timeout:', e);
+            }
+
+            reject(new Error('Voice transcription unavailable. Check your network connection.'));
+          }
+        }, 15000);
+
+        // Connection opened - this MUST fire for transcription to work
         connection.on(LiveTranscriptionEvents.Open, () => {
-          console.log('[RecordingManager] Deepgram live connection established successfully');
-          clearTimeout(timeout);
-          resolve();
+          if (!isResolved) {
+            isResolved = true;
+            console.log('[RecordingManager] ✅ Deepgram connection opened successfully');
+            clearTimeout(timeout);
+
+            // Store connection reference AFTER successful open
+            this.deepgramConnection = connection;
+
+            // Setup event handlers AFTER connection is open
+            connection.on(LiveTranscriptionEvents.Transcript, (data) => {
+              this.handleDeepgramMessage({
+                type: 'Results',
+                ...data,
+              });
+            });
+
+            connection.on(LiveTranscriptionEvents.Metadata, (data) => {
+              console.log('[RecordingManager] 📊 Metadata:', data);
+            });
+
+            connection.on(LiveTranscriptionEvents.UtteranceEnd, (data) => {
+              console.log('[RecordingManager] 🔚 Utterance ended');
+              this.handleDeepgramMessage({
+                type: 'UtteranceEnd',
+                ...data,
+              });
+            });
+
+            connection.on(LiveTranscriptionEvents.Warning, (warning) => {
+              console.warn('[RecordingManager] ⚠️ Warning:', warning);
+            });
+
+            connection.on(LiveTranscriptionEvents.Close, (closeEvent) => {
+              console.log('[RecordingManager] 🔌 Connection closed:', closeEvent);
+            });
+
+            resolve();
+          }
         });
 
-        // Transcription results
-        connection.on(LiveTranscriptionEvents.Transcript, (data) => {
-          this.handleDeepgramMessage({
-            type: 'Results',
-            ...data,
-          });
-        });
-
-        // Metadata events
-        connection.on(LiveTranscriptionEvents.Metadata, (data) => {
-          console.log('[RecordingManager] Deepgram metadata:', data);
-        });
-
-        // Utterance end events
-        connection.on(LiveTranscriptionEvents.UtteranceEnd, (data) => {
-          console.log('[RecordingManager] Utterance ended');
-          this.handleDeepgramMessage({
-            type: 'UtteranceEnd',
-            ...data,
-          });
-        });
-
-        // Error handling
+        // Error handling - before connection opens
         connection.on(LiveTranscriptionEvents.Error, (error) => {
-          console.error('[RecordingManager] Deepgram WebSocket error:', error);
-          clearTimeout(timeout);
-          reject(new Error('Deepgram connection error. Please try again.'));
+          console.error('[RecordingManager] ❌ WebSocket error:', error);
+          if (!isResolved) {
+            isResolved = true;
+            clearTimeout(timeout);
+
+            try {
+              connection.finish();
+            } catch (e) {
+              // Ignore cleanup errors
+            }
+
+            reject(new Error('Voice transcription connection failed. Please try again.'));
+          }
         });
 
-        // Connection closed
-        connection.on(LiveTranscriptionEvents.Close, () => {
-          console.log('[RecordingManager] Deepgram connection closed');
-        });
+        console.log('[RecordingManager] ⏳ Waiting for WebSocket connection...');
       });
 
     } catch (error) {
-      console.error('[RecordingManager] Deepgram setup failed:', error);
+      console.error('[RecordingManager] Setup failed:', error);
+
+      // Ensure cleanup on any error
+      if (this.deepgramConnection) {
+        try {
+          this.deepgramConnection.finish();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        this.deepgramConnection = null;
+      }
+
       throw error;
     }
   }
@@ -305,16 +354,19 @@ class RecordingManager {
 
     // Deepgram sends different message types
     if (data.type === 'Results') {
-      const transcript = data.channel?.alternatives?.[0]?.transcript;
-      const isFinal = data.is_final || data.speech_final;
+      // Extract transcript from the response structure
+      const transcript = data.channel?.alternatives?.[0]?.transcript || '';
+      const isFinal = data.is_final === true || data.speech_final === true;
 
       // Skip empty transcripts
       if (!transcript || transcript.trim().length === 0) return;
 
-      console.log('[RecordingManager] Transcript received:', {
-        text: transcript,
+      const confidence = data.channel?.alternatives?.[0]?.confidence || 0;
+
+      console.log('[RecordingManager] 🎤 Transcript:', {
+        text: transcript.substring(0, 50) + (transcript.length > 50 ? '...' : ''),
         isFinal,
-        confidence: data.channel?.alternatives?.[0]?.confidence,
+        confidence: (confidence * 100).toFixed(1) + '%',
       });
 
       if (isFinal) {
@@ -322,12 +374,14 @@ class RecordingManager {
         this.session.finalTranscripts.push(transcript);
         this.session.interimTranscript = ''; // Clear interim
         this.emit('transcript-final', transcript);
-        console.log('[RecordingManager] Final transcript added:', transcript);
+        console.log('[RecordingManager] ✅ Final transcript added');
       } else {
         // Interim transcript - update current interim
         this.session.interimTranscript = transcript;
         this.emit('transcript-interim', transcript);
       }
+    } else if (data.type === 'UtteranceEnd') {
+      console.log('[RecordingManager] 🔚 Utterance ended, finalizing current transcript');
     }
   }
 
@@ -335,34 +389,49 @@ class RecordingManager {
    * Stop recording and finalize
    */
   async stopRecording(): Promise<void> {
-    if (!this.session || this.session.state !== 'recording') {
-      throw new Error('No active recording to stop');
+    // Gracefully handle if already stopped or no session
+    if (!this.session) {
+      console.log('[RecordingManager] No active session to stop');
+      return;
+    }
+
+    // If already processing or idle, don't throw error
+    if (this.session.state !== 'recording') {
+      console.log('[RecordingManager] Recording already stopping or stopped, state:', this.session.state);
+      return;
     }
 
     try {
       this.session.state = 'processing';
       this.emit('state-changed', 'processing');
 
-      // Close Deepgram connection gracefully first
+      // Close Deepgram connection gracefully
       if (this.deepgramConnection) {
+        console.log('[RecordingManager] 📡 Closing Deepgram connection...');
+
         // Capture reference before clearing
         const connection = this.deepgramConnection;
         this.deepgramConnection = null;
 
-        // Wait a bit for final transcripts
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait a bit for final transcripts to arrive
+        await new Promise(resolve => setTimeout(resolve, 800));
 
-        // Finish the connection
+        // Finish the connection gracefully
         try {
           connection.finish();
+          console.log('[RecordingManager] ✅ Deepgram connection closed');
         } catch (error) {
-          console.error('[Deepgram] Error closing connection:', error);
+          console.error('[RecordingManager] ❌ Error closing connection:', error);
         }
       }
 
       // Stop MediaRecorder - this will trigger finalizeRecording via onstop handler
       if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
         this.mediaRecorder.stop();
+      } else {
+        // If MediaRecorder is already stopped, manually finalize
+        console.log('[RecordingManager] MediaRecorder already inactive, finalizing...');
+        this.finalizeRecording();
       }
     } catch (error) {
       console.error('[RecordingManager] Error stopping recording:', error);
@@ -378,7 +447,7 @@ class RecordingManager {
   /**
    * Finalize recording and create audio blob
    */
-  private finalizeRecording(): void {
+  private async finalizeRecording(): Promise<void> {
     if (!this.session) return;
 
     try {
@@ -391,8 +460,20 @@ class RecordingManager {
         type: this.mediaRecorder?.mimeType || 'audio/webm'
       });
 
-      // Combine all final transcripts
-      const fullTranscript = this.session.finalTranscripts.join(' ').trim();
+      // Combine all final transcripts from live transcription
+      let fullTranscript = this.session.finalTranscripts.join(' ').trim();
+
+      // If no live transcription, try to transcribe the audio file
+      if (!fullTranscript && audioBlob.size > 0) {
+        console.log('[RecordingManager] No live transcript, attempting post-recording transcription...');
+        try {
+          fullTranscript = await this.transcribeAudioBlob(audioBlob);
+          console.log('[RecordingManager] Post-recording transcription successful');
+        } catch (transcribeError) {
+          console.error('[RecordingManager] Post-recording transcription failed:', transcribeError);
+          // Continue without transcript
+        }
+      }
 
       // Emit completion event
       this.emit('recording-complete', {
@@ -415,6 +496,37 @@ class RecordingManager {
       // Always reset session to null after completion (success or error)
       this.session = null;
     }
+  }
+
+  /**
+   * Transcribe audio blob using Deepgram's prerecorded API (fallback)
+   */
+  private async transcribeAudioBlob(audioBlob: Blob): Promise<string> {
+    // Convert blob to base64 using browser APIs
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64Audio = btoa(binary);
+
+    const response = await fetch('/api/voice/transcribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        audioData: base64Audio,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Transcription API failed');
+    }
+
+    const result = await response.json();
+    return result.transcript || '';
   }
 
   /**

@@ -17,7 +17,7 @@ import { BaseNode } from "./BaseNode";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
 import type { NodeProps } from "@xyflow/react";
 import type { YouTubeNodeData } from "@/types/workflow";
-import { AIInstructionsInline } from "./AIInstructionsInline";
+import { FloatingAIInstructions } from "./FloatingAIInstructions";
 import { extractChannelId } from "@/lib/api/youtube";
 
 function extractYouTubeId(url: string): string | null {
@@ -806,23 +806,27 @@ export const YouTubeNode = memo(
     );
 
     return (
-      <BaseNode
-        id={id}
-        type={isChannel ? "YouTube Channel" : "YouTube"}
-        icon={
-          isChannel ? (
-            <Users className="h-3.5 w-3.5 text-red-600" />
-          ) : (
-            <Youtube className="h-3.5 w-3.5 text-red-600" />
-          )
-        }
-        iconBg="bg-red-100"
-        showTargetHandle={false}
-        allowOverflow={true}
-        parentId={parentId}
-      >
-        {isChannel ? renderChannelView() : renderVideoView()}
-        <AIInstructionsInline
+      <div className="relative">
+        <BaseNode
+          id={id}
+          type={isChannel ? "YouTube Channel" : "YouTube"}
+          icon={
+            isChannel ? (
+              <Users className="h-3.5 w-3.5 text-red-600" />
+            ) : (
+              <Youtube className="h-3.5 w-3.5 text-red-600" />
+            )
+          }
+          iconBg="bg-red-100"
+          showTargetHandle={false}
+          allowOverflow={true}
+          parentId={parentId}
+        >
+          {isChannel ? renderChannelView() : renderVideoView()}
+        </BaseNode>
+
+        {/* Floating AI Instructions */}
+        <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) =>
             updateNodeData(id, {
@@ -832,7 +836,7 @@ export const YouTubeNode = memo(
           nodeId={id}
           nodeType="youtube"
         />
-      </BaseNode>
+      </div>
     );
   }
 );

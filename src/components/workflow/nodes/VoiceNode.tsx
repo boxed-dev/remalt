@@ -429,16 +429,12 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
                         : 'Waiting...'}
                     </div>
                   ) : (
-                    <div className="space-y-1.5 text-[12px] leading-relaxed">
-                      {finalTranscripts.map((transcript, index) => (
-                        <div key={index} className="text-[#1F2937]">
-                          {transcript}
-                        </div>
-                      ))}
+                    <div className="text-[12px] leading-relaxed text-[#1F2937]">
+                      <span>{finalTranscripts.join(' ')}</span>
                       {interimTranscript && (
-                        <div className="text-[#6B7280] italic animate-pulse">
-                          {interimTranscript}
-                        </div>
+                        <span className="text-[#6B7280] italic animate-pulse">
+                          {' '}{interimTranscript}
+                        </span>
                       )}
                       <div ref={transcriptEndRef} />
                     </div>

@@ -267,7 +267,6 @@ export default function WorkflowEditorPage() {
     },
     // Add node shortcuts
     c: () => addNodeAtCursor("chat"),
-    s: () => addNodeAtCursor("template"),
     r: () => addNodeAtCursor("voice"),
     i: () => {
       // Open upload dialog for images
@@ -276,11 +275,16 @@ export default function WorkflowEditorPage() {
     },
     a: () => addNodeAtCursor("connector"),
     w: () => addNodeAtCursor("webpage"),
+    m: () => addNodeAtCursor("mindmap"),
     d: () => {
       // Open upload dialog for PDFs
       setUploadMediaType('pdf');
       setUploadMediaDialogOpen(true);
     },
+    g: () => addNodeAtCursor("group"),
+    t: () => addNodeAtCursor("text"),
+    v: () => addNodeAtCursor("voice"), // Alternative shortcut for voice (V for Voice)
+    // Note: S for Social Media is handled in WorkflowCanvas
     // Zoom shortcuts
     "=": () => {
       // Will be handled by ReactFlow controls

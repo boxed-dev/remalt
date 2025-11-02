@@ -5,7 +5,7 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { ConnectorNodeData } from '@/types/workflow';
-import { AIInstructionsInline } from './AIInstructionsInline';
+import { FloatingAIInstructions } from './FloatingAIInstructions';
 
 export const ConnectorNode = memo(({ id, data, parentId }: NodeProps<ConnectorNodeData>) => {
   const [isSelecting, setIsSelecting] = useState(false);
@@ -31,8 +31,9 @@ export const ConnectorNode = memo(({ id, data, parentId }: NodeProps<ConnectorNo
   };
 
   return (
-    <BaseNode id={id} parentId={parentId}>
-      <div className="space-y-2 w-[200px]">
+    <div className="relative">
+      <BaseNode id={id} parentId={parentId}>
+        <div className="space-y-2 w-[200px]">
         <div className="flex items-center gap-2">
           <Link2 className="h-4 w-4 text-[#6366F1]" />
           <span className="text-[13px] font-medium text-[#1A1D21]">Connector</span>
@@ -57,13 +58,16 @@ export const ConnectorNode = memo(({ id, data, parentId }: NodeProps<ConnectorNo
             <div className="text-[12px] text-[#1A1D21]">{relationshipLabels[data.relationshipType]}</div>
           </div>
         )}
-        <AIInstructionsInline
-          value={data.aiInstructions}
-          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ConnectorNodeData>)}
-          nodeId={id}
-          nodeType="connector"
-        />
-      </div>
-    </BaseNode>
+        </div>
+      </BaseNode>
+
+      {/* Floating AI Instructions */}
+      <FloatingAIInstructions
+        value={data.aiInstructions}
+        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ConnectorNodeData>)}
+        nodeId={id}
+        nodeType="connector"
+      />
+    </div>
   );
 });

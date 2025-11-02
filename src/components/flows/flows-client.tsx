@@ -215,20 +215,20 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
   }, [isPageVisible]);
 
   return (
-    <div className="min-h-screen bg-[#FAFBFC]" data-testid="flows-list">
+    <div className="flex-1 min-h-screen bg-gradient-to-br from-[#F9FAFB] to-[#F3F4F6]" data-testid="flows-list">
       {/* Main Content */}
       <main className="min-h-screen">
-        <div className="max-w-full mx-auto px-8 py-8">
+        <div className="w-full px-8 lg:px-12 py-10">
           {/* Header with Search and New Flow Button */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-            <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-10">
+            <div className="relative w-full sm:w-96">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9CA3AF]" />
               <input
                 type="text"
                 placeholder="Search canvas..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#1A1D21] text-sm bg-white transition-all duration-150"
+                className="w-full pl-12 pr-4 py-3.5 border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#095D40] focus:border-transparent text-[15px] bg-white transition-all duration-200 shadow-sm"
                 data-testid="search-input"
                 style={{
                   fontFamily:
@@ -238,28 +238,25 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
             </div>
             <Button
               onClick={handleNewFlow}
-              className="bg-[#095D40] text-white hover:bg-[#074030] transition-all duration-150 rounded-lg px-6 py-2.5 h-auto font-medium"
-              style={{
-                boxShadow: "0 1px 3px rgba(9, 93, 64, 0.3)",
-              }}
+              className="bg-[#095D40] text-white hover:bg-[#074030] transition-all duration-200 rounded-xl px-7 py-3.5 h-auto font-semibold text-[15px] shadow-lg hover:shadow-xl"
             >
-              <Plus className="h-4 w-4 mr-1.5" />
+              <Plus className="h-5 w-5 mr-2" />
               New Canvas
             </Button>
           </div>
 
           {/* Flow Grid */}
           {workflows.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {/* New Flow Card */}
               <button
                 onClick={handleNewFlow}
-                className="group cursor-pointer border-2 border-dashed border-[#E8ECEF] rounded-xl p-6 hover:border-[#1A1D21] hover:bg-[#FAFBFC] transition-all duration-200 aspect-[4/3] flex flex-col items-center justify-center gap-3"
+                className="group cursor-pointer border-2 border-dashed border-[#E5E7EB] rounded-xl p-6 hover:border-[#095D40] hover:bg-white transition-all duration-200 aspect-[4/3] flex flex-col items-center justify-center gap-3"
               >
-                <div className="h-12 w-12 rounded-full bg-[#F5F5F7] flex items-center justify-center group-hover:bg-[#1A1D21] transition-all duration-200">
+                <div className="h-12 w-12 rounded-full bg-[#F3F4F6] flex items-center justify-center group-hover:bg-[#095D40] transition-all duration-200">
                   <Plus className="h-6 w-6 text-[#9CA3AF] group-hover:text-white transition-all duration-200" />
                 </div>
-                <span className="text-[14px] font-medium text-[#6B7280] group-hover:text-[#1A1D21] transition-all duration-200">
+                <span className="text-[14px] font-medium text-[#6B7280] group-hover:text-[#095D40] transition-all duration-200">
                   New Canvas
                 </span>
               </button>
@@ -292,10 +289,10 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
             </div>
           ) : (
             /* Empty State - No Workflows */
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-[#F5F5F7] flex items-center justify-center">
+            <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl shadow-sm border border-[#E5E7EB]">
+              <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-[#095D40] to-[#074030] flex items-center justify-center shadow-lg">
                 <svg
-                  className="h-10 w-10 text-[#9CA3AF]"
+                  className="h-12 w-12 text-white"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -303,24 +300,21 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={1.5}
+                    strokeWidth={2}
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
               </div>
-              <h2 className="text-[24px] font-bold text-[#1A1D21] mb-2">
+              <h2 className="text-[28px] font-bold text-[#1A1D21] mb-3">
                 Create your first canvas
               </h2>
-              <p className="text-[15px] text-[#6B7280] mb-6 max-w-md text-center">
+              <p className="text-[16px] text-[#6B7280] mb-8 max-w-lg text-center leading-relaxed">
                 Build AI-powered canvas with drag-and-drop nodes. Connect
                 YouTube videos, PDFs, images, and more.
               </p>
               <Button
                 onClick={handleNewFlow}
-                className="bg-[#095D40] text-white hover:bg-[#074030] transition-all duration-150 rounded-lg px-8 py-3 h-auto text-[15px] font-medium"
-                style={{
-                  boxShadow: "0 2px 8px rgba(9, 93, 64, 0.3)",
-                }}
+                className="bg-[#095D40] text-white hover:bg-[#074030] transition-all duration-200 rounded-xl px-8 py-4 h-auto text-[16px] font-semibold shadow-lg hover:shadow-xl"
               >
                 <Plus className="h-5 w-5 mr-2" />
                 Create New Canvas
@@ -330,22 +324,22 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
 
           {/* Empty Search Results */}
           {workflows.length > 0 && filteredFlows.length === 0 && (
-            <div className="text-center py-20">
+            <div className="text-center py-24 bg-white rounded-3xl shadow-sm border border-[#E5E7EB]">
               <div className="max-w-md mx-auto">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#F5F5F7] flex items-center justify-center">
-                  <Search className="h-8 w-8 text-[#9CA3AF]" />
+                <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-[#F3F4F6] flex items-center justify-center">
+                  <Search className="h-10 w-10 text-[#9CA3AF]" />
                 </div>
-                <h3 className="text-[18px] font-semibold text-[#1A1D21] mb-2">
+                <h3 className="text-[22px] font-bold text-[#1A1D21] mb-3">
                   No canvas found
                 </h3>
-                <p className="text-[14px] text-[#6B7280] mb-6">
+                <p className="text-[15px] text-[#6B7280] mb-6">
                   Try adjusting your search or create a new flow to get started
                 </p>
                 <Button
                   onClick={handleNewFlow}
-                  className="bg-[#095D40] text-white hover:bg-[#074030] transition-all duration-150 rounded-lg"
+                  className="bg-[#095D40] text-white hover:bg-[#074030] transition-all duration-200 rounded-xl px-6 py-3 h-auto font-semibold shadow-lg hover:shadow-xl"
                 >
-                  <Plus className="h-4 w-4 mr-1.5" />
+                  <Plus className="h-5 w-5 mr-2" />
                   Create New Canvas
                 </Button>
               </div>
