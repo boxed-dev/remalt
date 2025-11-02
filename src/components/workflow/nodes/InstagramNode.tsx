@@ -6,6 +6,7 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { InstagramNodeData } from '@/types/workflow';
+import { FloatingAIInstructions } from './FloatingAIInstructions';
 
 function extractPostCode(url: string): string | null {
   // If it's already just a code (alphanumeric, ~11 chars)
@@ -36,7 +37,7 @@ function formatNumber(num: number): string {
   return `${num}`;
 }
 
-export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNodeData>) => {
+export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<InstagramNodeData>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -304,14 +305,15 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
   };
 
   return (
-    <BaseNode
-      id={id}
-      type="instagram"
-      icon={<Instagram className="h-3.5 w-3.5 text-[#E4405F]" />}
-      iconBg="bg-[#E4405F]/10"
-      parentId={parentId}
-    >
-      <div className="w-[320px] space-y-3">
+    <>
+      <BaseNode
+        id={id}
+        type="instagram"
+        icon={<Instagram className="h-3.5 w-3.5 text-[#E4405F]" />}
+        iconBg="bg-[#E4405F]/10"
+        parentId={parentId}
+      >
+        <div className="w-[320px] space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -555,6 +557,22 @@ export const InstagramNode = memo(({ id, data, parentId }: NodeProps<InstagramNo
         </div>
       </div>
     </BaseNode>
+
+    {/* Floating AI Instructions - Only show when node is selected */}
+    {selected && (
+      <FloatingAIInstructions
+        value={data.aiInstructions}
+        onChange={(value) =>
+          updateNodeData(id, {
+            aiInstructions: value,
+          } as Partial<InstagramNodeData>)
+        }
+        nodeId={id}
+        nodeType="instagram"
+        placeholder="Add AI instructions for this Instagram post..."
+      />
+    )}
+    </>
   );
 });
 

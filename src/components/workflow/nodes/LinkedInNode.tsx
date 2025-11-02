@@ -6,6 +6,7 @@ import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { LinkedInNodeData } from '@/types/workflow';
+import { FloatingAIInstructions } from './FloatingAIInstructions';
 
 function extractPostId(url: string): string | null {
   // LinkedIn post URL patterns:
@@ -31,7 +32,7 @@ function formatNumber(num: number): string {
   return `${num}`;
 }
 
-export const LinkedInNode = memo(({ id, data, parentId }: NodeProps<LinkedInNodeData>) => {
+export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<LinkedInNodeData>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [isContentExpanded, setIsContentExpanded] = useState(false);
@@ -157,14 +158,15 @@ export const LinkedInNode = memo(({ id, data, parentId }: NodeProps<LinkedInNode
   }, [data.url, data.content, data.fetchStatus, fetchPostData]);
 
   return (
-    <BaseNode
-      id={id}
-      type="linkedin"
-      icon={<Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />}
-      iconBg="bg-[#0A66C2]/10"
-      parentId={parentId}
-    >
-      <div className="w-[420px] space-y-3">
+    <>
+      <BaseNode
+        id={id}
+        type="linkedin"
+        icon={<Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />}
+        iconBg="bg-[#0A66C2]/10"
+        parentId={parentId}
+      >
+        <div className="w-[420px] space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -324,6 +326,22 @@ export const LinkedInNode = memo(({ id, data, parentId }: NodeProps<LinkedInNode
         </div>
       </div>
     </BaseNode>
+
+    {/* Floating AI Instructions - Only show when node is selected */}
+    {selected && (
+      <FloatingAIInstructions
+        value={data.aiInstructions}
+        onChange={(value) =>
+          updateNodeData(id, {
+            aiInstructions: value,
+          } as Partial<LinkedInNodeData>)
+        }
+        nodeId={id}
+        nodeType="linkedin"
+        placeholder="Add AI instructions for this LinkedIn post..."
+      />
+    )}
+    </>
   );
 });
 

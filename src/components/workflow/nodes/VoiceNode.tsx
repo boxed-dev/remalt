@@ -6,11 +6,12 @@ import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { VoiceNodeData } from '@/types/workflow';
 import { recordingManager, type RecordingState } from '@/lib/recording-manager';
+import { FloatingAIInstructions } from './FloatingAIInstructions';
 
 // Global state to track which node is currently recording
 let currentRecordingNodeId: string | null = null;
 
-export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>) => {
+export const VoiceNode = memo(({ id, data, parentId, selected }: NodeProps<VoiceNodeData>) => {
   const [mode, setMode] = useState<'idle' | 'upload'>('idle');
   const [showTranscript, setShowTranscript] = useState(false);
   const [isRecordingThisNode, setIsRecordingThisNode] = useState(false);
@@ -346,7 +347,8 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
   const showRecordingUI = isRecordingThisNode && recordingState !== 'idle';
 
   return (
-    <BaseNode id={id} showTargetHandle={false} parentId={parentId}>
+    <>
+      <BaseNode id={id} showTargetHandle={false} parentId={parentId}>
       <div className="w-[320px] space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -633,6 +635,22 @@ export const VoiceNode = memo(({ id, data, parentId }: NodeProps<VoiceNodeData>)
         }
       `}</style>
     </BaseNode>
+
+    {/* Floating AI Instructions - Only show when node is selected */}
+    {selected && (
+      <FloatingAIInstructions
+        value={data.aiInstructions}
+        onChange={(value) =>
+          updateNodeData(id, {
+            aiInstructions: value,
+          } as Partial<VoiceNodeData>)
+        }
+        nodeId={id}
+        nodeType="voice"
+        placeholder="Add AI instructions for this voice recording..."
+      />
+    )}
+    </>
   );
 });
 
