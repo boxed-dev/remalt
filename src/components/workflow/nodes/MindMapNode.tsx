@@ -72,7 +72,7 @@ export const MindMapNode = memo(({ id, data, parentId, selected }: NodeProps<Min
             />
           </div>
         ) : (
-          <div onClick={() => setIsEditing(true)} className="cursor-pointer">
+          <div onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} className="cursor-pointer">
             <div className="text-[13px] font-medium text-[#1A1D21] mb-1">
               {data.concept || 'New Idea'}
             </div>

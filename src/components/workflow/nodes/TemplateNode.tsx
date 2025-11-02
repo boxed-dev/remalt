@@ -109,7 +109,7 @@ export const TemplateNode = memo(({ id, data, parentId, selected }: NodeProps<Te
             {templateOptions.map((type) => (
               <button
                 key={type}
-                onClick={() => handleSelectTemplate(type)}
+                onClick={(e) => { e.stopPropagation(); handleSelectTemplate(type); }}
                 className="w-full text-left px-3 py-2 text-[12px] hover:bg-[#F5F5F7] rounded transition"
               >
                 {templateLabels[type]}
@@ -119,7 +119,7 @@ export const TemplateNode = memo(({ id, data, parentId, selected }: NodeProps<Te
         ) : (
           <div className="space-y-3">
             <div
-              onClick={() => setIsSelecting(true)}
+              onClick={(e) => { e.stopPropagation(); setIsSelecting(true); }}
               className="px-3 py-2 bg-[#F5F5F7] rounded cursor-pointer hover:bg-[#EBEBEB] transition"
             >
               <div className="text-[12px] text-[#1A1D21]">{templateLabel}</div>
@@ -129,13 +129,15 @@ export const TemplateNode = memo(({ id, data, parentId, selected }: NodeProps<Te
             <textarea
               value={data.customPrompt || ''}
               onChange={handlePromptChange}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               placeholder="Optional: add extra instructions or tone preferences"
               className="w-full px-3 py-2 text-[11px] border border-[#E5E7EB] rounded focus:outline-none focus:border-[#10B981] resize-y min-h-[60px]"
             />
 
             <div className="flex items-center gap-2">
               <button
-                onClick={handleGenerate}
+                onClick={(e) => { e.stopPropagation(); handleGenerate(); }}
                 disabled={data.generationStatus === 'generating'}
                 className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#10B981] text-white text-[12px] font-medium py-2 hover:bg-[#0EA472] disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
@@ -147,7 +149,7 @@ export const TemplateNode = memo(({ id, data, parentId, selected }: NodeProps<Te
                 {data.generationStatus === 'generating' ? 'Generating…' : 'Generate'}
               </button>
               <button
-                onClick={handleGenerate}
+                onClick={(e) => { e.stopPropagation(); handleGenerate(); }}
                 disabled={data.generationStatus === 'generating'}
                 className="p-2 rounded-lg border border-[#E5E7EB] text-[#6B7280] hover:border-[#10B981] hover:text-[#10B981] transition"
                 title="Regenerate"

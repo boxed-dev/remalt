@@ -738,6 +738,8 @@ export const YouTubeNode = memo(
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={handleKeyDown}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             placeholder="Paste YouTube URL or channel..."
             className="w-full px-4 py-2.5 text-[14px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] transition-all"
             style={{
@@ -791,7 +793,7 @@ export const YouTubeNode = memo(
           </div>
         ) : (
           <div
-            onClick={() => setIsEditing(true)}
+            onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
             className="aspect-video rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] flex items-center justify-center cursor-pointer transition-transform duration-200 hover:-translate-y-0.5"
           >
             <div className="text-center">

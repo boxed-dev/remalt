@@ -406,6 +406,8 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onBlur={handleSave}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSave();
               if (e.key === 'Escape') { setUrl(data.url || ''); setIsEditing(false); }
@@ -417,7 +419,7 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
         ) : data.url ? (
           <div className="space-y-2">
             <div
-              onClick={() => setIsEditing(true)}
+              onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
               className="cursor-pointer rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2 hover:border-[#095D40]"
             >
               <div className="text-[12px] font-medium text-[#1A1D21] truncate" title={data.url}>{data.url}</div>
@@ -514,7 +516,7 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
           </div>
         ) : (
           <div
-            onClick={() => setIsEditing(true)}
+            onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
             className="cursor-pointer rounded-lg border border-dashed border-[#E5E7EB] p-4 text-center hover:border-[#095D40]"
           >
             <Globe className="h-8 w-8 text-[#9CA3AF] mx-auto mb-1" />
