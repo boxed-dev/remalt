@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import { NodeResizer, Handle, Position, useReactFlow } from "@xyflow/react";
+import { Pencil } from "lucide-react";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
 import type { GroupNodeData, WorkflowNode } from "@/types/workflow";
 
@@ -185,8 +186,8 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
       />
 
       {/* Header - Dark bar with title */}
-      <div className="bg-[#095D40] px-4 py-2.5 flex items-center justify-between rounded-t-2xl pointer-events-auto">
-        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+      <div className="bg-[#095D40] px-4 py-2.5 flex items-center rounded-t-2xl pointer-events-auto">
+        <div className="flex items-center gap-2">
           <div
             contentEditable={isEditingTitle}
             suppressContentEditableWarning
@@ -224,14 +225,18 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
                 e.currentTarget.blur();
               }
             }}
-            className={`text-[13px] font-semibold tracking-wide text-white truncate flex-1 min-w-0 outline-none ${
-              isEditingTitle ? "nodrag cursor-text" : ""
+            className={`text-[13px] font-semibold tracking-wide text-white text-left outline-none ${
+              isEditingTitle ? "nodrag cursor-text" : "cursor-pointer"
             }`}
             role="textbox"
             aria-label="Group name"
           >
             {data.title || "Group"}
           </div>
+          <Pencil 
+            className="w-3.5 h-3.5 text-white/60 hover:text-white/90 transition-colors flex-shrink-0" 
+            aria-hidden="true"
+          />
         </div>
       </div>
 

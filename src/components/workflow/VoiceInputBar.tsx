@@ -38,12 +38,13 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
     const [isActiveRecorder, setIsActiveRecorder] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-    // Audio visualization - store real frequency data for each bar
-    const [frequencyData, setFrequencyData] = useState<Uint8Array>(new Uint8Array(32));
+    // Audio visualization - store real frequency data for each bar (reduced to 16 for performance)
+    const [frequencyData, setFrequencyData] = useState<Uint8Array>(new Uint8Array(16));
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyzerRef = useRef<AnalyserNode | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const mediaStreamRef = useRef<MediaStream | null>(null);
+    const lastUpdateTimeRef = useRef<number>(0);
 
     // Track accumulated transcripts (don't show until confirmed)
     const accumulatedTranscriptRef = useRef<string[]>([]);
@@ -117,27 +118,35 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
       };
     }, [isActiveRecorder, onChange]);
 
-    // Audio visualization setup
+    // Audio visualization setup - optimized with throttling and reduced bars
     const startAudioVisualization = async (stream: MediaStream) => {
       try {
         mediaStreamRef.current = stream;
         audioContextRef.current = new AudioContext();
         const source = audioContextRef.current.createMediaStreamSource(stream);
         analyzerRef.current = audioContextRef.current.createAnalyser();
-        analyzerRef.current.fftSize = 128; // 128 FFT = 64 frequency bins
+        analyzerRef.current.fftSize = 64; // Reduced from 128 for better performance
         analyzerRef.current.smoothingTimeConstant = 0.7;
         source.connect(analyzerRef.current);
 
-        const updateFrequencyData = () => {
+        const updateFrequencyData = (timestamp: number) => {
           if (!analyzerRef.current) return;
 
-          // Get 64 frequency bins from the analyzer
+          // Throttle to ~30fps (33ms between updates) for better performance
+          const elapsed = timestamp - lastUpdateTimeRef.current;
+          if (elapsed < 33) {
+            animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
+            return;
+          }
+          lastUpdateTimeRef.current = timestamp;
+
+          // Get 32 frequency bins from the analyzer
           const dataArray = new Uint8Array(analyzerRef.current.frequencyBinCount);
           analyzerRef.current.getByteFrequencyData(dataArray);
 
-          // Take first 32 bins for visualization (covers most voice frequencies)
-          const displayData = new Uint8Array(32);
-          for (let i = 0; i < 32; i++) {
+          // Take first 16 bins for visualization (covers most voice frequencies)
+          const displayData = new Uint8Array(16);
+          for (let i = 0; i < 16; i++) {
             displayData[i] = dataArray[i];
           }
 
@@ -145,7 +154,7 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
           animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
         };
 
-        updateFrequencyData();
+        animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
       } catch (error) {
         console.error('Failed to setup audio visualization:', error);
       }
@@ -165,7 +174,8 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
         mediaStreamRef.current = null;
       }
       analyzerRef.current = null;
-      setFrequencyData(new Uint8Array(32)); // Reset to zeros
+      setFrequencyData(new Uint8Array(16)); // Reset to zeros (16 bars)
+      lastUpdateTimeRef.current = 0;
     };
 
     // Start recording
@@ -269,14 +279,15 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
 
     return (
       <div className="relative w-full">
-        {/* Main pill container */}
+        {/* Main pill container - Super minimal and clean */}
         <div
           className={cn(
-            'relative flex items-start gap-3 px-4 py-3 rounded-[28px] transition-all duration-300',
-            'bg-white border-2 border-[#E8ECEF]',
-            'shadow-sm hover:shadow-md',
-            'min-h-[56px]',
-            isRecording && 'border-[#095D40]/50 shadow-[0_0_0_3px_rgba(9,93,64,0.12)]',
+            'relative flex items-center gap-2 px-4 py-2 rounded-[20px] transition-all duration-200',
+            'bg-white border border-[#E5E7EB]',
+            'hover:border-[#D1D5DB]',
+            'min-h-[44px]',
+            'max-w-full',
+            isRecording && 'border-[#095D40]/40 bg-[#095D40]/[0.02]',
             disabled && 'opacity-50 cursor-not-allowed',
             className
           )}
@@ -287,10 +298,10 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
               type="button"
               onClick={onAddClick}
               disabled={disabled}
-              className="flex-shrink-0 p-1.5 rounded-full hover:bg-gray-100 transition-all duration-200 disabled:cursor-not-allowed group mt-1"
+              className="flex-shrink-0 p-1 rounded-full hover:bg-gray-100 transition-colors duration-200 disabled:cursor-not-allowed"
               title="Add attachment"
             >
-              <Plus className="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors" strokeWidth={2.5} />
+              <Plus className="h-4 w-4 text-gray-400 group-hover:text-gray-600" strokeWidth={2} />
             </button>
           )}
 
@@ -313,16 +324,15 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
               rows={1}
               className={cn(
                 'w-full bg-transparent border-none outline-none resize-none',
-                'text-[14px] text-[#1A1D21] placeholder:text-[#9CA3AF]',
-                'transition-all duration-300',
-                'leading-[1.5] py-2',
+                'text-[14px] text-[#111827] placeholder:text-[#9CA3AF]',
+                'leading-[1.5] py-0',
                 'overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent',
-                'max-h-[200px]',
+                'max-h-[160px]',
                 isRecording && 'opacity-40',
                 disabled && 'cursor-not-allowed'
               )}
               style={{
-                minHeight: '40px',
+                minHeight: '24px',
                 fieldSizing: 'content'
               }}
               {...props}
@@ -342,16 +352,14 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
             onClick={handleConfirmRecording}
             disabled={!isRecording || recordingState === 'processing'}
             className={cn(
-              'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
+              'flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center',
               'bg-[#095D40] hover:bg-[#074A32]',
-              'shadow-[0_0_8px_rgba(9,93,64,0.4)]',
               'transition-all duration-200',
-              'mt-1',
               isRecording ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
             )}
             title="Confirm and send"
           >
-            <Check className="h-4 w-4 text-white" strokeWidth={2.5} />
+            <Check className="h-3.5 w-3.5 text-white" strokeWidth={2} />
           </button>
 
           {/* Right: Mic/Send button (rightmost position) */}
@@ -366,20 +374,11 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
             }
             disabled={disabled || recordingState === 'processing'}
             className={cn(
-              'flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center',
+              'flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center',
               'transition-all duration-200',
-              'mt-1',
-              !isRecording && !value.trim() && 'hover:bg-[#095D40]/5 border border-[#E8ECEF]',
-              !isRecording && value.trim() && [
-                'bg-[#095D40] border-[#095D40]',
-                'hover:bg-[#074A32]',
-                'shadow-sm hover:shadow-md',
-              ],
-              isRecording && [
-                'bg-[#095D40] border-[#095D40]',
-                'shadow-[0_0_8px_rgba(9,93,64,0.4),0_0_16px_rgba(9,93,64,0.2)]',
-                'hover:shadow-[0_0_12px_rgba(9,93,64,0.5),0_0_20px_rgba(9,93,64,0.25)]',
-              ],
+              !isRecording && !value.trim() && 'hover:bg-gray-100',
+              !isRecording && value.trim() && 'bg-[#095D40] hover:bg-[#074A32]',
+              isRecording && 'bg-[#095D40] hover:bg-[#074A32]',
               disabled && 'cursor-not-allowed'
             )}
             title={
@@ -391,13 +390,13 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
             }
           >
             {recordingState === 'processing' ? (
-              <Loader2 className="h-4 w-4 text-[#095D40] animate-spin" strokeWidth={2.5} />
+              <Loader2 className="h-4 w-4 text-[#095D40] animate-spin" strokeWidth={2} />
             ) : isRecording ? (
-              <Mic className="h-4 w-4 text-white" strokeWidth={2.5} />
+              <Mic className="h-4 w-4 text-white" strokeWidth={2} />
             ) : value.trim() ? (
-              <Send className="h-4 w-4 text-white" strokeWidth={2.5} />
+              <Send className="h-4 w-4 text-white" strokeWidth={2} />
             ) : (
-              <Mic className="h-4 w-4 text-[#095D40]" strokeWidth={2.5} />
+              <Mic className="h-4 w-4 text-gray-500" strokeWidth={2} />
             )}
           </button>
         </div>
@@ -426,6 +425,7 @@ VoiceInputBar.displayName = 'VoiceInputBar';
 
 /**
  * Real-time waveform visualization synced with actual voice input
+ * Optimized with CSS transforms for better performance (16 bars, GPU-accelerated)
  */
 function Waveform({ frequencyData }: { frequencyData: Uint8Array }) {
   return (
@@ -435,21 +435,21 @@ function Waveform({ frequencyData }: { frequencyData: Uint8Array }) {
         const normalizedValue = value / 255; // 0-1 range
         const amplified = Math.min(normalizedValue * 2.5, 1); // 2.5x amplification
 
-        // Only show bars with minimum height if there's actual audio
-        // Otherwise hide them completely to avoid visual glitches
-        const heightPercent = amplified > 0.1 ? Math.max(30, amplified * 100) : 0;
+        // Scale Y transform instead of height for GPU-accelerated animation
+        const scaleY = amplified > 0.1 ? Math.max(0.3, amplified) : 0.2;
 
         // Opacity based on actual audio level
-        const opacity = amplified > 0.1 ? 0.6 + (amplified * 0.4) : 0;
+        const opacity = amplified > 0.1 ? 0.5 + (amplified * 0.4) : 0.3;
 
         return (
           <div
             key={i}
-            className="w-1 bg-[#095D40] rounded-full shadow-sm"
+            className="w-1 h-10 bg-[#095D40] rounded-full origin-center"
             style={{
-              height: `${heightPercent}%`,
+              transform: `scaleY(${scaleY})`,
               opacity: opacity,
-              transition: 'height 50ms ease-out, opacity 50ms ease-out',
+              transition: 'transform 50ms ease-out, opacity 50ms ease-out',
+              willChange: 'transform, opacity',
             }}
           />
         );

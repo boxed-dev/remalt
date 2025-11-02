@@ -240,38 +240,61 @@ export function NovelEditor({
           StarterKit.configure({
             heading: {
               levels: [1, 2, 3],
+              HTMLAttributes: {
+                class: 'font-bold leading-tight',
+              },
+            },
+            paragraph: {
+              HTMLAttributes: {
+                class: 'text-[13px] leading-relaxed mb-3 last:mb-0',
+              },
             },
             codeBlock: {
               HTMLAttributes: {
-                class: 'rounded-md bg-gray-100 p-4 font-mono text-sm',
+                class: 'rounded-lg bg-[#1e1e1e] text-gray-300 p-4 font-mono text-[12px] overflow-x-auto border border-gray-700 my-3',
               },
             },
             bulletList: {
               HTMLAttributes: {
-                class: 'list-disc pl-4',
+                class: 'list-disc ml-5 my-3 space-y-1 text-[13px]',
               },
             },
             orderedList: {
               HTMLAttributes: {
-                class: 'list-decimal pl-4',
+                class: 'list-decimal ml-5 my-3 space-y-1 text-[13px]',
+              },
+            },
+            listItem: {
+              HTMLAttributes: {
+                class: 'leading-relaxed text-[13px]',
               },
             },
             blockquote: {
               HTMLAttributes: {
-                class: 'border-l-4 border-gray-300 pl-4 italic',
+                class: 'border-l-4 border-[#E5E7EB] pl-4 italic text-[#6B7280] my-4',
+              },
+            },
+            horizontalRule: {
+              HTMLAttributes: {
+                class: 'my-6 border-t-2 border-[#E5E7EB]',
+              },
+            },
+            code: {
+              HTMLAttributes: {
+                class: 'px-1.5 py-0.5 rounded-md bg-[#F3F4F6] text-[#374151] text-[11px] font-mono',
               },
             },
           }),
           TiptapLink.configure({
             HTMLAttributes: {
-              class: 'text-[#095D40] underline underline-offset-2 hover:text-[#074030] cursor-pointer',
+              class: 'text-[#095D40] underline underline-offset-2 hover:text-[#074030] cursor-pointer text-[13px]',
             },
             openOnClick: false,
           }),
           TiptapImage.configure({
             allowBase64: true,
             HTMLAttributes: {
-              class: 'rounded-md max-w-full h-auto',
+              class: 'rounded-lg max-w-full h-auto my-4',
             },
           }),
           TaskList.configure({
@@ -296,7 +319,8 @@ export function NovelEditor({
         }}
         editorProps={{
           attributes: {
-            class: 'prose prose-sm max-w-none focus:outline-none min-h-[200px] px-4 py-3',
+            class: 'prose prose-sm max-w-none focus:outline-none min-h-[120px] px-4 py-3 text-[13px]',
+            style: 'line-height: 1.6;',
           },
         }}
         slotAfter={<div className="px-4 pb-3" />}

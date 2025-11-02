@@ -1284,38 +1284,6 @@ function WorkflowCanvasInner() {
     };
   }, [spacePressed]);
 
-  // Quick add menu with slash command
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "/" && !quickAddMenuOpen) {
-        const target = e.target;
-        if (
-          target instanceof HTMLInputElement ||
-          target instanceof HTMLTextAreaElement ||
-          (target instanceof HTMLElement && target.isContentEditable)
-        ) {
-          return;
-        }
-        e.preventDefault();
-
-        // Get cursor position
-        const wrapperBounds = reactFlowWrapper.current?.getBoundingClientRect();
-        if (wrapperBounds) {
-          setQuickAddMenuPosition({
-            x: wrapperBounds.left + wrapperBounds.width / 2,
-            y: wrapperBounds.top + wrapperBounds.height / 2,
-          });
-          setQuickAddMenuOpen(true);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [quickAddMenuOpen]);
-
   // ESC key to deactivate all nodes
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {

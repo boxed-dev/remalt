@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo, useLayoutEffect } from 'react';
 import { MessageSquare, Copy, Check, Maximize2, User, Plus, ChevronDown, Trash2 } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { SyntheticEvent, WheelEvent as ReactWheelEvent, ReactNode } from 'react';
@@ -8,6 +8,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { buildChatContext, getLinkedNodeIds } from '@/lib/workflow/context-builder';
@@ -51,8 +52,8 @@ const parseDimension = (value: number | string | undefined): number | undefined 
   return undefined;
 };
 
-// Code block component with syntax highlighting and copy button
-function CodeBlock({ inline, className, children }: { inline?: boolean; className?: string; children: ReactNode }) {
+// Code block component with syntax highlighting and copy button - Memoized for performance
+const CodeBlock = memo(({ inline, className, children }: { inline?: boolean; className?: string; children: ReactNode }) => {
   const [copied, setCopied] = useState(false);
   const match = /language-(\w+)/.exec(className || '');
   const language = match ? match[1] : '';
@@ -113,7 +114,150 @@ function CodeBlock({ inline, className, children }: { inline?: boolean; classNam
       </span>
     </span>
   );
-}
+});
+
+CodeBlock.displayName = 'CodeBlock';
+
+// Memoized message component for better performance with markdown rendering
+const MessageBubble = memo(({ 
+  message, 
+  isLoading, 
+  copiedMessageId, 
+  getUserDisplayName,
+  handleCopyMessage,
+  stopReactFlowPropagation 
+}: {
+  message: ChatMessage;
+  isLoading: boolean;
+  copiedMessageId: string | null;
+  getUserDisplayName: () => string;
+  handleCopyMessage: (messageId: string, content: string) => Promise<void>;
+  stopReactFlowPropagation: (event: SyntheticEvent) => void;
+}) => {
+  // Memoize markdown rendering based on message content
+  const markdownContent = useMemo(() => {
+    if (message.content === '' && isLoading) {
+      return (
+        <div className="flex items-center gap-2 py-2">
+          <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+          <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+          <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+        </div>
+      );
+    }
+
+    return (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={{
+          code: (props) => <CodeBlock {...props} />,
+          pre: ({ children }) => <>{children}</>,
+          p: ({ children }) => <p className="text-[13px] mb-3 last:mb-0 select-text" style={{ userSelect: 'text' }}>{children}</p>,
+          h1: ({ children }) => <h1 className="text-[18px] font-bold mb-4 mt-5 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h1>,
+          h2: ({ children }) => <h2 className="text-[16px] font-bold mb-3 mt-4 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h2>,
+          h3: ({ children }) => <h3 className="text-[15px] font-semibold mb-3 mt-4 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h3>,
+          ul: ({ children }) => <ul className="list-disc ml-5 mb-4 space-y-2 text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal ml-5 mb-4 space-y-2 text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</ol>,
+          li: ({ children }) => <li className="leading-[1.6] text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</li>,
+          strong: ({ children }) => <strong className="font-semibold text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</strong>,
+          em: ({ children }) => <em className="italic text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</em>,
+          a: ({ href, children }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[13px] text-primary hover:underline select-text"
+              style={{ userSelect: 'text' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {children}
+            </a>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 text-[13px] border-border bg-muted pl-4 py-3 my-4 italic rounded-r leading-[1.6] select-text" style={{ userSelect: 'text' }}>
+              {children}
+            </blockquote>
+          ),
+          table: ({ children }) => (
+            <div className="overflow-x-auto my-4 select-text" style={{ userSelect: 'text' }}>
+              <table className="min-w-full text-[13px] border-collapse">{children}</table>
+            </div>
+          ),
+          thead: ({ children }) => <thead className="bg-muted">{children}</thead>,
+          th: ({ children }) => <th className="border border-border px-3 py-2 text-left font-semibold text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</th>,
+          td: ({ children }) => <td className="border border-border px-3 py-2 text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</td>,
+          hr: () => <hr className="my-4 border-t border-border" />,
+        }}
+      >
+        {message.content}
+      </ReactMarkdown>
+    );
+  }, [message.content, isLoading]);
+
+  return (
+    <div className="group/message max-w-[85%] mb-1">
+      {/* Role indicator - more subtle */}
+      <div className="flex items-center gap-1.5 mb-1.5 ml-1">
+        {message.role === 'assistant' ? (
+          <>
+            <div className="w-1 h-1 bg-primary rounded-full"></div>
+            <span className="text-[10px] font-medium text-muted-foreground">AI</span>
+          </>
+        ) : (
+          <>
+            <User className="w-2.5 h-2.5 text-muted-foreground" />
+            <span className="text-[10px] font-medium text-muted-foreground">{getUserDisplayName()}</span>
+          </>
+        )}
+      </div>
+      
+      {/* Message bubble - borderless, modern design */}
+      <div className="relative">
+        <div
+          className={`nodrag px-4 py-3 rounded-2xl text-[13px] leading-[1.6] select-text cursor-text transition-colors ${
+            message.role === 'user'
+              ? 'bg-[#F3F4F6] text-[#111827]'
+              : 'bg-white text-[#111827]'
+          }`}
+          style={{ userSelect: 'text' }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <div className="prose prose-sm max-w-none select-text" style={{ userSelect: 'text' }}>
+            {markdownContent}
+          </div>
+        </div>
+
+        {/* Copy button - floating style */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCopyMessage(message.id, message.content);
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="absolute -bottom-2 right-2 flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-white text-gray-600 hover:text-primary border border-gray-200 rounded-full shadow-sm hover:shadow-md transition-all opacity-0 group-hover/message:opacity-100"
+          title="Copy message"
+        >
+          {copiedMessageId === message.id ? (
+            <>
+              <Check className="h-3 w-3 text-primary" />
+              <span className="text-primary">Copied</span>
+            </>
+          ) : (
+            <>
+              <Copy className="h-3 w-3" />
+              <span>Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+});
+
+MessageBubble.displayName = 'MessageBubble';
 
 export const ChatNode = memo(({
   id,
@@ -128,9 +272,7 @@ export const ChatNode = memo(({
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [, setIsMaximized] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>(data.model || 'google/gemini-2.5-flash');
-  const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const updateNode = useWorkflowStore((state) => state.updateNode);
@@ -190,6 +332,14 @@ export const ChatNode = memo(({
     if (!user) return 'You';
     return user.user_metadata?.full_name || user.email?.split('@')[0] || 'You';
   };
+
+  // Setup virtual scrolling for messages
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 120, // Estimated message height in pixels (reduced for less bulky design)
+    overscan: 5, // Render 5 extra items above/below viewport
+  });
 
   type NativeEventWithStop = Event & { stopImmediatePropagation?: () => void };
 
@@ -283,10 +433,6 @@ export const ChatNode = memo(({
     ? '!opacity-100'
     : 'group-hover:!opacity-100 group-focus-within:!opacity-100';
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   // Check if user is near bottom of scroll container
   const isNearBottom = () => {
     const container = scrollContainerRef.current;
@@ -299,12 +445,12 @@ export const ChatNode = memo(({
     setShouldAutoScroll(isNearBottom());
   };
 
-  // Auto-scroll when new messages arrive
-  useEffect(() => {
-    if (shouldAutoScroll) {
-      setTimeout(scrollToBottom, 50);
+  // Auto-scroll when new messages arrive - useLayoutEffect for synchronous updates
+  useLayoutEffect(() => {
+    if (shouldAutoScroll && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
-  }, [messages.length, shouldAutoScroll]);
+  }, [messages.length, shouldAutoScroll, messages]);
 
   // Update linked nodes when workflow changes
   useEffect(() => {
@@ -748,10 +894,10 @@ export const ChatNode = memo(({
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col bg-white">
             {/* Chat Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#095D40]/20">
-              <div className="flex items-center gap-3">
-                <MessageSquare className="h-5 w-5 text-[#095D40]" />
-                <h3 className="text-[14px] font-semibold text-[#095D40]">
+            <div className="flex items-center justify-between px-6 py-3.5 border-b border-border/50 bg-white">
+              <div className="flex items-center gap-2.5">
+                <MessageSquare className="h-4.5 w-4.5 text-primary" />
+                <h3 className="text-[13px] font-semibold text-gray-900">
                   {currentSession?.title || 'Chat'}
                 </h3>
               </div>
@@ -761,176 +907,81 @@ export const ChatNode = memo(({
                   setIsMaximized(true);
                 }}
                 onMouseDown={(e) => stopReactFlowPropagation(e)}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                 title="Maximize chat"
               >
-                <Maximize2 className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                <Maximize2 className="h-4 w-4 text-gray-500 hover:text-gray-700" />
               </button>
             </div>
 
-            {/* Messages Area */}
+            {/* Messages Area - Virtualized */}
             <div
               ref={scrollContainerRef}
               onScroll={handleScroll}
               onWheel={handleWheelEvent}
               onWheelCapture={handleWheelEvent}
               data-lenis-prevent
-              className="nodrag flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-card"
+              className="nodrag flex-1 overflow-y-auto px-6 py-6 bg-[#FAFAFA]"
               style={{ overscrollBehavior: 'contain', userSelect: 'text' }}
             >
               {messages.length > 0 ? (
-                messages.map((message) => (
-                  <div key={message.id} className="max-w-[90%]">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      {message.role === 'assistant' ? (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted border border-border">
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                          <span className="text-[10px] font-medium text-muted-foreground tracking-wide">AI</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted border border-border">
-                          <User className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-[10px] font-medium text-muted-foreground tracking-wide">{getUserDisplayName()}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div
-                      className={`group nodrag p-4 rounded-lg text-[13px] leading-[1.6] select-text cursor-text ${
-                        message.role === 'user'
-                          ? 'bg-muted text-foreground border border-border'
-                          : 'bg-card text-foreground border border-border'
-                      }`}
-                      style={{ userSelect: 'text' }}
-                      onMouseDown={(e) => {
-                        // Stop propagation to prevent ReactFlow from capturing drag events
-                        e.stopPropagation();
-                      }}
-                    >
-                      <div className="prose prose-sm max-w-none select-text" style={{ userSelect: 'text' }}>
-                        {message.content === '' && isLoading ? (
-                          <div className="flex items-center gap-2 py-2">
-                            <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                          </div>
-                        ) : (
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm, remarkMath]}
-                            rehypePlugins={[rehypeKatex]}
-                            components={{
-                              code: (props) => <CodeBlock {...props} />,
-                              pre: ({ children }) => <>{children}</>,
-                              p: ({ children }) => <p className="text-[13px] mb-3 last:mb-0 select-text" style={{ userSelect: 'text' }}>{children}</p>,
-                              h1: ({ children }) => <h1 className="text-[18px] font-bold mb-4 mt-5 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h1>,
-                              h2: ({ children }) => <h2 className="text-[16px] font-bold mb-3 mt-4 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h2>,
-                              h3: ({ children }) => <h3 className="text-[15px] font-semibold mb-3 mt-4 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h3>,
-                              ul: ({ children }) => <ul className="list-disc ml-5 mb-4 space-y-2 text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</ul>,
-                              ol: ({ children }) => <ol className="list-decimal ml-5 mb-4 space-y-2 text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</ol>,
-                              li: ({ children }) => <li className="leading-[1.6] text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</li>,
-                              strong: ({ children }) => <strong className="font-semibold text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</strong>,
-                              em: ({ children }) => <em className="italic text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</em>,
-                              a: ({ href, children }) => (
-                                <a
-                                  href={href}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[13px] text-primary hover:underline select-text"
-                                  style={{ userSelect: 'text' }}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {children}
-                                </a>
-                              ),
-                              blockquote: ({ children }) => (
-                                <blockquote className="border-l-4 text-[13px] border-border bg-muted pl-4 py-3 my-4 italic rounded-r leading-[1.6] select-text" style={{ userSelect: 'text' }}>
-                                  {children}
-                                </blockquote>
-                              ),
-                              table: ({ children }) => (
-                                <div className="overflow-x-auto my-4 select-text" style={{ userSelect: 'text' }}>
-                                  <table className="min-w-full text-[13px] border-collapse">{children}</table>
-                                </div>
-                              ),
-                              thead: ({ children }) => <thead className="bg-muted">{children}</thead>,
-                              th: ({ children }) => <th className="border border-border px-3 py-2 text-left font-semibold text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</th>,
-                              td: ({ children }) => <td className="border border-border px-3 py-2 text-[13px] select-text" style={{ userSelect: 'text' }}>{children}</td>,
-                              hr: () => <hr className="my-4 border-t border-border" />,
-                            }}
-                          >
-                            {message.content}
-                          </ReactMarkdown>
-                        )}
+                <div
+                  style={{
+                    height: `${virtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                >
+                  {virtualizer.getVirtualItems().map((virtualItem) => {
+                    const message = messages[virtualItem.index];
+                    return (
+                      <div
+                        key={message.id}
+                        data-index={virtualItem.index}
+                        ref={virtualizer.measureElement}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualItem.start}px)`,
+                        }}
+                        className="pb-6"
+                      >
+                        <MessageBubble
+                          message={message}
+                          isLoading={isLoading}
+                          copiedMessageId={copiedMessageId}
+                          getUserDisplayName={getUserDisplayName}
+                          handleCopyMessage={handleCopyMessage}
+                          stopReactFlowPropagation={stopReactFlowPropagation}
+                        />
                       </div>
-
-                      {/* Copy button */}
-                      <div className="flex justify-start mt-2 pt-2 border-t border-border">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopyMessage(message.id, message.content);
-                          }}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-all opacity-0 group-hover:opacity-100"
-                          title="Copy message"
-                        >
-                          {copiedMessageId === message.id ? (
-                            <>
-                              <Check className="h-3.5 w-3.5 text-primary" />
-                              <span className="font-medium text-primary">Copied!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-3.5 w-3.5" />
-                              <span>Copy</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
+                    );
+                  })}
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center">
-                  <MessageSquare className="h-16 w-16 text-border mb-4" />
-                  <p className="text-[13px] text-muted-foreground">Start a conversation</p>
+                  <MessageSquare className="h-12 w-12 text-gray-300 mb-3" />
+                  <p className="text-[13px] text-gray-500">Start a conversation</p>
                 </div>
               )}
-              <div ref={messagesEndRef} />
             </div>
 
             {/* Input Area */}
-            <div className="nodrag px-6 py-4 border-t border-[#095D40]/20 bg-[#095D40]/5">
-              <div className="flex items-center gap-3 mb-3">
+            <div className="nodrag px-6 py-4 border-t border-border/50 bg-white">
+              <div className="flex items-center gap-3 mb-2.5">
                 {/* Model Selector with Provider Branding */}
-                <button
-                  onClick={(e) => {
-                    stopReactFlowPropagation(e);
-                    setModelDialogOpen(true);
-                  }}
+                <div
+                  onClick={(e) => stopReactFlowPropagation(e)}
                   onMouseDown={(e) => stopReactFlowPropagation(e)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-white border border-[#095D40]/20 hover:border-[#095D40]/50 transition-colors text-[11px] font-medium cursor-pointer"
+                  onPointerDown={(e) => stopReactFlowPropagation(e)}
                 >
-                  {(() => {
-                    const providerId = getProviderForModel(selectedModel);
-                    const provider = getProviderInfo(providerId);
-                    const ProviderIcon = provider ? PROVIDER_ICONS[provider.iconName] : null;
-
-                    return (
-                      <>
-                        {ProviderIcon && (
-                          <ProviderIcon
-                            className="w-3.5 h-3.5"
-                            style={{ color: provider?.colors.primary }}
-                          />
-                        )}
-                        <span className="text-[#095D40]">
-                          {getModelDisplayName(selectedModel)}
-                        </span>
-                        <ChevronDown className="w-3 h-3 text-[#095D40]/60" />
-                      </>
-                    );
-                  })()}
-                </button>
+                  <ModelSelectionDialog
+                    currentModel={selectedModel}
+                    onSelectModel={handleModelChange}
+                  />
+                </div>
               </div>
 
               <div onMouseDown={(e) => stopReactFlowPropagation(e)}>
@@ -949,14 +1000,6 @@ export const ChatNode = memo(({
           </div>
         </div>
       </BaseNode>
-
-      {/* Model Selection Dialog */}
-      <ModelSelectionDialog
-        open={modelDialogOpen}
-        onOpenChange={setModelDialogOpen}
-        currentModel={selectedModel}
-        onSelectModel={handleModelChange}
-      />
     </div>
   );
 });
