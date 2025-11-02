@@ -799,7 +799,9 @@ export const ChatNode = memo(({
         style={{ width: '100%', height: '100%' }}
       >
         <div
-          className="flex h-full w-full border-2 border-[#095D40]/20 rounded-2xl overflow-hidden bg-white shadow-sm"
+          className={`flex h-full w-full border-2 rounded-2xl overflow-hidden bg-white shadow-sm transition-all ${
+            isActive ? 'border-[#095D40] ring-2 ring-[#095D40] ring-offset-2' : 'border-[#095D40]/20'
+          }`}
           onWheel={handleWheelEvent}
           onWheelCapture={handleWheelEvent}
         >
