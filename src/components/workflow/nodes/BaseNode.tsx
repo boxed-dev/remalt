@@ -133,7 +133,9 @@ export function BaseNode({
         allowOverflow ? 'relative' : 'overflow-hidden relative'
       } ${
         className || 'border-2 border-[#E8ECEF] hover:border-[#D1D5DB] shadow-md hover:shadow-xl'
-      } ${isConnectTarget ? 'flowy-magnetic-node' : ''} ${isPreviewTarget ? 'flowy-preview-node' : ''}`}
+      } ${isConnectTarget ? 'flowy-magnetic-node' : ''} ${isPreviewTarget ? 'flowy-preview-node' : ''} ${
+        isActive ? 'ring-2 ring-[#095D40] ring-offset-2 !border-[#095D40]' : ''
+      }`}
       style={style}
     >
       {/* Activation overlay for inactive nodes - blocks interaction until activated */}

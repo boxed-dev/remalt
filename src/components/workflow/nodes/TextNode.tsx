@@ -27,6 +27,9 @@ export const TextNode = memo(({
 }: NodeProps<TextNodeData>) => {
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const updateNode = useWorkflowStore((state) => state.updateNode);
+  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
+  const setActiveNode = useWorkflowStore((state) => state.setActiveNode);
+  const isActive = activeNodeId === id;
   const [wordCount, setWordCount] = useState(data.wordCount || 0);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -69,6 +72,12 @@ export const TextNode = memo(({
     setTimeout(() => setIsResizing(false), 50);
   }, []);
 
+  const handleActivationClick = useCallback(() => {
+    if (!isActive) {
+      setActiveNode(id);
+    }
+  }, [id, isActive, setActiveNode]);
+
   // Calculate actual dimensions with fallbacks
   const width = (typeof nodeWidth === 'number' ? nodeWidth : undefined) || 
                 (nodeStyle as any)?.width || 
@@ -80,11 +89,12 @@ export const TextNode = memo(({
   return (
     <div className="relative">
       <div
+        onClick={handleActivationClick}
         className={`
           rounded-2xl bg-white border-2 border-[#E8ECEF] hover:border-[#D1D5DB]
           shadow-md hover:shadow-xl relative group
           ${isResizing ? 'resizing !transition-none' : 'transition-all duration-200'}
-          ${selected ? 'ring-2 ring-[#095D40] ring-offset-2' : ''}
+          ${selected || isActive ? 'ring-2 ring-[#095D40] ring-offset-2 !border-[#095D40]' : ''}
         `}
         style={{
           width: typeof width === 'number' ? `${width}px` : width,
