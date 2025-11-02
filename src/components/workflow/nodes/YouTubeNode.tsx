@@ -64,7 +64,7 @@ function formatDuration(isoDuration: string): string {
 }
 
 export const YouTubeNode = memo(
-  ({ id, data, parentId }: NodeProps<YouTubeNodeData>) => {
+  ({ id, data, parentId, selected }: NodeProps<YouTubeNodeData>) => {
     const [isEditing, setIsEditing] = useState(false);
     const [url, setUrl] = useState(data.url || "");
     const [expandedVideos, setExpandedVideos] = useState(false);
@@ -825,17 +825,19 @@ export const YouTubeNode = memo(
           {isChannel ? renderChannelView() : renderVideoView()}
         </BaseNode>
 
-        {/* Floating AI Instructions */}
-        <FloatingAIInstructions
-          value={data.aiInstructions}
-          onChange={(value) =>
-            updateNodeData(id, {
-              aiInstructions: value,
-            } as Partial<YouTubeNodeData>)
-          }
-          nodeId={id}
-          nodeType="youtube"
-        />
+        {/* Floating AI Instructions - Only show when node is selected */}
+        {selected && (
+          <FloatingAIInstructions
+            value={data.aiInstructions}
+            onChange={(value) =>
+              updateNodeData(id, {
+                aiInstructions: value,
+              } as Partial<YouTubeNodeData>)
+            }
+            nodeId={id}
+            nodeType="youtube"
+          />
+        )}
       </div>
     );
   }

@@ -63,7 +63,7 @@ function setCachedEntry<T>(cache: Map<string, CacheRecord<T>>, key: string, data
   cache.set(key, { data, fetchedAt: Date.now() });
 }
 
-export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeData>) => {
+export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<WebpageNodeData>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [showSummary, setShowSummary] = useState(false);
@@ -524,13 +524,15 @@ export const WebpageNode = memo(({ id, data, parentId }: NodeProps<WebpageNodeDa
         </div>
       </BaseNode>
 
-      {/* Floating AI Instructions */}
-      <FloatingAIInstructions
-        value={data.aiInstructions}
-        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<WebpageNodeData>)}
-        nodeId={id}
-        nodeType="webpage"
-      />
+      {/* Floating AI Instructions - Only show when node is selected */}
+      {selected && (
+        <FloatingAIInstructions
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<WebpageNodeData>)}
+          nodeId={id}
+          nodeType="webpage"
+        />
+      )}
     </div>
   );
 });

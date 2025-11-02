@@ -144,7 +144,20 @@ export const TextNode = memo(({
 
         {/* Novel Editor - Notion-style inline markdown */}
         <div
-          className="flex-1 min-h-0 mx-5 mb-5 border border-[#E5E7EB] rounded-lg overflow-hidden bg-white"
+          className="flex-1 min-h-0 mx-5 mb-5 border border-[#E5E7EB] rounded-lg overflow-hidden bg-white cursor-text"
+          onMouseDown={(e) => {
+            // Stop propagation to prevent ReactFlow from interfering
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            // Stop propagation and focus the editor
+            e.stopPropagation();
+            // Find the editor element and focus it
+            const editorElement = e.currentTarget.querySelector('[contenteditable="true"]') as HTMLElement;
+            if (editorElement) {
+              editorElement.focus();
+            }
+          }}
           style={{
             // Prevent content from shifting during resize
             contain: 'layout style paint',
@@ -161,15 +174,17 @@ export const TextNode = memo(({
       </div>
       </div>
 
-      {/* Floating AI Instructions */}
-      <FloatingAIInstructions
-        value={data.aiInstructions}
-        onChange={(value) =>
-          updateNodeData(id, { aiInstructions: value } as Partial<TextNodeData>)
-        }
-        nodeId={id}
-        nodeType="text"
-      />
+      {/* Floating AI Instructions - Only show when node is selected */}
+      {selected && (
+        <FloatingAIInstructions
+          value={data.aiInstructions}
+          onChange={(value) =>
+            updateNodeData(id, { aiInstructions: value } as Partial<TextNodeData>)
+          }
+          nodeId={id}
+          nodeType="text"
+        />
+      )}
     </div>
   );
 });

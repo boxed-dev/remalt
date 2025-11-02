@@ -24,7 +24,7 @@ const templateOptions: Array<TemplateNodeData['templateType']> = [
   'custom',
 ];
 
-export const TemplateNode = memo(({ id, data, parentId }: NodeProps<TemplateNodeData>) => {
+export const TemplateNode = memo(({ id, data, parentId, selected }: NodeProps<TemplateNodeData>) => {
   const [isSelecting, setIsSelecting] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
@@ -181,13 +181,15 @@ export const TemplateNode = memo(({ id, data, parentId }: NodeProps<TemplateNode
         </div>
       </BaseNode>
 
-      {/* Floating AI Instructions */}
-      <FloatingAIInstructions
-        value={data.aiInstructions}
-        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<TemplateNodeData>)}
-        nodeId={id}
-        nodeType="template"
-      />
+      {/* Floating AI Instructions - Only show when node is selected */}
+      {selected && (
+        <FloatingAIInstructions
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<TemplateNodeData>)}
+          nodeId={id}
+          nodeType="template"
+        />
+      )}
     </div>
   );
 });

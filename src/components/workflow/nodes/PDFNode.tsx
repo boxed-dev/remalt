@@ -8,7 +8,7 @@ import { FloatingAIInstructions } from './FloatingAIInstructions';
 import type { NodeProps } from '@xyflow/react';
 import type { PDFNodeData } from '@/types/workflow';
 
-export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => {
+export const PDFNode = memo(({ id, data, parentId, selected }: NodeProps<PDFNodeData>) => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
 
@@ -344,13 +344,15 @@ export const PDFNode = memo(({ id, data, parentId }: NodeProps<PDFNodeData>) => 
         </div>
       </BaseNode>
 
-      {/* Floating AI Instructions */}
-      <FloatingAIInstructions
-        value={data.aiInstructions}
-        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<PDFNodeData>)}
-        nodeId={id}
-        nodeType="pdf"
-      />
+      {/* Floating AI Instructions - Only show when node is selected */}
+      {selected && (
+        <FloatingAIInstructions
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<PDFNodeData>)}
+          nodeId={id}
+          nodeType="pdf"
+        />
+      )}
     </div>
   );
 });

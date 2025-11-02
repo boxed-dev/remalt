@@ -8,7 +8,7 @@ import type { MindMapNodeData } from '@/types/workflow';
 import { FloatingAIInstructions } from './FloatingAIInstructions';
 import { VoiceInput, VoiceTextarea } from '../VoiceInput';
 
-export const MindMapNode = memo(({ id, data, parentId }: NodeProps<MindMapNodeData>) => {
+export const MindMapNode = memo(({ id, data, parentId, selected }: NodeProps<MindMapNodeData>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [concept, setConcept] = useState(data.concept || '');
   const [notes, setNotes] = useState(data.notes || '');
@@ -93,13 +93,15 @@ export const MindMapNode = memo(({ id, data, parentId }: NodeProps<MindMapNodeDa
         </div>
       </BaseNode>
 
-      {/* Floating AI Instructions */}
-      <FloatingAIInstructions
-        value={data.aiInstructions}
-        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<MindMapNodeData>)}
-        nodeId={id}
-        nodeType="mindmap"
-      />
+      {/* Floating AI Instructions - Only show when node is selected */}
+      {selected && (
+        <FloatingAIInstructions
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<MindMapNodeData>)}
+          nodeId={id}
+          nodeType="mindmap"
+        />
+      )}
     </div>
   );
 });

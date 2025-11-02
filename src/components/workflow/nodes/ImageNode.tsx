@@ -9,7 +9,7 @@ import type { NodeProps } from '@xyflow/react';
 import type { ImageNodeData } from '@/types/workflow';
 import { FloatingAIInstructions } from './FloatingAIInstructions';
 
-export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>) => {
+export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<ImageNodeData>) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -298,13 +298,15 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
         </div>
       </BaseNode>
 
-      {/* Floating AI Instructions */}
-      <FloatingAIInstructions
-        value={data.aiInstructions}
-        onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ImageNodeData>)}
-        nodeId={id}
-        nodeType="image"
-      />
+      {/* Floating AI Instructions - Only show when node is selected */}
+      {selected && (
+        <FloatingAIInstructions
+          value={data.aiInstructions}
+          onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ImageNodeData>)}
+          nodeId={id}
+          nodeType="image"
+        />
+      )}
     </div>
   );
 });
