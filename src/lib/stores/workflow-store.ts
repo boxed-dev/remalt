@@ -233,7 +233,8 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
         ...baseData,
         messages: [],
         linkedNodes: [],
-        model: "gemini-flash-latest",
+        model: "google/gemini-2.5-flash", // New default model format
+        provider: "gemini", // Default provider
         contextWindow: [],
       } as NodeData;
     case "connector":

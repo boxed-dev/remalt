@@ -4,6 +4,8 @@ import * as Sentry from '@sentry/nextjs';
 import type { Span } from '@sentry/types';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
 import { recordAIMetadata, summarizeTextLengths } from '@/lib/sentry/ai';
+import { createOpenRouterClient, isOpenRouterConfigured } from '@/lib/api/openrouter-client';
+import { normalizeLegacyModel } from '@/lib/models/model-registry';
 
 async function postHandler(req: NextRequest) {
   // Require authentication
@@ -21,7 +23,7 @@ async function postHandler(req: NextRequest) {
     }
     if (data) {
       for (const [key, value] of Object.entries(data)) {
-        operationSpan.setData(key, value);
+        operationSpan.setAttribute(key, value);
       }
     }
     operationSpan.setStatus(status);
@@ -32,6 +34,8 @@ async function postHandler(req: NextRequest) {
   try {
     const {
       messages,
+      model: requestModel,
+      provider: requestProvider,
       textContext,
       youtubeTranscripts,
       voiceTranscripts,
@@ -43,6 +47,11 @@ async function postHandler(req: NextRequest) {
       mindMaps,
       templates
     } = await req.json();
+
+    // Normalize and determine model/provider
+    const rawModel = requestModel || 'google/gemini-2.5-flash';
+    const model = normalizeLegacyModel(rawModel);
+    const provider = requestProvider || (model.includes('/') ? 'openrouter' : 'gemini');
 
     const metadataCounts = {
       messageCount: messages?.length ?? 0,
@@ -64,41 +73,60 @@ async function postHandler(req: NextRequest) {
       messagePayloadBytes: Buffer.byteLength(JSON.stringify(messages ?? [])),
     });
 
-    // Validate API key
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: 'GEMINI_API_KEY is not configured' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
+    // Validate API keys based on provider
+    if (provider === 'openrouter') {
+      if (!isOpenRouterConfigured()) {
+        return new Response(
+          JSON.stringify({ error: 'OPENROUTER_API_KEY is not configured. Please set it in your environment variables.' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return new Response(
+          JSON.stringify({ error: 'GEMINI_API_KEY is not configured' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     operationSpan = Sentry.startInactiveSpan({
       name: 'ai.chat.generate',
       op: 'ai.chat',
       attributes: {
-        model: 'gemini-flash-latest',
+        model,
+        provider,
         userId: user.id,
         ...metadataCounts,
       },
     });
 
-    // Initialize Gemini
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-flash-latest',
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2048,
-      },
-    });
+    // Initialize AI client based on provider
+    let geminiModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
+    let openrouterClient: ReturnType<typeof createOpenRouterClient> | null = null;
+
+    if (provider === 'openrouter') {
+      openrouterClient = createOpenRouterClient();
+    } else {
+      const apiKey = process.env.GEMINI_API_KEY!;
+      const genAI = new GoogleGenerativeAI(apiKey);
+
+      // Map google/ models to Gemini format
+      const geminiModelName = model.startsWith('google/')
+        ? model.replace('google/', '').replace('2.5', '2-5').replace('2.0', '2-0')
+        : 'gemini-2-5-flash';
+
+      geminiModel = genAI.getGenerativeModel({
+        model: geminiModelName,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+        },
+      });
+    }
 
     // Build the context from linked nodes
-    const contextSpan = operationSpan?.startChild({
-      name: 'Build aggregated context',
-      op: 'ai.context',
-    });
-
     let systemContext = '';
 
     // Add text context
@@ -455,8 +483,7 @@ async function postHandler(req: NextRequest) {
 
 
     // Get the latest user message
-    contextSpan?.setData('context_characters', systemContext.length);
-    contextSpan?.end();
+    operationSpan?.setAttribute('context_characters', systemContext.length);
 
     summarizeTextLengths('ai_context', [
       { id: 'system', length: systemContext.length },
@@ -935,9 +962,9 @@ END OF PROMPT
 User: ${latestMessage.content}`;
     }
 
-    operationSpan?.setData('prompt_characters', prompt.length);
-    operationSpan?.setData('context_counts', metadataCounts);
-    operationSpan?.setData('message_payload_bytes', Buffer.byteLength(JSON.stringify(messages ?? [])));
+    operationSpan?.setAttribute('prompt_characters', prompt.length);
+    operationSpan?.setAttribute('context_counts', JSON.stringify(metadataCounts));
+    operationSpan?.setAttribute('message_payload_bytes', Buffer.byteLength(JSON.stringify(messages ?? [])));
 
     console.log('\n=== Chat Request ===');
     console.log('User ID:', user.id);
@@ -955,11 +982,9 @@ User: ${latestMessage.content}`;
     console.log('===================\n');
 
     // Use streaming for faster perceived performance
-    const result = await model.generateContentStream(prompt);
+    operationSpan?.setAttribute('response_mode', 'sse');
 
-    operationSpan?.setData('response_mode', 'sse');
-
-    // Create a readable stream
+    // Create a readable stream with provider-specific handling
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
@@ -967,14 +992,40 @@ User: ${latestMessage.content}`;
           let fullText = '';
           let chunkCount = 0;
 
-          for await (const chunk of result.stream) {
-            const chunkText = chunk.text();
-            fullText += chunkText;
-            chunkCount += 1;
+          if (provider === 'openrouter' && openrouterClient) {
+            // OpenRouter streaming using OpenAI SDK
+            const completion = await openrouterClient.chat.completions.create({
+              model,
+              messages: [{ role: 'user', content: prompt }],
+              stream: true,
+              temperature: 0.7,
+              max_tokens: 2048,
+            });
 
-            // Send each chunk as JSON
-            const data = JSON.stringify({ content: chunkText, done: false });
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            for await (const chunk of completion) {
+              const chunkText = chunk.choices[0]?.delta?.content || '';
+              if (chunkText) {
+                fullText += chunkText;
+                chunkCount += 1;
+
+                // Send each chunk as JSON
+                const data = JSON.stringify({ content: chunkText, done: false });
+                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              }
+            }
+          } else if (geminiModel) {
+            // Gemini streaming
+            const result = await geminiModel.generateContentStream(prompt);
+
+            for await (const chunk of result.stream) {
+              const chunkText = chunk.text();
+              fullText += chunkText;
+              chunkCount += 1;
+
+              // Send each chunk as JSON
+              const data = JSON.stringify({ content: chunkText, done: false });
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            }
           }
 
           // Send final message

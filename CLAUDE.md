@@ -35,7 +35,8 @@ pnpm lint
 - **Workflow Canvas**: @xyflow/react v12
 - **Authentication**: Supabase Auth with SSR support (Email + Google OAuth)
 - **Database**: Supabase PostgreSQL with Row Level Security
-- **AI Services**: Google Generative AI (Gemini 2.5 Flash/Pro), Deepgram SDK
+- **AI Services**: Multi-LLM support via OpenRouter (OpenAI GPT-5/4.1, Google Gemini 2.5, Anthropic Claude 3.5, DeepSeek V3.2), Direct Gemini integration, Deepgram SDK
+- **AI Provider Icons**: @lobehub/icons for official provider branding
 - **Media Storage**: Supabase Storage for permanent file storage
 - **Layout**: ELK.js for automatic graph layout
 
@@ -44,7 +45,7 @@ pnpm lint
 src/
 ├── app/
 │   ├── api/                    # API route handlers
-│   │   ├── chat/               # Gemini AI streaming chat
+│   │   ├── chat/               # Multi-LLM streaming chat (Gemini + OpenRouter)
 │   │   ├── transcribe/         # YouTube transcription
 │   │   ├── voice/transcribe/   # Deepgram voice transcription
 │   │   ├── image/analyze/      # Gemini Vision image analysis
@@ -92,12 +93,21 @@ src/
 # Required
 NEXT_PUBLIC_SUPABASE_URL=           # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=      # Supabase anonymous key
-GEMINI_API_KEY=                     # Google Gemini API key
 
-# Optional
+# AI Model Providers (at least one required)
+GEMINI_API_KEY=                     # Google Gemini API key (for direct Gemini access)
+OPENROUTER_API_KEY=                 # OpenRouter API key (for OpenAI, Anthropic, DeepSeek, etc.)
+
+# OpenRouter Optional (for usage tracking)
+NEXT_PUBLIC_SITE_URL=               # Your site URL for OpenRouter dashboard
+NEXT_PUBLIC_APP_NAME=               # Your app name for OpenRouter dashboard
+
+# Media Processing (Optional)
 DEEPGRAM_API_KEY=                   # Voice transcription
 SUPADATA_API_KEY=                   # YouTube transcription via Supadata API
 APIFY_API_TOKEN=                    # Apify API token (Instagram + LinkedIn nodes)
+
+# Web Scraping & Screenshots (Optional)
 JINA_API_KEY=                       # Web scraping (20 RPM free, 200 RPM with key)
 SCREENSHOTONE_API_KEY=              # Screenshot provider (Priority 1)
 APIFLASH_API_KEY=                   # Screenshot provider (Priority 2)
@@ -194,12 +204,49 @@ RLS policies enforce:
 - Public workflows visible to all (via `metadata->>'isPublic'`)
 - Profile trigger creates profile row on user signup
 
+## Multi-LLM Support
+
+### Overview
+Remalt supports multiple AI providers through a unified chat interface:
+- **Direct Integration**: Google Gemini (via `@google/generative-ai`)
+- **OpenRouter Integration**: OpenAI, Anthropic Claude, DeepSeek, and 300+ models
+
+### Model Registry
+All available models are defined in [model-registry.ts](src/lib/models/model-registry.ts):
+- **Provider branding**: Official icons and colors from @lobehub/icons
+- **Model metadata**: Context windows, pricing, capabilities, categories
+- **15+ models**: GPT-5, GPT-4.1, Gemini 2.5 Pro/Flash, Claude 3.5 Sonnet, DeepSeek V3.2, etc.
+
+### Model Selection
+Chat nodes feature a branded model selector dialog:
+- Provider grouping with official icons and colors
+- Searchable/filterable model list
+- Model cards showing context window, pricing, and capabilities
+- Recommended badges for flagship models
+
+### Provider Routing
+The chat API ([chat/route.ts](src/app/api/chat/route.ts)) automatically routes requests:
+```typescript
+if (provider === 'openrouter') {
+  // OpenRouter client (OpenAI SDK with custom baseURL)
+  // Supports: OpenAI, Anthropic, DeepSeek, Meta, etc.
+} else {
+  // Direct Gemini client
+  // Optimized for Google models
+}
+```
+
+### Backward Compatibility
+- Existing workflows with `'gemini-flash-latest'` automatically migrate to `'google/gemini-2.5-flash'`
+- Legacy model mapping in [model-registry.ts](src/lib/models/model-registry.ts)
+- Default provider: Gemini (for users without OpenRouter key)
+
 ## API Routes
 
 ### `/api/chat` (POST)
-Streaming AI chat endpoint using Gemini 2.5 Flash:
+Multi-LLM streaming chat endpoint with provider routing:
 - **Authentication**: Required
-- Accepts: `messages`, context from all 13 node types
+- Accepts: `messages`, `model`, `provider`, context from all 13 node types
 - Returns: Server-sent events (SSE) stream with incremental responses
 - Context builder assembles data from connected nodes
 

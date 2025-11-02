@@ -230,7 +230,6 @@
     font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
   }
 
-
   /* Glass morphism effect */
   .glass {
     backdrop-filter: blur(20px);
@@ -455,6 +454,15 @@
   /* Ensure group nodes don't get styling */
   .react-flow__node-group.selected > div {
     box-shadow: none !important;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
 

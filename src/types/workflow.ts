@@ -320,10 +320,20 @@ export interface ChatNodeData extends BaseNodeData {
   messages: ChatMessage[];
   linkedNodes: string[];
   systemPrompt?: string;
-  model: 'gemini-flash-latest';
+  model: string; // Dynamic model support (e.g., 'google/gemini-2.5-flash', 'openai/gpt-4.1')
+  provider?: 'gemini' | 'openrouter'; // Provider routing
   temperature?: number;
   maxTokens?: number;
   contextWindow: unknown[];
+
+  // Model metadata for display and tracking
+  modelMetadata?: {
+    contextWindow?: number;
+    pricing?: {
+      input: number;
+      output: number;
+    };
+  };
 
   // New multi-chat session support
   sessions?: ChatSession[];
@@ -336,7 +346,8 @@ export interface ChatSession {
   messages: ChatMessage[];
   createdAt: string;
   updatedAt: string;
-  model: 'gemini-flash-latest';
+  model: string; // Dynamic model support
+  provider?: 'gemini' | 'openrouter'; // Provider routing
 }
 
 export interface ChatMessage {

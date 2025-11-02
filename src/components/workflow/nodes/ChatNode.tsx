@@ -16,6 +16,9 @@ import type { ChatNodeData, ChatMessage, ChatSession, NodeStyle } from '@/types/
 import { NodeResizer, type NodeProps } from '@xyflow/react';
 import type { OnResize, OnResizeEnd } from '@xyflow/system';
 import { VoiceInputBar } from '../VoiceInputBar';
+import { ModelSelectionDialog } from '../ModelSelectionDialog';
+import { getModelDisplayName, getProviderForModel, getProviderInfo, PROVIDERS } from '@/lib/models/model-registry';
+import { OpenAI, Gemini, Anthropic, DeepSeek } from '@lobehub/icons';
 import 'katex/dist/katex.min.css';
 
 type ChatNodeProps = NodeProps<ChatNodeData>;
@@ -26,10 +29,14 @@ const CHAT_NODE_MIN_WIDTH = 760;
 const CHAT_NODE_MIN_HEIGHT = 520;
 const CHAT_NODE_MAX_WIDTH = 2000;
 const CHAT_NODE_MAX_HEIGHT = 1600;
-const CHAT_MODELS = [
-  'gemini-flash-latest',
-] as const;
-type SupportedChatModel = typeof CHAT_MODELS[number];
+
+// Provider icon mapping
+const PROVIDER_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+  OpenAI: OpenAI,
+  Google: Gemini,
+  Anthropic: Anthropic,
+  DeepSeek: DeepSeek,
+};
 
 const parseDimension = (value: number | string | undefined): number | undefined => {
   if (typeof value === 'number') {
@@ -120,7 +127,8 @@ export const ChatNode = memo(({
   const [isLoading, setIsLoading] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [, setIsMaximized] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<SupportedChatModel>('gemini-flash-latest');
+  const [selectedModel, setSelectedModel] = useState<string>(data.model || 'google/gemini-2.5-flash');
+  const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -134,9 +142,12 @@ export const ChatNode = memo(({
   });
   const { user } = useCurrentUser();
 
-  const isSupportedModel = useCallback((value: string): value is SupportedChatModel => {
-    return (CHAT_MODELS as readonly string[]).includes(value);
-  }, []);
+  // Sync selectedModel with data.model
+  useEffect(() => {
+    if (data.model && data.model !== selectedModel) {
+      setSelectedModel(data.model);
+    }
+  }, [data.model, selectedModel]);
 
   const storedWidth = parseDimension(storedStyle?.width);
   const storedHeight = parseDimension(storedStyle?.height);
@@ -407,6 +418,30 @@ export const ChatNode = memo(({
     }
   };
 
+  // Handle model selection
+  const handleModelChange = (modelId: string) => {
+    setSelectedModel(modelId);
+
+    // Determine provider
+    const provider = modelId.includes('/') ? 'openrouter' : 'gemini';
+
+    // Update node data
+    updateNodeData(id, {
+      model: modelId,
+      provider,
+    } as Partial<ChatNodeData>);
+
+    // Update current session model if exists
+    if (currentSession && data.sessions) {
+      const updatedSessions = data.sessions.map(session =>
+        session.id === currentSession.id
+          ? { ...session, model: modelId, provider }
+          : session
+      );
+      updateNodeData(id, { sessions: updatedSessions } as Partial<ChatNodeData>);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading || !currentSession) return;
 
@@ -470,6 +505,9 @@ export const ChatNode = memo(({
         templates: [],
       };
 
+      // Determine provider based on model
+      const provider = selectedModel.includes('/') ? 'openrouter' : 'gemini';
+
       // Call the chat API with streaming
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -479,6 +517,8 @@ export const ChatNode = memo(({
         credentials: 'include',
         body: JSON.stringify({
           messages: updatedMessages,
+          model: selectedModel,
+          provider,
           textContext: context.textContext,
           youtubeTranscripts: context.youtubeTranscripts,
           voiceTranscripts: context.voiceTranscripts,
@@ -861,24 +901,36 @@ export const ChatNode = memo(({
             {/* Input Area */}
             <div className="nodrag px-6 py-4 border-t border-[#095D40]/20 bg-[#095D40]/5">
               <div className="flex items-center gap-3 mb-3">
-                {/* Model Selector */}
-                <div className="relative">
-                  <select
-                    value={selectedModel}
-                    onChange={(event) => {
-                      const nextValue = event.target.value;
-                      if (isSupportedModel(nextValue)) {
-                        setSelectedModel(nextValue);
-                      }
-                    }}
-                    onClick={(e) => stopReactFlowPropagation(e)}
-                    onMouseDown={(e) => stopReactFlowPropagation(e)}
-                    className="appearance-none pl-3 pr-8 py-2 text-[11px] font-medium bg-white border border-[#095D40]/20 rounded-lg cursor-pointer hover:border-[#095D40] transition-colors focus:outline-none focus:ring-2 focus:ring-[#095D40] text-[#095D40]"
-                  >
-                    <option value="gemini-flash-latest">Gemini Flash Latest</option>
-                  </select>
-                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#095D40]/60 pointer-events-none" />
-                </div>
+                {/* Model Selector with Provider Branding */}
+                <button
+                  onClick={(e) => {
+                    stopReactFlowPropagation(e);
+                    setModelDialogOpen(true);
+                  }}
+                  onMouseDown={(e) => stopReactFlowPropagation(e)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-white border border-[#095D40]/20 hover:border-[#095D40]/50 transition-colors text-[11px] font-medium cursor-pointer"
+                >
+                  {(() => {
+                    const providerId = getProviderForModel(selectedModel);
+                    const provider = getProviderInfo(providerId);
+                    const ProviderIcon = provider ? PROVIDER_ICONS[provider.iconName] : null;
+
+                    return (
+                      <>
+                        {ProviderIcon && (
+                          <ProviderIcon
+                            className="w-3.5 h-3.5"
+                            style={{ color: provider?.colors.primary }}
+                          />
+                        )}
+                        <span className="text-[#095D40]">
+                          {getModelDisplayName(selectedModel)}
+                        </span>
+                        <ChevronDown className="w-3 h-3 text-[#095D40]/60" />
+                      </>
+                    );
+                  })()}
+                </button>
               </div>
 
               <div onMouseDown={(e) => stopReactFlowPropagation(e)}>
@@ -897,6 +949,14 @@ export const ChatNode = memo(({
           </div>
         </div>
       </BaseNode>
+
+      {/* Model Selection Dialog */}
+      <ModelSelectionDialog
+        open={modelDialogOpen}
+        onOpenChange={setModelDialogOpen}
+        currentModel={selectedModel}
+        onSelectModel={handleModelChange}
+      />
     </div>
   );
 });
