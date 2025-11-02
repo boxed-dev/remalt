@@ -158,7 +158,7 @@ function generateSummary(text: string): string {
   return sentences.slice(0, 3).join(' ').trim();
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const { user, error: authError } = await requireAuth(req);
   if (authError || !user) {
     return unauthorizedResponse('You must be signed in to analyze webpages');
@@ -215,3 +215,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = postHandler;

@@ -20,7 +20,7 @@ function extractYouTubeId(url: string): string | null {
   return null;
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   // Require authentication
   const { user, error: authError } = await requireAuth(req);
   if (authError || !user) {
@@ -104,3 +104,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = postHandler;

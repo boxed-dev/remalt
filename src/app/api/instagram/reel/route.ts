@@ -364,7 +364,7 @@ async function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: st
   };
 }
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
   const startTime = Date.now();
 
   try {
@@ -460,3 +460,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const POST = postHandler;

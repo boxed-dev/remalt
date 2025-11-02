@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { processInstagramImage } from '@/lib/instagram-processor';
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
   try {
     const { imageUrl, postCode, caption } = await request.json();
 
@@ -32,3 +32,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const POST = postHandler;

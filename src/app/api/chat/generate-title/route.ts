@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
  * Generate a concise chat title from user's first message
  * Uses Gemini to create a 3-5 word descriptive title
  */
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const { message } = await request.json();
 
@@ -52,3 +52,5 @@ Title:`;
     );
   }
 }
+
+export const POST = postHandler;

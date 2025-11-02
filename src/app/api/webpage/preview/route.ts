@@ -85,7 +85,7 @@ async function fetchWithTimeout(input: string, init?: RequestInit) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const { user, error: authError } = await requireAuth(req);
   if (authError || !user) {
     return unauthorizedResponse('You must be signed in to preview webpages');
@@ -191,3 +191,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = postHandler;

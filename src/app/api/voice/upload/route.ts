@@ -31,7 +31,7 @@ function resolveExtension(name: string, mimeType: string): string {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const { user, error: authError } = await requireAuth(req);
   if (authError || !user) {
     return unauthorizedResponse('You must be signed in to upload recordings');
@@ -105,3 +105,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = postHandler;

@@ -9,7 +9,7 @@ import { getPublicTemplates, getPublicTemplatesByCategory } from '@/lib/supabase
  * - category: Filter by category (optional)
  * - search: Search by name/description (optional)
  */
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const searchParams = request.nextUrl.searchParams;
@@ -51,3 +51,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = getHandler;

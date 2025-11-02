@@ -201,7 +201,7 @@ async function tryProvider(provider: ScreenshotProvider, targetUrl: string): Pro
   }
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const { user, error: authError } = await requireAuth(req);
   if (authError || !user) {
     return unauthorizedResponse('You must be signed in to generate screenshots');
@@ -264,3 +264,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = postHandler;

@@ -2,3 +2,4 @@ youtube-transcript-api
 deepgram-sdk
 yt-dlp
 python-dotenv
+sentry-sdk

@@ -48,7 +48,7 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
         return;
       }
 
-      console.log('[ImageNode] Starting image analysis...', analysisSource.kind === 'url' ? analysisSource.payload : 'base64');
+      console.log('[ImageNode] Starting STREAMING image analysis...', analysisSource.kind === 'url' ? analysisSource.payload : 'base64');
 
       updateNodeData(id, {
         analysisStatus: 'analyzing',
@@ -59,39 +59,66 @@ export const ImageNode = memo(({ id, data, parentId }: NodeProps<ImageNodeData>)
         ? { imageData: analysisSource.payload.split(',')[1] }
         : { imageUrl: analysisSource.payload };
 
-      const response = await fetch('/api/image/analyze', {
+      // Use streaming endpoint for real-time progress
+      const response = await fetch('/api/image/analyze-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(body),
       });
 
-      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
-      if (response.ok) {
-        console.log('[ImageNode] Image analysis completed successfully');
-        updateNodeData(id, {
-          ocrText: result.ocrText,
-          analysisData: {
-            description: result.description,
-            tags: result.tags,
-            colors: result.colors,
-          },
-          analysisStatus: 'success',
-          analysisError: undefined,
-        } as Partial<ImageNodeData>);
-      } else {
-        console.error('[ImageNode] Image analysis failed:', result.error);
-        updateNodeData(id, {
-          analysisStatus: 'error',
-          analysisError: result.error,
-        } as Partial<ImageNodeData>);
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Response body is not readable');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              if (data.status === 'complete' && data.success) {
+                console.log('[ImageNode] STREAMING analysis completed successfully');
+                updateNodeData(id, {
+                  ocrText: data.ocrText,
+                  analysisData: {
+                    description: data.description,
+                    tags: data.tags,
+                    colors: data.colors,
+                  },
+                  analysisStatus: 'success',
+                  analysisError: undefined,
+                } as Partial<ImageNodeData>);
+              } else if (data.status === 'error') {
+                throw new Error(data.error || 'Analysis failed');
+              }
+              // Progress updates are handled but don't update node data
+            } catch (e) {
+              console.error('[ImageNode] Failed to parse SSE data:', e);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('[ImageNode] Image analysis exception:', error);
       updateNodeData(id, {
         analysisStatus: 'error',
-        analysisError: 'Failed to analyze image',
+        analysisError: error instanceof Error ? error.message : 'Failed to analyze image',
       } as Partial<ImageNodeData>);
     }
   }, [data.imageFile, safeImageUrl, id, updateNodeData]);

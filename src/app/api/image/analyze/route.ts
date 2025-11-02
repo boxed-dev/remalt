@@ -1,8 +1,9 @@
 import OpenAI from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
+import { recordAIMetadata, withAISpan } from '@/lib/sentry/ai';
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   // Require authentication
   const { user, error: authError } = await requireAuth(req);
   if (authError || !user) {
@@ -18,6 +19,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const sourceType = imageUrl ? 'url' : 'base64';
+    let downloadOccurred = false;
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -68,6 +72,7 @@ export async function POST(req: NextRequest) {
           imageContent = `data:${contentType};base64,${base64}`;
 
           console.log('[Uploadcare] ✅ Image downloaded and converted to base64');
+          downloadOccurred = true;
         } catch (fetchError) {
           console.error('[Uploadcare] Failed to download:', fetchError);
           // Fallback to direct URL
@@ -105,28 +110,62 @@ Format your response as JSON:
   "theme": "visual theme description"
 }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'image_url',
-              image_url: {
-                url: imageContent,
-                detail: 'high'
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.3,
+    recordAIMetadata({
+      userId: user.id,
+      operation: 'image.analyze',
+      sourceType,
+      downloadOccurred,
+      promptLength: prompt.length,
     });
 
-    const responseText = response.choices[0]?.message?.content || '';
+    const { responseText } = await withAISpan(
+      {
+        name: 'ai.image.analyze',
+        op: 'ai.vision',
+        metadata: {
+          sourceType,
+          downloadOccurred,
+          hasInlineData: Boolean(imageData),
+        },
+      },
+      async (span) => {
+        span.setData('prompt_characters', prompt.length);
+
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: prompt },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: imageContent,
+                    detail: 'high'
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 1000,
+          temperature: 0.3,
+        });
+
+        const text = response.choices[0]?.message?.content || '';
+        span.setData('response_characters', text.length);
+
+        if (response.usage) {
+          span.setData('token_usage', {
+            prompt_tokens: response.usage.prompt_tokens,
+            completion_tokens: response.usage.completion_tokens,
+            total_tokens: response.usage.total_tokens,
+          });
+        }
+
+        return { responseText: text };
+      }
+    );
 
     console.log('[OpenAI] Analysis complete:', responseText.length, 'chars');
 
@@ -178,3 +217,5 @@ Format your response as JSON:
     );
   }
 }
+
+export const POST = postHandler;

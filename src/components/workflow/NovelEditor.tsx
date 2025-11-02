@@ -41,7 +41,6 @@ import { EditorRoot, EditorContent, EditorCommand, EditorCommandItem, EditorComm
 import { StarterKit, TiptapLink, TiptapImage, TaskList, TaskItem, TextStyle, Color } from 'novel';
 import type { JSONContent } from 'novel';
 import { useEffect, useState } from 'react';
-import { NovelEditorHelp } from './NovelEditorHelp';
 import {
   Heading1,
   Heading2,
@@ -234,7 +233,6 @@ export function NovelEditor({
   return (
     <EditorRoot>
       <div className="relative">
-        <NovelEditorHelp />
         <EditorContent
         immediatelyRender={false}
         initialContent={initialContent}

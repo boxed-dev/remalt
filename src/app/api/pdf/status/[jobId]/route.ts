@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
 import { getJob } from '@/lib/pdf/job-queue';
 
-export async function GET(
+async function getHandler(
   req: NextRequest,
   { params }: { params: { jobId: string } }
 ) {
@@ -87,3 +87,5 @@ export async function GET(
     );
   }
 }
+
+export const GET = getHandler;

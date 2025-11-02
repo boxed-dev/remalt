@@ -16,9 +16,20 @@ import tempfile
 from deepgram import DeepgramClient
 import yt_dlp
 from dotenv import load_dotenv
+import sentry_sdk
 
 # Load .env at startup
 load_dotenv()
+
+SENTRY_DSN = os.getenv('SENTRY_PYTHON_DSN') or os.getenv('SENTRY_DSN')
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+        profiles_sample_rate=float(os.getenv('SENTRY_PROFILES_SAMPLE_RATE', '0.0')),
+        environment=os.getenv('SENTRY_ENVIRONMENT') or os.getenv('PYTHON_ENV') or 'development',
+        send_default_pii=False,
+    )
 
 # In-memory cache for transcripts (24 hour TTL)
 transcript_cache = {}
@@ -62,47 +73,61 @@ def cache_transcript(video_id, data):
 def fetch_transcript_with_retry(video_id, max_retries=3):
     ytt_api = YouTubeTranscriptApi()
     last_exception = None
-    for attempt in range(max_retries+1):
-        try:
-            transcript_list = ytt_api.list_transcripts(video_id)
-            transcript = None
+    with sentry_sdk.start_span(op='youtube.transcript.fetch', description=video_id) as span:
+        span.set_data('max_retries', max_retries)
+        for attempt in range(max_retries + 1):
             try:
-                transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
-            except:
-                pass
-            if not transcript:
+                transcript_list = ytt_api.list_transcripts(video_id)
+                transcript = None
                 try:
-                    manual_transcripts = [t for t in transcript_list if not t.is_generated]
-                    if manual_transcripts:
-                        transcript = manual_transcripts[0]
-                except:
+                    transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
+                except Exception:
                     pass
-            if not transcript:
-                try:
-                    available = list(transcript_list)
-                    if available:
-                        transcript = available[0]
-                except:
-                    pass
-            if not transcript:
-                raise NoTranscriptFound(video_id, [], {})
-            transcript_data = transcript.fetch()
-            full_text = ' '.join([snippet['text'] for snippet in transcript_data])
-            return {
-                'transcript': full_text,
-                'language': transcript.language_code
-            }
-        except (RequestBlocked, YouTubeRequestFailed) as e:
-            last_exception = e
-            delay = min(RETRY_CONFIG['initial_delay'] * (RETRY_CONFIG['backoff_multiplier'] ** attempt), RETRY_CONFIG['max_delay'])
-            time.sleep(delay)
-        except (TranscriptsDisabled, NoTranscriptFound, VideoUnavailable) as e:
-            raise e
-        except Exception as e:
-            last_exception = e
-            break
-    if last_exception:
-        raise last_exception
+                if not transcript:
+                    try:
+                        manual_transcripts = [t for t in transcript_list if not t.is_generated]
+                        if manual_transcripts:
+                            transcript = manual_transcripts[0]
+                    except Exception:
+                        pass
+                if not transcript:
+                    try:
+                        available = list(transcript_list)
+                        if available:
+                            transcript = available[0]
+                    except Exception:
+                        pass
+                if not transcript:
+                    span.set_status('not_found')
+                    raise NoTranscriptFound(video_id, [], {})
+                transcript_data = transcript.fetch()
+                full_text = ' '.join([snippet['text'] for snippet in transcript_data])
+                span.set_data('language', transcript.language_code)
+                span.set_data('attempts', attempt)
+                span.set_status('ok')
+                return {
+                    'transcript': full_text,
+                    'language': transcript.language_code
+                }
+            except (RequestBlocked, YouTubeRequestFailed) as e:
+                last_exception = e
+                delay = min(
+                    RETRY_CONFIG['initial_delay'] * (RETRY_CONFIG['backoff_multiplier'] ** attempt),
+                    RETRY_CONFIG['max_delay']
+                )
+                span.set_data('retry_delay', delay)
+                time.sleep(delay)
+            except (TranscriptsDisabled, NoTranscriptFound, VideoUnavailable) as e:
+                span.set_status('permission_denied')
+                raise e
+            except Exception as e:
+                last_exception = e
+                break
+        if last_exception:
+            span.set_status('internal_error')
+            span.set_data('error_type', type(last_exception).__name__)
+            span.set_data('error_message', str(last_exception))
+            raise last_exception
 
 class handler(BaseHTTPRequestHandler):
     def _send_json(self, data, status=200):
@@ -167,6 +192,7 @@ class handler(BaseHTTPRequestHandler):
             except (RequestBlocked, YouTubeRequestFailed) as e:
                 self._send_json({'error': 'Rate limited or request failed', 'error_type': type(e).__name__, 'details': str(e), 'videoId': video_id}, status=429)
             except Exception as e:
+                sentry_sdk.capture_exception(e)
                 self._send_json({'error': 'Transcription failed', 'error_type': type(e).__name__, 'details': str(e), 'videoId': video_id}, status=500)
         # DUMMY DEEPGRAM-LIKE ENDPOINT (super minimal demo)
         elif self._is_path('/deepgram/transcribe'):
@@ -220,6 +246,7 @@ class handler(BaseHTTPRequestHandler):
                     else:
                         self._send_json({'source_url': url, 'deepgram_response': response})
             except Exception as e:
+                sentry_sdk.capture_exception(e)
                 self._send_json({'error': 'Deepgram transcription failed', 'details': str(e), 'source_url': url}, status=500)
         # Clear-cache endpoints
         elif self._is_path('/clear-cache', '/transcript_api/clear-cache', '/api/transcript_api/clear-cache'):

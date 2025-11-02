@@ -30,6 +30,7 @@ interface WorkflowStore {
   // Connection UI State
   isConnecting: boolean;
   connectHoveredTargetId: string | null;
+  connectPreviewTargetId: string | null;
 
   // History State
   history: Workflow[];
@@ -136,6 +137,7 @@ interface WorkflowStore {
   // Connection UI Actions
   setConnecting: (is: boolean) => void;
   setConnectHoveredTarget: (id: string | null) => void;
+  setConnectPreviewTarget: (id: string | null) => void;
 }
 
 const createDefaultWorkflow = (
@@ -283,6 +285,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
     cursorPosition: null,
     isConnecting: false,
     connectHoveredTargetId: null,
+    connectPreviewTargetId: null,
 
     // Workflow Actions
     createWorkflow: (name, description) => {
@@ -970,6 +973,11 @@ export const useWorkflowStore = create<WorkflowStore>()(
     setConnectHoveredTarget: (id) => {
       set((state) => {
         state.connectHoveredTargetId = id;
+      });
+    },
+    setConnectPreviewTarget: (id) => {
+      set((state) => {
+        state.connectPreviewTargetId = id;
       });
     },
   }))

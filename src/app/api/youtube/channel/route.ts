@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
  * GET /api/youtube/channel?url=...&maxResults=10&pageToken=...
  * Fetch channel details and videos from a YouTube channel URL
  */
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const url = searchParams.get('url');
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
  * POST /api/youtube/channel/videos
  * Fetch more videos from a channel (for pagination)
  */
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const { channelId, maxResults = 10, pageToken } = body;
@@ -84,3 +84,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const GET = getHandler;
+export const POST = postHandler;

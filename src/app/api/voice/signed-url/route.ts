@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24; // 24 hours
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const { user, error: authError } = await requireAuth(req);
   if (authError || !user) {
     return unauthorizedResponse('You must be signed in to access recordings');
@@ -40,3 +40,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = postHandler;

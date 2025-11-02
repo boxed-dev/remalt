@@ -2,7 +2,7 @@ import { createClient } from '@deepgram/sdk';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   // Require authentication
   const { user, error: authError } = await requireAuth(req);
   if (authError || !user) {
@@ -99,3 +99,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = postHandler;

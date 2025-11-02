@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
   const { password } = await request.json();
 
   // This would require the Supabase service role key and database password
@@ -17,3 +17,5 @@ export async function POST(request: Request) {
     ],
   }, { status: 400 });
 }
+
+export const POST = postHandler;

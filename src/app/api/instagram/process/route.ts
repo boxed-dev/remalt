@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { processInstagramVideo } from '@/lib/instagram-processor';
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
   try {
     const body = await request.json();
     const { videoUrl, reelCode } = body;
@@ -18,3 +18,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
+
+export const POST = postHandler;

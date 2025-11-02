@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { MessageSquare, Copy, Check, Maximize2, User, Plus, Library, ChevronDown, Trash2, Settings } from 'lucide-react';
+import { MessageSquare, Copy, Check, Maximize2, User, Plus, ChevronDown, Trash2 } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { SyntheticEvent, WheelEvent as ReactWheelEvent, ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -625,15 +625,6 @@ export const ChatNode = memo(({
                 <h3 className="text-[12px] font-semibold text-[#095D40] uppercase tracking-wide">
                   Connected Data ({data.linkedNodes?.length || 0})
                 </h3>
-                <button
-                  onClick={(e) => {
-                    stopReactFlowPropagation(e);
-                  }}
-                  className="p-1 hover:bg-white/50 rounded transition-colors"
-                  title="Settings"
-                >
-                  <Settings className="h-3.5 w-3.5 text-[#095D40]" />
-                </button>
               </div>
               {data.linkedNodes && data.linkedNodes.length > 0 ? (
                 <div className="text-[11px] text-[#095D40]/80 px-2 py-1.5 bg-white border border-[#095D40]/20 rounded">
@@ -860,15 +851,8 @@ export const ChatNode = memo(({
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center">
-                  <MessageSquare className="h-16 w-16 text-border mb-6" />
-                  <button
-                    onClick={(e) => stopReactFlowPropagation(e)}
-                    onMouseDown={(e) => stopReactFlowPropagation(e)}
-                    className="flex items-center gap-2 px-5 py-3 bg-background border-2 border-border rounded-xl hover:border-primary hover:bg-muted transition-all text-[13px] font-medium text-foreground"
-                  >
-                    <Library className="h-4 w-4" />
-                    Browse Prompt Library
-                  </button>
+                  <MessageSquare className="h-16 w-16 text-border mb-4" />
+                  <p className="text-[13px] text-muted-foreground">Start a conversation</p>
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -895,16 +879,6 @@ export const ChatNode = memo(({
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#095D40]/60 pointer-events-none" />
                 </div>
-
-                {/* Prompts Button */}
-                <button
-                  onClick={(e) => stopReactFlowPropagation(e)}
-                  onMouseDown={(e) => stopReactFlowPropagation(e)}
-                  className="flex items-center gap-2 px-3 py-2 text-[11px] font-medium bg-white border border-[#095D40]/20 rounded-lg hover:border-[#095D40] hover:bg-[#095D40]/10 transition-colors text-[#095D40]"
-                >
-                  <Library className="h-3.5 w-3.5" />
-                  Prompts
-                </button>
               </div>
 
               <div onMouseDown={(e) => stopReactFlowPropagation(e)}>

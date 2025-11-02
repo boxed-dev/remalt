@@ -11,7 +11,7 @@ const client = new ApifyClient({
   token: APIFY_API_KEY,
 });
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
   try {
     const { url } = await request.json();
 
@@ -145,3 +145,5 @@ function determinePostType(data: any): string {
   if (data.pollOptions) return 'Poll';
   return 'Text';
 }
+
+export const POST = postHandler;

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
+async function getHandler(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const imageUrl = searchParams.get('url');
@@ -57,3 +57,5 @@ export async function GET(request: Request) {
     );
   }
 }
+
+export const GET = getHandler;

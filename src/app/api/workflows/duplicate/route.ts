@@ -7,7 +7,7 @@ import { duplicateWorkflow } from '@/lib/supabase/workflows';
  * Duplicate a workflow (can be used for templates or user workflows)
  * Requires authentication
  */
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -66,3 +66,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = postHandler;

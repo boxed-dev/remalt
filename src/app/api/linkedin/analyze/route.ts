@@ -9,7 +9,7 @@ if (!GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
   try {
     const { content, imageUrl } = await request.json();
 
@@ -134,3 +134,5 @@ Format your response with clear section headers.`;
     );
   }
 }
+
+export const POST = postHandler;

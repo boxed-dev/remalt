@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+async function getHandler() {
   try {
     const supabase = await createClient();
 
@@ -93,3 +93,5 @@ export async function GET() {
     }, { status: 500 });
   }
 }
+
+export const GET = getHandler;

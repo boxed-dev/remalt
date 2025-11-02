@@ -17,7 +17,7 @@ function isValidYouTubeUrl(url: string): boolean {
   }
 }
 
-export async function GET(req: NextRequest) {
+async function getHandler(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const targetUrl = searchParams.get('url');
 
@@ -51,3 +51,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = getHandler;

@@ -1,9 +1,10 @@
 import { type NextRequest } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { updateSession } from '@/lib/supabase/middleware';
 
-export async function middleware(request: NextRequest) {
+export const middleware = Sentry.wrapMiddlewareWithSentry(async (request: NextRequest) => {
   return await updateSession(request);
-}
+});
 
 export const config = {
   matcher: [

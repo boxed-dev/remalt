@@ -15,7 +15,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: st
   ]);
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   // Require authentication
   const { user, error: authError } = await requireAuth(req);
   if (authError || !user) {
@@ -151,3 +151,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = postHandler;

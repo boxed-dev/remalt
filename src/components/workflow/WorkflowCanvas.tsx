@@ -234,6 +234,7 @@ function WorkflowCanvasInner() {
   const setActiveNode = useWorkflowStore((state) => state.setActiveNode);
   const setConnecting = useWorkflowStore((state) => state.setConnecting);
   const setConnectHoveredTarget = useWorkflowStore((state) => state.setConnectHoveredTarget);
+  const setConnectPreviewTarget = useWorkflowStore((state) => state.setConnectPreviewTarget);
 
   // Convert workflow nodes/edges to React Flow format
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -359,14 +360,15 @@ function WorkflowCanvasInner() {
 
       setCursorPosition(flowPosition);
 
-      // Magnetic targeting while connecting
+      // Magnetic targeting while connecting - two-zone detection
       const store = useWorkflowStore.getState();
       if (store.isConnecting) {
         const nodesRf = reactFlowInstance
           .getNodes()
           .filter((n) => n.type !== "group" && n.id !== connectSourceRef.current);
 
-        const MAGNET_RADIUS = 72; // px in flow coords (bigger zone)
+        const MAGNET_RADIUS = 72; // px in flow coords - auto-connect zone
+        const PREVIEW_RADIUS = 144; // px in flow coords - visual preview zone (2x magnetic)
         let bestId: string | null = null;
         let bestDist = Infinity;
 
@@ -385,12 +387,22 @@ function WorkflowCanvasInner() {
           }
         }
 
+        // Update magnetic zone (72px - strong snap + auto-connect)
         if (bestId && bestDist <= MAGNET_RADIUS) {
           if (store.connectHoveredTargetId !== bestId) {
             setConnectHoveredTarget(bestId);
           }
         } else if (store.connectHoveredTargetId) {
           setConnectHoveredTarget(null);
+        }
+
+        // Update preview zone (144px - early visual feedback)
+        if (bestId && bestDist <= PREVIEW_RADIUS) {
+          if (store.connectPreviewTargetId !== bestId) {
+            setConnectPreviewTarget(bestId);
+          }
+        } else if (store.connectPreviewTargetId) {
+          setConnectPreviewTarget(null);
         }
       }
     };
@@ -546,10 +558,11 @@ function WorkflowCanvasInner() {
           connection.targetHandle || undefined
         );
       }
-      // clear hover target after a successful connect
+      // clear hover and preview targets after a successful connect
       setConnectHoveredTarget(null);
+      setConnectPreviewTarget(null);
     },
-    [addEdgeToStore, setConnectHoveredTarget]
+    [addEdgeToStore, setConnectHoveredTarget, setConnectPreviewTarget]
   );
 
   // Begin/End connection lifecycle
@@ -568,8 +581,9 @@ function WorkflowCanvasInner() {
     connectedViaNativeRef.current = false;
     setConnecting(false);
     setConnectHoveredTarget(null);
+    setConnectPreviewTarget(null);
     connectSourceRef.current = null;
-  }, [addEdgeToStore, setConnecting, setConnectHoveredTarget]);
+  }, [addEdgeToStore, setConnecting, setConnectHoveredTarget, setConnectPreviewTarget]);
 
   // onConnectStop is not available in our React Flow version; rely on onConnectEnd only
 
@@ -1461,41 +1475,67 @@ function WorkflowCanvasInner() {
         .react-flow__pane:active {
           cursor: grabbing !important;
         }
-        /* Blackhole effect on connector handles only */
-        .flowy-bh-handle {
-          /* Do not override transform or position: React Flow uses them */
+        /* Preview zone (144px) - early visual feedback */
+        .flowy-preview-handle {
           border-color: #095D40 !important;
+          transform: scale(1.3) !important;
+          box-shadow: 0 0 0 3px rgba(9,93,64,0.15), 0 0 12px rgba(9,93,64,0.25);
+          transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
           z-index: 60;
-          box-shadow: 0 0 0 2px rgba(9,93,64,0.25);
         }
-        .flowy-bh-handle::before,
-        .flowy-bh-handle::after {
+
+        /* Magnetic zone (72px) - strong snap effect with blackhole */
+        .flowy-magnetic-handle {
+          border-color: #095D40 !important;
+          transform: scale(2) !important;
+          z-index: 70;
+          box-shadow: 0 0 0 4px rgba(9,93,64,0.3);
+          transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .flowy-magnetic-handle::before,
+        .flowy-magnetic-handle::after {
           content: "";
           position: absolute;
           inset: -20px;
           border-radius: 9999px;
           pointer-events: none;
         }
-        .flowy-bh-handle::before {
+        .flowy-magnetic-handle::before {
           background: radial-gradient(60% 60% at 50% 50%, rgba(9,93,64,0.35) 0%, rgba(9,93,64,0.12) 45%, rgba(9,93,64,0) 60%);
           filter: blur(6px);
           opacity: .9;
-          animation: bh-glow 900ms ease-in-out infinite alternate;
+          animation: magnetic-glow 900ms ease-in-out infinite alternate;
           transform: scale(2.4);
         }
-        .flowy-bh-handle::after {
+        .flowy-magnetic-handle::after {
           -webkit-mask: radial-gradient(circle at 50% 50%, transparent 40%, black 42%);
           mask: radial-gradient(circle at 50% 50%, transparent 40%, black 42%);
           background: radial-gradient(60% 60% at 50% 50%, rgba(3,7,18,0.75) 0%, rgba(3,7,18,0.35) 42%, rgba(3,7,18,0) 60%);
-          animation: bh-pulse 950ms ease-in-out infinite;
+          animation: magnetic-pulse 950ms ease-in-out infinite;
           opacity: .85;
           transform: scale(2.0);
         }
-        @keyframes bh-glow {
+
+        /* Node-level highlighting */
+        .flowy-preview-node {
+          border-color: #095D40 !important;
+          border-width: 2px !important;
+          box-shadow: 0 0 0 2px rgba(9,93,64,0.1), 0 4px 12px rgba(0,0,0,0.1) !important;
+          transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .flowy-magnetic-node {
+          border-color: #095D40 !important;
+          border-width: 3px !important;
+          box-shadow: 0 0 0 4px rgba(9,93,64,0.2), 0 8px 24px rgba(9,93,64,0.15), 0 4px 16px rgba(0,0,0,0.1) !important;
+          transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes magnetic-glow {
           from { transform: scale(1.00); }
           to { transform: scale(0.96); }
         }
-        @keyframes bh-pulse {
+        @keyframes magnetic-pulse {
           0%   { transform: scale(1.00); }
           50%  { transform: scale(0.92); }
           100% { transform: scale(1.00); }

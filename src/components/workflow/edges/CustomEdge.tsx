@@ -25,8 +25,12 @@ export function CustomEdge({
 }: EdgeProps) {
   const deleteEdge = useWorkflowStore((state) => state.deleteEdge);
   const [isHovered, setIsHovered] = useState(false);
+  const [isDeleteButtonHovered, setIsDeleteButtonHovered] = useState(false);
   const edgeRef = useRef<SVGGElement>(null);
   const { zoom } = useViewport();
+
+  // Keep edge highlighted if either the edge or delete button is hovered
+  const shouldHighlight = isHovered || isDeleteButtonHovered || selected;
 
   // Calculate dynamic stroke width based on zoom level
   // This ensures edges remain visible at all zoom levels
@@ -87,14 +91,14 @@ export function CustomEdge({
   );
 
   // Show delete button on hover OR when selected
-  const showDeleteButton = isHovered || selected;
+  const showDeleteButton = shouldHighlight;
 
   // Debug logging
   useEffect(() => {
-    if (isHovered) {
-      console.log(`Edge ${id} is hovered`);
+    if (shouldHighlight) {
+      console.log(`Edge ${id} is highlighted (hovered: ${isHovered}, deleteHovered: ${isDeleteButtonHovered}, selected: ${selected})`);
     }
-  }, [isHovered, id]);
+  }, [shouldHighlight, isHovered, isDeleteButtonHovered, selected, id]);
 
   // Generate unique ID for animation
   const animationId = `edge-flow-${id}`;
@@ -131,9 +135,13 @@ export function CustomEdge({
           console.log('MOUSE ENTER DETECTED on edge', id);
           setIsHovered(true);
         }}
-        onMouseLeave={() => {
-          console.log('MOUSE LEAVE DETECTED on edge', id);
-          setIsHovered(false);
+        onMouseLeave={(e) => {
+          // Only hide if we're not moving to the delete button
+          const relatedTarget = e.relatedTarget as HTMLElement;
+          if (!relatedTarget?.closest('.edge-delete-button')) {
+            console.log('MOUSE LEAVE DETECTED on edge', id);
+            setIsHovered(false);
+          }
         }}
         style={{ cursor: 'pointer' }}
       >
@@ -146,18 +154,34 @@ export function CustomEdge({
           style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
         />
 
+        {/* Glow layer when hovered or selected */}
+        {shouldHighlight && (
+          <path
+            d={edgePath}
+            fill="none"
+            stroke="#095D40"
+            strokeWidth={calculateStrokeWidth(10)}
+            strokeLinecap="round"
+            opacity={0.3}
+            style={{
+              pointerEvents: 'none',
+              filter: 'blur(6px)',
+            }}
+          />
+        )}
+
         {/* Light tan dotted background layer */}
         <path
           d={edgePath}
           fill="none"
-          stroke="#D4AF7F"
-          strokeWidth={calculateStrokeWidth(selected ? 3.5 : 2.5)}
+          stroke={shouldHighlight ? '#095D40' : '#D4AF7F'}
+          strokeWidth={calculateStrokeWidth(shouldHighlight ? 4.5 : 2.5)}
           strokeDasharray={calculateDashArray()}
           strokeLinecap="round"
-          opacity={0.5}
+          opacity={shouldHighlight ? 0.9 : 0.5}
           style={{
             pointerEvents: 'none',
-            transition: 'stroke-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), stroke-dasharray 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         />
 
@@ -165,16 +189,16 @@ export function CustomEdge({
         <path
           d={edgePath}
           fill="none"
-          stroke={selected ? '#095D40' : `url(#${animationId})`}
-          strokeWidth={calculateStrokeWidth(selected ? 3.5 : 2.5)}
+          stroke={shouldHighlight ? '#095D40' : `url(#${animationId})`}
+          strokeWidth={calculateStrokeWidth(shouldHighlight ? 4.5 : 2.5)}
           strokeDasharray={calculateDashArray()}
           strokeLinecap="round"
           strokeDashoffset={0}
           markerEnd={markerEnd}
           style={{
             pointerEvents: 'none',
-            animation: 'dash-flow 1.5s linear infinite',
-            transition: 'stroke-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), stroke-dasharray 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+            animation: shouldHighlight ? 'none' : 'dash-flow 1.5s linear infinite',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         />
       </g>
@@ -202,9 +226,17 @@ export function CustomEdge({
               pointerEvents: 'all',
               zIndex: 1000,
             }}
-            className="nodrag nopan"
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            className="nodrag nopan edge-delete-button"
+            onMouseEnter={() => {
+              console.log('Delete button mouse enter');
+              setIsHovered(true);
+              setIsDeleteButtonHovered(true);
+            }}
+            onMouseLeave={() => {
+              console.log('Delete button mouse leave');
+              setIsDeleteButtonHovered(false);
+              setIsHovered(false);
+            }}
           >
             <button
               onClick={handleDelete}

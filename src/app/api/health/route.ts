@@ -190,7 +190,7 @@ async function checkYouTubeAPI(): Promise<{ ok: boolean; details?: any; error?: 
   }
 }
 
-export async function GET(req: NextRequest) {
+async function getHandler(_req: NextRequest) {
   console.log('\n=== Health Check Request ===');
 
   // Run all health checks in parallel
@@ -234,3 +234,5 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(response, { status: statusCode });
 }
+
+export const GET = getHandler;

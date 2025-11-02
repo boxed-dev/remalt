@@ -14,9 +14,20 @@ import glob
 from typing import Optional, Tuple
 from dotenv import load_dotenv
 from deepgram import DeepgramClient
+import sentry_sdk
 
 # Load .env for API key and optional proxy
 load_dotenv()
+
+SENTRY_DSN = os.getenv("SENTRY_PYTHON_DSN") or os.getenv("SENTRY_DSN")
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+        profiles_sample_rate=float(os.getenv('SENTRY_PROFILES_SAMPLE_RATE', '0.0')),
+        environment=os.getenv('SENTRY_ENVIRONMENT') or os.getenv('PYTHON_ENV') or 'development',
+        send_default_pii=False,
+    )
 
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
 YTDLP_PROXY = os.getenv("YTDLP_PROXY")
@@ -120,10 +131,21 @@ def download_youtube_audio(youtube_url: str, output_template: str):
             cmd.extend(['--proxy', YTDLP_PROXY])
 
         print(f"\n[yt-dlp] Trying: {strategy['name']}...", file=sys.stderr)
+        sentry_sdk.add_breadcrumb(
+            category='yt-dlp',
+            message='Attempting download strategy',
+            data={'strategy': strategy['name']},
+        )
 
         try:
             result = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=120)
             print(f"[yt-dlp] ✅ SUCCESS with {strategy['name']}", file=sys.stderr)
+            sentry_sdk.add_breadcrumb(
+                category='yt-dlp',
+                message='Download success',
+                data={'strategy': strategy['name'], 'stdout': result.stdout[:200]},
+                level='info',
+            )
             return
         except subprocess.TimeoutExpired:
             print(f"[yt-dlp] ⏱️  Timeout with {strategy['name']}", file=sys.stderr)
@@ -143,6 +165,7 @@ def download_youtube_audio(youtube_url: str, output_template: str):
                 print(f"[yt-dlp] 🔞 Age restriction with {strategy['name']}", file=sys.stderr)
             else:
                 print(f"[yt-dlp] ❌ Error: {e.stderr[:150]}", file=sys.stderr)
+            sentry_sdk.capture_exception(e)
             continue
 
     # All strategies failed - provide actionable error
@@ -184,23 +207,28 @@ def _resolve_downloaded_audio(tmpdir: str) -> Tuple[str, str]:
 
 def transcribe_with_deepgram(audio_path: str, mimetype: str):
     """Transcribe audio file with Deepgram SDK v5"""
-    client = DeepgramClient()
+    with sentry_sdk.start_span(op='deepgram.transcribe', description=os.path.basename(audio_path)) as span:
+        client = DeepgramClient()
 
-    with open(audio_path, 'rb') as audio_file:
-        buffer_data = audio_file.read()
+        with open(audio_path, 'rb') as audio_file:
+            buffer_data = audio_file.read()
 
-    # Deepgram SDK v5 simplified API
-    response = client.listen.v1.media.transcribe_file(
-        request=buffer_data,
-        model="nova-2",
-        smart_format=True,
-        language="en",
-        punctuate=True,
-        paragraphs=True,
-        utterances=True,
-    )
+        # Deepgram SDK v5 simplified API
+        response = client.listen.v1.media.transcribe_file(
+            request=buffer_data,
+            model="nova-2",
+            smart_format=True,
+            language="en",
+            punctuate=True,
+            paragraphs=True,
+            utterances=True,
+        )
 
-    return response
+        if hasattr(response, 'metadata') and response.metadata:
+            span.set_data('duration', response.metadata.duration)
+            span.set_data('channels', response.metadata.channels)
+
+        return response
 
 def extract_transcript(result) -> Optional[str]:
     try:
@@ -262,6 +290,7 @@ def main():
         print(f'\n❌ ERROR: {e}', file=sys.stderr)
         import traceback
         traceback.print_exc()
+        sentry_sdk.capture_exception(e)
         sys.exit(1)
 
 if __name__ == "__main__":

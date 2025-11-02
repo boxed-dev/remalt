@@ -8,7 +8,7 @@ import { canPublishTemplates } from '@/lib/permissions/template-permissions';
  * Publish a workflow as a public template
  * Requires authentication and admin permissions (ackash@remalt.com)
  */
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
  * Unpublish a template (set isPublic to false)
  * Requires authentication and admin permissions (ackash@remalt.com)
  */
-export async function DELETE(request: NextRequest) {
+async function deleteHandler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -156,3 +156,6 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const POST = postHandler;
+export const DELETE = deleteHandler;

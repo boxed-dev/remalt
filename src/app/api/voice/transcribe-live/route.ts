@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+async function getHandler() {
   try {
     // Verify Deepgram API key exists
     const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
@@ -35,3 +35,5 @@ export async function GET() {
     );
   }
 }
+
+export const GET = getHandler;

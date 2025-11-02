@@ -100,14 +100,16 @@ export function BaseNode({
   // Connection targeting highlight state
   const isConnecting = useWorkflowStore((state) => state.isConnecting);
   const connectHoveredTargetId = useWorkflowStore((state) => state.connectHoveredTargetId);
+  const connectPreviewTargetId = useWorkflowStore((state) => state.connectPreviewTargetId);
   const isConnectTarget = isConnecting && connectHoveredTargetId === id;
+  const isPreviewTarget = isConnecting && connectPreviewTargetId === id && !isConnectTarget;
   return (
     <div
       className={`min-w-[280px] rounded-2xl bg-white transition-all duration-200 ${
         allowOverflow ? 'relative' : 'overflow-hidden relative'
       } ${
         className || 'border-2 border-[#E8ECEF] hover:border-[#D1D5DB] shadow-md hover:shadow-xl'
-      }`}
+      } ${isConnectTarget ? 'flowy-magnetic-node' : ''} ${isPreviewTarget ? 'flowy-preview-node' : ''}`}
       style={style}
     >
       {/* Activation overlay for inactive nodes - blocks interaction until activated */}
@@ -131,7 +133,7 @@ export function BaseNode({
         <Handle
           type="target"
           position={targetHandlePosition}
-          className={`!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50 ${isConnectTarget ? 'flowy-bh-handle' : ''}`}
+          className={`!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50 ${isConnectTarget ? 'flowy-magnetic-handle' : ''} ${isPreviewTarget ? 'flowy-preview-handle' : ''}`}
           style={{
             ...(targetHandlePosition === Position.Left && { left: '-7px' }),
             ...(targetHandlePosition === Position.Right && { right: '-7px' }),
@@ -159,7 +161,7 @@ export function BaseNode({
           id={handle.id}
           type="target"
           position={handle.position}
-          className={`!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50 ${isConnectTarget ? 'flowy-bh-handle' : ''}`}
+          className={`!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50 ${isConnectTarget ? 'flowy-magnetic-handle' : ''} ${isPreviewTarget ? 'flowy-preview-handle' : ''}`}
           style={handle.style}
         />
       ))}

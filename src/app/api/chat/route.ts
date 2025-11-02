@@ -1,13 +1,33 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+import type { Span } from '@sentry/types';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
+import { recordAIMetadata, summarizeTextLengths } from '@/lib/sentry/ai';
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   // Require authentication
   const { user, error: authError } = await requireAuth(req);
   if (authError || !user) {
     return unauthorizedResponse('You must be signed in to use the chat feature');
   }
+
+  let operationSpan: Span | undefined;
+  let spanFinalized = false;
+
+  const finalizeSpan = (status: 'ok' | 'internal_error', data?: Record<string, unknown>) => {
+    if (!operationSpan || spanFinalized) {
+      return;
+    }
+    if (data) {
+      for (const [key, value] of Object.entries(data)) {
+        operationSpan.setData(key, value);
+      }
+    }
+    operationSpan.setStatus(status);
+    operationSpan.end();
+    spanFinalized = true;
+  };
 
   try {
     const {
@@ -24,6 +44,26 @@ export async function POST(req: NextRequest) {
       templates
     } = await req.json();
 
+    const metadataCounts = {
+      messageCount: messages?.length ?? 0,
+      textContextCount: textContext?.length ?? 0,
+      youtubeTranscriptCount: youtubeTranscripts?.length ?? 0,
+      voiceTranscriptCount: voiceTranscripts?.length ?? 0,
+      pdfDocumentCount: pdfDocuments?.length ?? 0,
+      imageCount: images?.length ?? 0,
+      webpageCount: webpages?.length ?? 0,
+      instagramCount: instagramReels?.length ?? 0,
+      linkedInCount: linkedInPosts?.length ?? 0,
+      mindMapCount: mindMaps?.length ?? 0,
+      templateCount: templates?.length ?? 0,
+    } satisfies Record<string, number>;
+
+    recordAIMetadata({
+      userId: user.id,
+      ...metadataCounts,
+      messagePayloadBytes: Buffer.byteLength(JSON.stringify(messages ?? [])),
+    });
+
     // Validate API key
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -32,6 +72,16 @@ export async function POST(req: NextRequest) {
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    operationSpan = Sentry.startInactiveSpan({
+      name: 'ai.chat.generate',
+      op: 'ai.chat',
+      attributes: {
+        model: 'gemini-flash-latest',
+        userId: user.id,
+        ...metadataCounts,
+      },
+    });
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -44,6 +94,11 @@ export async function POST(req: NextRequest) {
     });
 
     // Build the context from linked nodes
+    const contextSpan = operationSpan?.startChild({
+      name: 'Build aggregated context',
+      op: 'ai.context',
+    });
+
     let systemContext = '';
 
     // Add text context
@@ -400,6 +455,13 @@ export async function POST(req: NextRequest) {
 
 
     // Get the latest user message
+    contextSpan?.setData('context_characters', systemContext.length);
+    contextSpan?.end();
+
+    summarizeTextLengths('ai_context', [
+      { id: 'system', length: systemContext.length },
+    ]);
+
     const latestMessage = messages[messages.length - 1];
 
     // Build text prompt with Remalt system prompt
@@ -873,6 +935,10 @@ END OF PROMPT
 User: ${latestMessage.content}`;
     }
 
+    operationSpan?.setData('prompt_characters', prompt.length);
+    operationSpan?.setData('context_counts', metadataCounts);
+    operationSpan?.setData('message_payload_bytes', Buffer.byteLength(JSON.stringify(messages ?? [])));
+
     console.log('\n=== Chat Request ===');
     console.log('User ID:', user.id);
     console.log('Context length:', systemContext.length, 'chars');
@@ -891,16 +957,20 @@ User: ${latestMessage.content}`;
     // Use streaming for faster perceived performance
     const result = await model.generateContentStream(prompt);
 
+    operationSpan?.setData('response_mode', 'sse');
+
     // Create a readable stream
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
           let fullText = '';
+          let chunkCount = 0;
 
           for await (const chunk of result.stream) {
             const chunkText = chunk.text();
             fullText += chunkText;
+            chunkCount += 1;
 
             // Send each chunk as JSON
             const data = JSON.stringify({ content: chunkText, done: false });
@@ -912,10 +982,19 @@ User: ${latestMessage.content}`;
           controller.enqueue(encoder.encode(`data: ${finalData}\n\n`));
 
           controller.close();
+
+          finalizeSpan('ok', {
+            output_characters: fullText.length,
+            chunk_count: chunkCount,
+          });
         } catch (error: unknown) {
           const errorData = JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' });
           controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
           controller.close();
+
+          finalizeSpan('internal_error', {
+            stream_error: error instanceof Error ? error.message : String(error),
+          });
         }
       },
     });
@@ -929,6 +1008,10 @@ User: ${latestMessage.content}`;
     });
 
   } catch (error: unknown) {
+    finalizeSpan('internal_error', {
+      phase: 'request',
+      error: error instanceof Error ? error.message : String(error),
+    });
     console.error('Chat API Error:', error);
     return new Response(
       JSON.stringify({
@@ -939,3 +1022,5 @@ User: ${latestMessage.content}`;
     );
   }
 }
+
+export const POST = postHandler;
