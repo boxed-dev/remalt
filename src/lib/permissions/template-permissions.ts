@@ -11,6 +11,7 @@
 export const TEMPLATE_ADMIN_EMAILS = [
   'ackash@remalt.com',
   'rishabh@connectivity.cx',
+  'aakash.bhalla9792@gmail.com',
 ] as const;
 
 /**
