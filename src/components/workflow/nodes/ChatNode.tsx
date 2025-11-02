@@ -800,7 +800,7 @@ export const ChatNode = memo(({
       >
         <div
           className={`flex h-full w-full border-2 rounded-2xl overflow-hidden bg-white shadow-sm transition-all ${
-            isActive ? 'border-[#095D40] ring-2 ring-[#095D40] ring-offset-2' : 'border-[#095D40]/20'
+            isActive ? 'border-[#095D40]' : 'border-[#095D40]/20'
           }`}
           onWheel={handleWheelEvent}
           onWheelCapture={handleWheelEvent}

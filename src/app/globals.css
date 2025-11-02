@@ -474,17 +474,12 @@
     opacity: 1 !important;
   }
 
-  /* Selected node styling - dark green border only */
+  /* Selected node styling - disabled, using activation system instead */
   .react-flow__node.selected:not(.react-flow__node-group) {
     outline: none !important;
   }
 
-  .react-flow__node.selected:not(.react-flow__node-group) > div {
-    box-shadow: 0 0 0 3px #095D40 !important;
-    transition: box-shadow 0.2s ease-out !important;
-  }
-
-  /* Ensure group nodes don't get styling */
+  /* Group nodes don't get selection styling */
   .react-flow__node-group.selected > div {
     box-shadow: none !important;
   }
