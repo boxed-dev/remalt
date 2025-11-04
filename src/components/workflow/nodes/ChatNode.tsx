@@ -1009,7 +1009,7 @@ export const ChatNode = memo(({
                 return (
                   <div
                     key={session.id}
-                    className={`flex items-center gap-2 rounded-md border px-3 py-2 text-[11px] transition-colors ${
+                    className={`flex items-center gap-2 rounded-md border px-3 py-2 text-[11px] transition-colors min-w-0 ${
                       isActiveSession
                         ? 'border-[#095D40]/30 bg-[#095D40]/5'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/60'
@@ -1017,13 +1017,15 @@ export const ChatNode = memo(({
                   >
                     <Button
                       variant="ghost"
-                      className="h-6 px-0 flex-1 justify-start text-left text-current hover:bg-transparent min-w-0"
+                      className="h-6 px-0 flex-1 justify-start text-left text-current hover:bg-transparent min-w-0 overflow-hidden"
                       onClick={(e) => {
                         stopReactFlowPropagation(e);
                         switchSession(session.id);
                       }}
                     >
-                      <span className="truncate block">{session.title}</span>
+                      <span className="truncate block w-full" title={session.title}>
+                        {session.title}
+                      </span>
                     </Button>
                     <Button
                       variant="ghost"
@@ -1050,12 +1052,15 @@ export const ChatNode = memo(({
       <div className="flex-1 flex flex-col bg-white min-w-0 overflow-hidden">
         {/* Chat Header */}
         <div
-          className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200/60 bg-[#FAFBFA] flowy-drag-handle cursor-grab active:cursor-grabbing select-none"
+          className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-gray-200/60 bg-[#FAFBFA] flowy-drag-handle cursor-grab active:cursor-grabbing select-none"
           data-flowy-drag-handle
         >
-          <div className="flex items-center gap-2.5">
-            <MessageSquare className="h-4.5 w-4.5 text-[#095D40]" />
-            <h3 className="text-[13px] font-semibold text-[#095D40]">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0 overflow-hidden">
+            <MessageSquare className="h-4.5 w-4.5 text-[#095D40] flex-shrink-0" />
+            <h3
+              className="text-[13px] font-semibold text-[#095D40] leading-[1.4] whitespace-normal break-words"
+              title={currentSession?.title ?? undefined}
+            >
               {currentSession?.title || 'Chat'}
             </h3>
           </div>
