@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI, FinishReason } from '@google/genai/web';
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 
@@ -6,14 +6,14 @@ if (!geminiApiKey) {
   throw new Error('GEMINI_API_KEY environment variable is not set');
 }
 
-const genAI = new GoogleGenerativeAI(geminiApiKey);
+const genAI = new GoogleGenAI({ apiKey: geminiApiKey });
 
 export const runtime = 'edge';
 export const maxDuration = 30;
 
 async function postHandler(request: Request) {
   try {
-    const { imageUrl, imageData } = await request.json();
+    const { imageUrl, imageData, mimeType: providedMimeType } = await request.json();
 
     if (!imageUrl && !imageData) {
       return new Response(
@@ -28,12 +28,12 @@ async function postHandler(request: Request) {
       async start(controller) {
         try {
           let base64Image: string;
-          let mimeType: string;
+          let mimeType: string = providedMimeType || 'image/jpeg';
 
           if (imageData) {
             // Image data is already base64
             base64Image = imageData;
-            mimeType = 'image/jpeg';
+            mimeType = providedMimeType || 'image/jpeg';
 
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ status: 'analyzing', progress: 10 })}\n\n`)
@@ -50,8 +50,20 @@ async function postHandler(request: Request) {
             }
 
             const imageBuffer = await imageResponse.arrayBuffer();
-            base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
-            mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+
+            // Convert ArrayBuffer to base64 using chunked processing to avoid stack overflow
+            const bytes = new Uint8Array(imageBuffer);
+            const CHUNK_SIZE = 8192;
+            let binary = '';
+
+            for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+              const chunk = bytes.subarray(i, Math.min(i + CHUNK_SIZE, bytes.length));
+              binary += String.fromCharCode(...chunk);
+            }
+
+            base64Image = btoa(binary);
+            const downloadedMimeType = imageResponse.headers.get('content-type');
+            mimeType = downloadedMimeType || providedMimeType || 'image/jpeg';
 
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ status: 'analyzing', progress: 20 })}\n\n`)
@@ -59,11 +71,6 @@ async function postHandler(request: Request) {
           } else {
             throw new Error('No image data provided');
           }
-
-          // Initialize Gemini model
-          const model = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash-exp',
-          });
 
           const prompt = `Analyze this image comprehensively and provide:
 
@@ -79,35 +86,60 @@ async function postHandler(request: Request) {
 
 Format your response in clear sections.`;
 
-          // Stream the response
-          const result = await model.generateContentStream([
-            {
-              inlineData: {
-                data: base64Image,
-                mimeType,
+          // Notify client that Gemini request has started
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ status: 'analyzing', progress: 35 })}\n\n`)
+          );
+
+          const response = await genAI.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  {
+                    inlineData: {
+                      data: base64Image,
+                      mimeType,
+                    },
+                  },
+                  { text: prompt },
+                ],
               },
-            },
-            prompt,
-          ]);
+            ],
+          });
 
-          let fullAnalysis = '';
-          let chunkCount = 0;
+          const primaryCandidate = response.candidates?.[0];
 
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
-            fullAnalysis += text;
-            chunkCount++;
+          if (!primaryCandidate) {
+            throw new Error('Gemini returned no analysis candidates');
+          }
 
-            // Stream each chunk to client
-            controller.enqueue(
-              encoder.encode(
-                `data: ${JSON.stringify({
-                  status: 'streaming',
-                  chunk: text,
-                  progress: Math.min(90, 20 + chunkCount * 5),
-                })}\n\n`
-              )
-            );
+          if (primaryCandidate.finishReason && primaryCandidate.finishReason !== FinishReason.STOP) {
+            throw new Error(`Gemini response ended early: ${primaryCandidate.finishReason}`);
+          }
+
+          if (primaryCandidate.content === undefined && !response.text) {
+            throw new Error('Gemini response was empty');
+          }
+
+          const combinedText =
+            response.text ??
+            primaryCandidate.content?.parts
+              ?.map((part) => {
+                if ('text' in part && part.text) {
+                  return part.text;
+                }
+
+                return '';
+              })
+              .join('') ??
+            '';
+
+          const fullAnalysis = combinedText.trim();
+
+          if (!fullAnalysis) {
+            throw new Error('Gemini returned empty analysis');
           }
 
           // Extract sections

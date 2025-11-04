@@ -93,7 +93,7 @@ export function BaseNode({
   const isPreviewTarget = isConnecting && connectPreviewTargetId === id && !isConnectTarget;
   return (
     <div
-      className={`min-w-[280px] rounded-2xl bg-white transition-all duration-200 ${
+      className={`flowy-node min-w-[280px] rounded-2xl bg-white transition-all duration-200 ${
         allowOverflow ? 'relative' : 'overflow-hidden relative'
       } ${
         className
@@ -118,7 +118,7 @@ export function BaseNode({
         <Handle
           type="target"
           position={targetHandlePosition}
-          className={`!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50 ${isConnectTarget ? 'flowy-magnetic-handle' : ''} ${isPreviewTarget ? 'flowy-preview-handle' : ''}`}
+          className={`flowy-handle flowy-handle-target !w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50 ${isConnectTarget ? 'flowy-magnetic-handle' : ''} ${isPreviewTarget ? 'flowy-preview-handle' : ''}`}
           style={{
             ...(targetHandlePosition === Position.Left && { left: '-7px' }),
             ...(targetHandlePosition === Position.Right && { right: '-7px' }),
@@ -131,7 +131,7 @@ export function BaseNode({
         <Handle
           type="source"
           position={sourceHandlePosition}
-          className="!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50"
+          className="flowy-handle flowy-handle-source !w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50"
           style={{
             ...(sourceHandlePosition === Position.Left && { left: '-7px' }),
             ...(sourceHandlePosition === Position.Right && { right: '-7px' }),
@@ -146,7 +146,7 @@ export function BaseNode({
           id={handle.id}
           type="target"
           position={handle.position}
-          className={`!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50 ${isConnectTarget ? 'flowy-magnetic-handle' : ''} ${isPreviewTarget ? 'flowy-preview-handle' : ''}`}
+          className={`flowy-handle flowy-handle-target !w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50 ${isConnectTarget ? 'flowy-magnetic-handle' : ''} ${isPreviewTarget ? 'flowy-preview-handle' : ''}`}
           style={handle.style}
         />
       ))}
@@ -158,7 +158,7 @@ export function BaseNode({
           id={handle.id}
           type="source"
           position={handle.position}
-          className="!w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50"
+          className="flowy-handle flowy-handle-source !w-3.5 !h-3.5 !bg-white !border-2 !border-[#9CA3AF] hover:!border-[#095D40] !transition-all !duration-150 !z-50"
           style={handle.style}
         />
       ))}

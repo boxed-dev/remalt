@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useEffect, useMemo, useCallback } from 'react';
+import { memo, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Image as ImageIcon, Loader2, Eye, CheckCircle2, AlertCircle, Upload, X } from 'lucide-react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
@@ -16,15 +16,17 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
   const isActive = activeNodeId === id;
-  
+  const analysisTriggeredRef = useRef(false);
+
   const isUploading = data.analysisStatus === 'loading' || data.analysisStatus === 'analyzing';
 
   const safeImageUrl = useMemo(() => data.storageUrl || data.imageUrl || data.thumbnail, [data.storageUrl, data.imageUrl, data.thumbnail]);
 
-  // Reset error state when image URL changes
+  // Reset error state and analysis trigger when image URL changes
   useEffect(() => {
     setImageError(false);
     setImageLoading(true);
+    analysisTriggeredRef.current = false;
   }, [data.imageUrl, data.storageUrl, data.thumbnail]);
 
   const fileToBase64 = async (file: File) => await new Promise<string>((resolve, reject) => {
@@ -60,7 +62,22 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
       } as Partial<ImageNodeData>);
 
       const body = analysisSource.kind === 'base64'
-        ? { imageData: analysisSource.payload.split(',')[1] }
+        ? (() => {
+            const [metaOrData, maybeData] = analysisSource.payload.split(',');
+            const base64Data = maybeData ?? metaOrData;
+            let mimeType: string | undefined;
+
+            if (maybeData && metaOrData?.includes(';')) {
+              const [prefix] = metaOrData.split(';');
+              const [, detected] = prefix.split(':');
+              mimeType = detected;
+            }
+
+            return {
+              imageData: base64Data,
+              mimeType,
+            };
+          })()
         : { imageUrl: analysisSource.payload };
 
       // Use streaming endpoint for real-time progress
@@ -155,17 +172,23 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
     }
   }, [data.imageFile, safeImageUrl, id, updateNodeData]);
 
-  // Auto-trigger analysis when image is uploaded
+  // Auto-trigger analysis when image is uploaded (only once per image)
   useEffect(() => {
-    if (safeImageUrl && (data.analysisStatus === 'idle' || data.analysisStatus === 'loading')) {
+    if (
+      safeImageUrl &&
+      !analysisTriggeredRef.current &&
+      (data.analysisStatus === 'idle' || data.analysisStatus === 'loading')
+    ) {
       console.log('[ImageNode] Auto-triggering analysis for image:', safeImageUrl);
+      analysisTriggeredRef.current = true;
       void triggerAnalysis({ kind: 'url', payload: safeImageUrl });
     }
-  }, [safeImageUrl, data.analysisStatus, triggerAnalysis]);
+  }, [safeImageUrl, data.analysisStatus]);
 
   const resetNode = () => {
     setImageError(false);
     setImageLoading(true);
+    analysisTriggeredRef.current = false;
     updateNodeData(id, {
       imageUrl: undefined,
       thumbnail: undefined,

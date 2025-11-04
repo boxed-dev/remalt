@@ -1489,6 +1489,61 @@ function WorkflowCanvasInner() {
         .react-flow__pane:active {
           cursor: grabbing !important;
         }
+        .flowy-handle {
+          position: absolute;
+          border-radius: 9999px !important;
+          transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
+            box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+          transform-origin: center;
+          cursor: pointer;
+        }
+        .flowy-handle::before {
+          content: "";
+          position: absolute;
+          inset: -12px;
+          border-radius: 9999px;
+          background: transparent;
+          pointer-events: auto;
+        }
+        .flowy-handle::after {
+          content: "";
+          position: absolute;
+          inset: -6px;
+          border-radius: 9999px;
+          pointer-events: none;
+          background: radial-gradient(50% 50% at 50% 50%, rgba(9,93,64,0.18) 0%, rgba(9,93,64,0) 65%);
+          opacity: 0;
+          transition: opacity 200ms ease;
+        }
+        .flowy-handle:hover {
+          transform: scale(1.45);
+          box-shadow: 0 0 0 3px rgba(9,93,64,0.18);
+        }
+        .flowy-handle:hover::after {
+          opacity: 1;
+        }
+        .flowy-node {
+          position: relative;
+        }
+        .flowy-node::after {
+          content: "";
+          position: absolute;
+          inset: -4px;
+          border-radius: inherit;
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 180ms cubic-bezier(0.4, 0, 0.2, 1),
+            box-shadow 180ms cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 0 0 0 rgba(9,93,64,0.22);
+        }
+        .flowy-node.flowy-preview-node::after {
+          opacity: 1;
+          box-shadow: 0 0 0 5px rgba(9,93,64,0.18);
+        }
+        .flowy-node.flowy-magnetic-node::after {
+          opacity: 1;
+          box-shadow: 0 0 0 6px rgba(9,93,64,0.28);
+        }
         /* Preview zone (144px) - early visual feedback */
         .flowy-preview-handle {
           border-color: #095D40 !important;

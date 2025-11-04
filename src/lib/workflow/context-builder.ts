@@ -14,17 +14,32 @@ import type {
   ChatNodeData
 } from '@/types/workflow';
 
+// Metadata shared across all context items
+export interface ContextMetadata {
+  nodeLabel?: string;        // User-defined label for the node
+  nodeDescription?: string;  // User-defined description
+  groupName?: string;        // Name of parent group (if in a group)
+  groupPath?: string;        // Full group hierarchy (e.g., "Research > Marketing > Q4")
+  nodeId?: string;           // Node ID for reference
+  lastEditedAt?: string;     // When content was last modified
+}
+
 export interface ChatContext {
   textContext: Array<{
     content: string;
     aiInstructions?: string;
+    metadata?: ContextMetadata;
   }>;
   youtubeTranscripts: Array<{
     url: string;
+    title?: string;           // Video title
+    channelName?: string;     // Channel name
     transcript?: string;
     status: 'loading' | 'success' | 'unavailable' | 'error';
     method?: string;
+    duration?: string;        // Video duration
     aiInstructions?: string;
+    metadata?: ContextMetadata;
   }>;
   voiceTranscripts: Array<{
     audioUrl?: string;
@@ -32,10 +47,12 @@ export interface ChatContext {
     duration?: number;
     status: 'idle' | 'transcribing' | 'success' | 'error';
     aiInstructions?: string;
+    metadata?: ContextMetadata;
   }>;
   pdfDocuments: Array<{
     fileName?: string;
     parsedText?: string;
+    pageCount?: number;
     segments?: Array<{
       content: string;
       heading?: string;
@@ -43,6 +60,7 @@ export interface ChatContext {
     }>;
     status: 'idle' | 'parsing' | 'success' | 'error';
     aiInstructions?: string;
+    metadata?: ContextMetadata;
   }>;
   images: Array<{
     imageUrl?: string;
@@ -52,6 +70,7 @@ export interface ChatContext {
     tags?: string[];
     status: 'idle' | 'analyzing' | 'success' | 'error';
     aiInstructions?: string;
+    metadata?: ContextMetadata;
   }>;
   webpages: Array<{
     url: string;
@@ -64,6 +83,7 @@ export interface ChatContext {
     };
     status: 'idle' | 'scraping' | 'success' | 'error';
     aiInstructions?: string;
+    contextMetadata?: ContextMetadata;
   }>;
   instagramReels: Array<{
     url: string;
@@ -84,6 +104,7 @@ export interface ChatContext {
     isVideo?: boolean;
     postType?: string;
     aiInstructions?: string;
+    metadata?: ContextMetadata;
   }>;
   linkedInPosts: Array<{
     url: string;
@@ -103,23 +124,27 @@ export interface ChatContext {
     fullAnalysis?: string;
     postType?: string;
     aiInstructions?: string;
+    metadata?: ContextMetadata;
   }>;
   mindMaps: Array<{
     concept: string;
     notes?: string;
     tags?: string[];
     aiInstructions?: string;
+    metadata?: ContextMetadata;
   }>;
   templates: Array<{
     templateType: string;
     generatedContent?: string;
     status: 'idle' | 'generating' | 'success' | 'error';
     aiInstructions?: string;
+    metadata?: ContextMetadata;
   }>;
 }
 
 /**
  * Safely extract AI instructions from node data
+ * Increased limit from 500 to 2000 chars based on 2025 best practices
  */
 function safeGetInstructions(data: any): string | undefined {
   if (!data?.aiInstructions) return undefined;
@@ -127,8 +152,67 @@ function safeGetInstructions(data: any): string | undefined {
   const trimmed = String(data.aiInstructions).trim();
   if (!trimmed) return undefined;
 
-  // Truncate if too long (failsafe)
-  return trimmed.slice(0, 500);
+  // Increased limit for more detailed instructions
+  const MAX_LENGTH = 2000;
+  if (trimmed.length > MAX_LENGTH) {
+    console.warn(`AI instructions truncated from ${trimmed.length} to ${MAX_LENGTH} chars`);
+    return trimmed.slice(0, MAX_LENGTH) + '... [truncated]';
+  }
+
+  return trimmed;
+}
+
+/**
+ * Build metadata for a node including label, group hierarchy, and timestamps
+ */
+function buildNodeMetadata(
+  node: WorkflowNode,
+  workflow: Workflow
+): ContextMetadata {
+  const metadata: ContextMetadata = {
+    nodeId: node.id,
+  };
+
+  // Extract label and description from node data
+  if (node.data) {
+    const data = node.data as any;
+    if (data.label) metadata.nodeLabel = data.label;
+    if (data.description) metadata.nodeDescription = data.description;
+    if (data.lastEditedAt) metadata.lastEditedAt = data.lastEditedAt;
+  }
+
+  // Build group hierarchy if node is in a group
+  if (node.parentId) {
+    const groupPath: string[] = [];
+    let currentParentId = node.parentId;
+
+    // Traverse up the group hierarchy
+    while (currentParentId) {
+      const parentNode = workflow.nodes.find(n => n.id === currentParentId);
+      if (!parentNode) break;
+
+      if (parentNode.type === 'group') {
+        const groupData = parentNode.data as any;
+        const groupTitle = groupData?.title || 'Untitled Group';
+        groupPath.unshift(groupTitle); // Add to beginning to maintain order
+
+        // Set the immediate parent group name
+        if (!metadata.groupName) {
+          metadata.groupName = groupTitle;
+        }
+      }
+
+      // Check if parent has a parent (nested groups)
+      currentParentId = parentNode.parentId || '';
+    }
+
+    // Build full path (e.g., "Research > Marketing > Q4 Analysis")
+    if (groupPath.length > 0) {
+      metadata.groupPath = groupPath.join(' > ');
+    }
+  }
+
+  return metadata;
 }
 
 /**
@@ -198,6 +282,7 @@ export function buildChatContext(
           context.textContext.push({
             content: textData.plainText,
             aiInstructions: safeGetInstructions(textData),
+            metadata: buildNodeMetadata(node, workflow),
           });
         }
         break;
@@ -221,6 +306,7 @@ export function buildChatContext(
             context.textContext.push({
               content: channelInfo,
               aiInstructions: safeGetInstructions(youtubeData),
+              metadata: buildNodeMetadata(node, workflow),
             });
           }
 
@@ -230,10 +316,14 @@ export function buildChatContext(
             if (video.transcript) {
               context.youtubeTranscripts.push({
                 url: `https://www.youtube.com/watch?v=${video.id}`,
+                title: video.title,
+                channelName: youtubeData.channelTitle,
                 transcript: video.transcript,
                 status: video.transcriptStatus || 'success',
                 method: 'channel',
+                duration: video.duration,
                 aiInstructions: safeGetInstructions(youtubeData),
+                metadata: buildNodeMetadata(node, workflow),
               });
             }
           });
@@ -242,10 +332,14 @@ export function buildChatContext(
         else if (youtubeData.url) {
           context.youtubeTranscripts.push({
             url: youtubeData.url,
+            title: youtubeData.title,
+            channelName: youtubeData.channelTitle,
             transcript: youtubeData.transcript,
             status: youtubeData.transcriptStatus || 'loading',
             method: youtubeData.transcriptMethod,
+            duration: youtubeData.duration,
             aiInstructions: safeGetInstructions(youtubeData),
+            metadata: buildNodeMetadata(node, workflow),
           });
         }
         break;
@@ -259,6 +353,7 @@ export function buildChatContext(
           duration: voiceData.duration,
           status: voiceData.transcriptStatus || 'idle',
           aiInstructions: safeGetInstructions(voiceData),
+          metadata: buildNodeMetadata(node, workflow),
         });
         break;
       }
@@ -268,9 +363,11 @@ export function buildChatContext(
         context.pdfDocuments.push({
           fileName: pdfData.fileName,
           parsedText: pdfData.parsedText,
+          pageCount: pdfData.pageCount,
           segments: pdfData.segments,
           status: pdfData.parseStatus || 'idle',
           aiInstructions: safeGetInstructions(pdfData),
+          metadata: buildNodeMetadata(node, workflow),
         });
         break;
       }
@@ -285,6 +382,7 @@ export function buildChatContext(
           tags: imageData.analysisData?.tags,
           status: imageData.analysisStatus || 'idle',
           aiInstructions: safeGetInstructions(imageData),
+          metadata: buildNodeMetadata(node, workflow),
         });
         break;
       }
@@ -298,6 +396,7 @@ export function buildChatContext(
           metadata: webpageData.metadata,
           status: webpageData.scrapeStatus || 'idle',
           aiInstructions: safeGetInstructions(webpageData),
+          contextMetadata: buildNodeMetadata(node, workflow),
         });
         break;
       }
@@ -321,6 +420,7 @@ export function buildChatContext(
             isVideo: instagramData.isVideo,
             postType: instagramData.postType,
             aiInstructions: safeGetInstructions(instagramData),
+            metadata: buildNodeMetadata(node, workflow),
           });
         }
         break;
@@ -344,6 +444,7 @@ export function buildChatContext(
             fullAnalysis: linkedInData.fullAnalysis,
             postType: linkedInData.postType,
             aiInstructions: safeGetInstructions(linkedInData),
+            metadata: buildNodeMetadata(node, workflow),
           });
         }
         break;
@@ -356,6 +457,7 @@ export function buildChatContext(
           notes: mindMapData.notes,
           tags: mindMapData.tags,
           aiInstructions: safeGetInstructions(mindMapData),
+          metadata: buildNodeMetadata(node, workflow),
         });
         break;
       }
@@ -367,6 +469,7 @@ export function buildChatContext(
           generatedContent: templateData.generatedContent,
           status: templateData.generationStatus || 'idle',
           aiInstructions: safeGetInstructions(templateData),
+          metadata: buildNodeMetadata(node, workflow),
         });
         break;
       }
