@@ -1,5 +1,5 @@
 import { memo, useMemo, useLayoutEffect } from 'react';
-import { MessageSquare, Copy, Check, Maximize2, User, Plus, ChevronDown, Trash2 } from 'lucide-react';
+import { MessageSquare, Copy, Check, Maximize2, X, User, Plus, Trash2 } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { SyntheticEvent, WheelEvent as ReactWheelEvent, ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -18,8 +18,10 @@ import { NodeResizer, type NodeProps } from '@xyflow/react';
 import type { OnResize, OnResizeEnd } from '@xyflow/system';
 import { VoiceInputBar } from '../VoiceInputBar';
 import { ModelSelectionDialog } from '../ModelSelectionDialog';
-import { getModelDisplayName, getProviderForModel, getProviderInfo, PROVIDERS } from '@/lib/models/model-registry';
-import { OpenAI, Gemini, Anthropic, DeepSeek } from '@lobehub/icons';
+import { normalizeLegacyModel } from '@/lib/models/model-registry';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import 'katex/dist/katex.min.css';
 
 type ChatNodeProps = NodeProps<ChatNodeData>;
@@ -30,13 +32,12 @@ const CHAT_NODE_MIN_WIDTH = 760;
 const CHAT_NODE_MIN_HEIGHT = 520;
 const CHAT_NODE_MAX_WIDTH = 2000;
 const CHAT_NODE_MAX_HEIGHT = 1600;
+const DEFAULT_CHAT_MODEL = 'google/gemini-2.5-flash-preview-09-2025';
 
-// Provider icon mapping
-const PROVIDER_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
-  OpenAI: OpenAI,
-  Google: Gemini,
-  Anthropic: Anthropic,
-  DeepSeek: DeepSeek,
+const resolveModelConfig = (rawModel?: string) => {
+  const canonicalModel = normalizeLegacyModel(rawModel || DEFAULT_CHAT_MODEL);
+  const provider = canonicalModel.includes('/') ? 'openrouter' : 'gemini';
+  return { canonicalModel, provider };
 };
 
 const parseDimension = (value: number | string | undefined): number | undefined => {
@@ -124,15 +125,13 @@ const MessageBubble = memo(({
   isLoading, 
   copiedMessageId, 
   getUserDisplayName,
-  handleCopyMessage,
-  stopReactFlowPropagation 
+  handleCopyMessage
 }: {
   message: ChatMessage;
   isLoading: boolean;
   copiedMessageId: string | null;
   getUserDisplayName: () => string;
   handleCopyMessage: (messageId: string, content: string) => Promise<void>;
-  stopReactFlowPropagation: (event: SyntheticEvent) => void;
 }) => {
   // Memoize markdown rendering based on message content
   const markdownContent = useMemo(() => {
@@ -153,7 +152,7 @@ const MessageBubble = memo(({
         components={{
           code: (props) => <CodeBlock {...props} />,
           pre: ({ children }) => <>{children}</>,
-          p: ({ children }) => <p className="text-[13px] mb-3 last:mb-0 select-text" style={{ userSelect: 'text' }}>{children}</p>,
+          p: ({ children }) => <p className="text-[13px] mb-3 last:mb-0 select-text break-words" style={{ userSelect: 'text', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{children}</p>,
           h1: ({ children }) => <h1 className="text-[18px] font-bold mb-4 mt-5 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h1>,
           h2: ({ children }) => <h2 className="text-[16px] font-bold mb-3 mt-4 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h2>,
           h3: ({ children }) => <h3 className="text-[15px] font-semibold mb-3 mt-4 first:mt-0 leading-[1.4] select-text" style={{ userSelect: 'text' }}>{children}</h3>,
@@ -196,13 +195,13 @@ const MessageBubble = memo(({
   }, [message.content, isLoading]);
 
   return (
-    <div className="group/message max-w-[85%] mb-1">
+    <div className="group/message max-w-[85%] mb-1 min-w-0">
       {/* Role indicator - more subtle */}
       <div className="flex items-center gap-1.5 mb-1.5 ml-1">
         {message.role === 'assistant' ? (
           <>
             <div className="w-1 h-1 bg-primary rounded-full"></div>
-            <span className="text-[10px] font-medium text-muted-foreground">AI</span>
+            <span className="text-[10px] font-medium text-muted-foreground">Remic AI</span>
           </>
         ) : (
           <>
@@ -211,47 +210,41 @@ const MessageBubble = memo(({
           </>
         )}
       </div>
-      
+
       {/* Message bubble - borderless, modern design */}
       <div className="relative">
         <div
-          className={`nodrag px-4 py-3 rounded-2xl text-[13px] leading-[1.6] select-text cursor-text transition-colors ${
+          className={`px-3 py-2.5 rounded-xl text-[13px] leading-[1.6] select-text cursor-text transition-colors break-words ${
             message.role === 'user'
-              ? 'bg-[#F3F4F6] text-[#111827]'
-              : 'bg-white text-[#111827]'
+              ? 'bg-muted text-foreground'
+              : 'bg-background text-foreground border border-border/60'
           }`}
-          style={{ userSelect: 'text' }}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-          }}
+          style={{ userSelect: 'text', wordBreak: 'break-word', overflowWrap: 'break-word' }}
         >
-          <div className="prose prose-sm max-w-none select-text" style={{ userSelect: 'text' }}>
+          <div className="prose prose-sm max-w-none select-text break-words" style={{ userSelect: 'text', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {markdownContent}
           </div>
         </div>
 
         {/* Copy button - floating style */}
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
+          className={`absolute -bottom-2 right-2 h-6 px-2 text-[10px] gap-1 border-border/60 shadow-sm transition-opacity opacity-0 group-hover/message:opacity-100 ${
+            copiedMessageId === message.id ? 'text-primary' : ''
+          }`}
           onClick={(e) => {
             e.stopPropagation();
             handleCopyMessage(message.id, message.content);
           }}
-          onMouseDown={(e) => e.stopPropagation()}
-          className="absolute -bottom-2 right-2 flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-white text-gray-600 hover:text-primary border border-gray-200 rounded-full shadow-sm hover:shadow-md transition-all opacity-0 group-hover/message:opacity-100"
-          title="Copy message"
         >
           {copiedMessageId === message.id ? (
-            <>
-              <Check className="h-3 w-3 text-primary" />
-              <span className="text-primary">Copied</span>
-            </>
+            <Check className="h-3 w-3" />
           ) : (
-            <>
-              <Copy className="h-3 w-3" />
-              <span>Copy</span>
-            </>
+            <Copy className="h-3 w-3" />
           )}
-        </button>
+          {copiedMessageId === message.id ? 'Copied' : 'Copy'}
+        </Button>
       </div>
     </div>
   );
@@ -270,10 +263,12 @@ export const ChatNode = memo(({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  const [, setIsMaximized] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>(data.model || 'google/gemini-2.5-flash');
+  const [isMaximized, setIsMaximized] = useState(false);
+  const initialModelConfig = resolveModelConfig(data.model);
+  const [selectedModel, setSelectedModel] = useState<string>(initialModelConfig.canonicalModel);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const nodeScrollContainerRef = useRef<HTMLDivElement>(null);
+  const dialogScrollContainerRef = useRef<HTMLDivElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const updateNode = useWorkflowStore((state) => state.updateNode);
   const workflow = useWorkflowStore((state) => state.workflow);
@@ -284,12 +279,20 @@ export const ChatNode = memo(({
   });
   const { user } = useCurrentUser();
 
-  // Sync selectedModel with data.model
+  // Normalize node-level model/provider metadata
   useEffect(() => {
-    if (data.model && data.model !== selectedModel) {
-      setSelectedModel(data.model);
+    const { canonicalModel, provider } = resolveModelConfig(data.model);
+    if (data.model !== canonicalModel || data.provider !== provider) {
+      updateNodeData(id, {
+        model: canonicalModel,
+        provider,
+      } as Partial<ChatNodeData>);
     }
-  }, [data.model, selectedModel]);
+
+    if (canonicalModel !== selectedModel) {
+      setSelectedModel(canonicalModel);
+    }
+  }, [data.model, data.provider, id, selectedModel, updateNodeData]);
 
   const storedWidth = parseDimension(storedStyle?.width);
   const storedHeight = parseDimension(storedStyle?.height);
@@ -307,21 +310,26 @@ export const ChatNode = memo(({
   // Initialize sessions if not present (migration from old format)
   useEffect(() => {
     if (!data.sessions) {
-      // Migrate old format to new sessions format
+      const { canonicalModel, provider } = resolveModelConfig(data.model || selectedModel);
+
       const initialSession: ChatSession = {
         id: crypto.randomUUID(),
         title: 'New Chat',
         messages: data.messages || [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        model: 'gemini-flash-latest',
+        model: canonicalModel,
+        provider,
       };
+
       updateNodeData(id, {
         sessions: [initialSession],
         currentSessionId: initialSession.id,
+        model: canonicalModel,
+        provider,
       } as Partial<ChatNodeData>);
     }
-  }, [data.messages, data.sessions, id, updateNodeData]);
+  }, [data.messages, data.model, data.sessions, id, selectedModel, updateNodeData]);
 
   // Get current session
   const currentSession = data.sessions?.find(s => s.id === data.currentSessionId) || data.sessions?.[0];
@@ -333,31 +341,57 @@ export const ChatNode = memo(({
     return user.user_metadata?.full_name || user.email?.split('@')[0] || 'You';
   };
 
-  // Setup virtual scrolling for messages
-  const virtualizer = useVirtualizer({
+  // Setup virtual scrolling for messages - use appropriate ref based on mode
+  const nodeVirtualizer = useVirtualizer({
     count: messages.length,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 120, // Estimated message height in pixels (reduced for less bulky design)
-    overscan: 5, // Render 5 extra items above/below viewport
+    getScrollElement: () => nodeScrollContainerRef.current,
+    estimateSize: () => 96,
+    overscan: 12,
+  });
+
+  const dialogVirtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => dialogScrollContainerRef.current,
+    estimateSize: () => 96,
+    overscan: 12,
   });
 
   type NativeEventWithStop = Event & { stopImmediatePropagation?: () => void };
 
   const stopReactFlowPropagation = useCallback((event: SyntheticEvent) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return;
+    }
+
+    const interactive = target.closest(
+      'button, a, input, textarea, select, [contenteditable="true"], [data-flowy-interactive="true"]'
+    );
+
+    if (!interactive) {
+      return;
+    }
+
     event.stopPropagation();
     (event.nativeEvent as NativeEventWithStop).stopImmediatePropagation?.();
   }, []);
 
   const handleWheelEvent = useCallback(
     (event: ReactWheelEvent) => {
-      if (event.ctrlKey || event.metaKey) {
-        event.preventDefault();
+      if (!isActive) {
         return;
       }
 
-      stopReactFlowPropagation(event);
+      const target = event.target as HTMLElement | null;
+      const scrollable = target?.closest<HTMLElement>('.flowy-scrollable');
+      if (!scrollable) {
+        return;
+      }
+
+      event.stopPropagation();
+      (event.nativeEvent as NativeEventWithStop).stopImmediatePropagation?.();
     },
-    [stopReactFlowPropagation],
+    [isActive],
   );
 
   useEffect(() => {
@@ -435,7 +469,7 @@ export const ChatNode = memo(({
 
   // Check if user is near bottom of scroll container
   const isNearBottom = () => {
-    const container = scrollContainerRef.current;
+    const container = isMaximized ? dialogScrollContainerRef.current : nodeScrollContainerRef.current;
     if (!container) return true;
     const threshold = 100;
     return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
@@ -447,10 +481,11 @@ export const ChatNode = memo(({
 
   // Auto-scroll when new messages arrive - useLayoutEffect for synchronous updates
   useLayoutEffect(() => {
-    if (shouldAutoScroll && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    const container = isMaximized ? dialogScrollContainerRef.current : nodeScrollContainerRef.current;
+    if (shouldAutoScroll && container) {
+      container.scrollTop = container.scrollHeight;
     }
-  }, [messages.length, shouldAutoScroll, messages]);
+  }, [messages.length, shouldAutoScroll, messages, isMaximized]);
 
   // Update linked nodes when workflow changes
   useEffect(() => {
@@ -464,57 +499,120 @@ export const ChatNode = memo(({
 
   // Create new chat session
   const createNewChat = () => {
+    const { canonicalModel, provider } = resolveModelConfig(selectedModel);
     const newSession: ChatSession = {
       id: crypto.randomUUID(),
       title: 'New Chat',
       messages: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      model: selectedModel,
+      model: canonicalModel,
+      provider,
     };
 
     const updatedSessions = [...(data.sessions || []), newSession];
     updateNodeData(id, {
       sessions: updatedSessions,
       currentSessionId: newSession.id,
+      model: canonicalModel,
+      provider,
     } as Partial<ChatNodeData>);
+
+    setSelectedModel(canonicalModel);
   };
 
   // Switch to a different chat session
   const switchSession = (sessionId: string) => {
-    updateNodeData(id, {
+    const sessions = data.sessions || [];
+    const targetSession = sessions.find((session) => session.id === sessionId);
+
+    if (!targetSession) {
+      updateNodeData(id, {
+        currentSessionId: sessionId,
+      } as Partial<ChatNodeData>);
+      return;
+    }
+
+    const { canonicalModel, provider } = resolveModelConfig(targetSession.model);
+    const requiresSessionUpdate =
+      targetSession.model !== canonicalModel || targetSession.provider !== provider;
+
+    const payload: Partial<ChatNodeData> = {
       currentSessionId: sessionId,
-    } as Partial<ChatNodeData>);
+      model: canonicalModel,
+      provider,
+    };
+
+    if (requiresSessionUpdate) {
+      payload.sessions = sessions.map((session) =>
+        session.id === sessionId ? { ...session, model: canonicalModel, provider } : session,
+      );
+    }
+
+    updateNodeData(id, payload as Partial<ChatNodeData>);
+    setSelectedModel(canonicalModel);
   };
 
   // Delete a chat session
   const deleteSession = (sessionId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    const updatedSessions = (data.sessions || []).filter(s => s.id !== sessionId);
+    const sessions = data.sessions || [];
+    let remainingSessions = sessions.filter((s) => s.id !== sessionId);
 
-    // If deleting current session, switch to another or create new
-    let newCurrentId = data.currentSessionId;
+    let nextCurrentId = data.currentSessionId;
+    let targetSession = remainingSessions.find((s) => s.id === nextCurrentId);
+
     if (sessionId === data.currentSessionId) {
-      newCurrentId = updatedSessions[0]?.id;
-      if (!newCurrentId) {
-        // Create a new session if none left
+      nextCurrentId = remainingSessions[0]?.id;
+      targetSession = remainingSessions.find((s) => s.id === nextCurrentId);
+
+      if (!targetSession) {
+        const { canonicalModel, provider } = resolveModelConfig(selectedModel);
         const newSession: ChatSession = {
           id: crypto.randomUUID(),
           title: 'New Chat',
           messages: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          model: 'gemini-flash-latest',
+          model: canonicalModel,
+          provider,
         };
-        updatedSessions.push(newSession);
-        newCurrentId = newSession.id;
+
+        remainingSessions = [...remainingSessions, newSession];
+        nextCurrentId = newSession.id;
+        targetSession = newSession;
       }
     }
 
+    if (!targetSession && remainingSessions.length > 0) {
+      targetSession = remainingSessions[0];
+      nextCurrentId = targetSession.id;
+    }
+
+    const { canonicalModel, provider } = resolveModelConfig(targetSession?.model || selectedModel);
+
+    const normalizedSessions = remainingSessions.map((session) => {
+      if (session.id !== targetSession?.id) {
+        return session;
+      }
+      const sessionConfig = resolveModelConfig(session.model);
+      if (
+        session.model === sessionConfig.canonicalModel &&
+        session.provider === sessionConfig.provider
+      ) {
+        return session;
+      }
+      return { ...session, model: sessionConfig.canonicalModel, provider: sessionConfig.provider };
+    });
+
     updateNodeData(id, {
-      sessions: updatedSessions,
-      currentSessionId: newCurrentId,
+      sessions: normalizedSessions,
+      currentSessionId: nextCurrentId,
+      model: canonicalModel,
+      provider,
     } as Partial<ChatNodeData>);
+
+    setSelectedModel(canonicalModel);
   };
 
   // Copy message content to clipboard
@@ -566,43 +664,41 @@ export const ChatNode = memo(({
 
   // Handle model selection
   const handleModelChange = (modelId: string) => {
-    setSelectedModel(modelId);
+    const { canonicalModel, provider } = resolveModelConfig(modelId);
+    setSelectedModel(canonicalModel);
 
-    // Determine provider
-    const provider = modelId.includes('/') ? 'openrouter' : 'gemini';
-
-    // Update node data
     updateNodeData(id, {
-      model: modelId,
+      model: canonicalModel,
       provider,
     } as Partial<ChatNodeData>);
 
-    // Update current session model if exists
     if (currentSession && data.sessions) {
       const updatedSessions = data.sessions.map(session =>
         session.id === currentSession.id
-          ? { ...session, model: modelId, provider }
+          ? { ...session, model: canonicalModel, provider }
           : session
       );
       updateNodeData(id, { sessions: updatedSessions } as Partial<ChatNodeData>);
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading || !currentSession) return;
+  // Helper function to send a message directly with custom content
+  const sendMessage = async (messageContent: string) => {
+    if (!messageContent.trim() || isLoading || !currentSession) return;
+
+    setIsLoading(true);
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: input,
+      content: messageContent,
       timestamp: new Date().toISOString(),
     };
 
     const updatedMessages = [...currentSession.messages, userMessage];
     const isFirstMessage = currentSession.messages.length === 0;
-    const userMessageContent = input.trim();
+    const userMessageContent = messageContent.trim();
 
-    // Update current session with new message
     const updatedSessions = (data.sessions || []).map(session =>
       session.id === currentSession.id
         ? {
@@ -614,8 +710,6 @@ export const ChatNode = memo(({
     );
 
     updateNodeData(id, { sessions: updatedSessions } as Partial<ChatNodeData>);
-    setInput('');
-    setIsLoading(true);
     setShouldAutoScroll(true);
 
     // Create placeholder for streaming response
@@ -652,7 +746,7 @@ export const ChatNode = memo(({
       };
 
       // Determine provider based on model
-      const provider = selectedModel.includes('/') ? 'openrouter' : 'gemini';
+      const { provider } = resolveModelConfig(selectedModel);
 
       // Call the chat API with streaming
       const response = await fetch('/api/chat', {
@@ -770,6 +864,292 @@ export const ChatNode = memo(({
     }
   };
 
+  const handleSend = async () => {
+    if (!input.trim() || isLoading || !currentSession) return;
+
+    const messageContent = input;
+    setInput(''); // Clear input immediately
+    await sendMessage(messageContent);
+  };
+
+  const renderMessageList = (
+    virtualizer: ReturnType<typeof useVirtualizer> | null,
+    useVirtualization: boolean
+  ) => {
+    if (!messages.length) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-center">
+          <MessageSquare className="h-12 w-12 text-gray-300 mb-3" />
+          <p className="text-[13px] text-gray-500">Start a conversation</p>
+        </div>
+      );
+    }
+
+    if (!useVirtualization || !virtualizer) {
+      return (
+        <div className="space-y-4">
+          {messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              isLoading={isLoading}
+              copiedMessageId={copiedMessageId}
+              getUserDisplayName={getUserDisplayName}
+              handleCopyMessage={handleCopyMessage}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualItem) => {
+          const message = messages[virtualItem.index];
+          return (
+            <div
+              key={message.id}
+              data-index={virtualItem.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualItem.start}px)`,
+              }}
+              className="pb-6"
+            >
+              <MessageBubble
+                message={message}
+                isLoading={isLoading}
+                copiedMessageId={copiedMessageId}
+                getUserDisplayName={getUserDisplayName}
+                handleCopyMessage={handleCopyMessage}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderChatLayout = (isModal = false) => {
+    const scrollRef = isModal ? dialogScrollContainerRef : nodeScrollContainerRef;
+    const virtualizer = isModal ? dialogVirtualizer : nodeVirtualizer;
+
+    return (
+      <div
+        className={`flex h-full w-full border-2 rounded-2xl overflow-hidden bg-white ${
+          isModal
+            ? 'border-[#095D40] shadow-2xl'
+            : `shadow-sm transition-all ${isActive ? 'border-[#095D40]' : 'border-[#E8ECEF]'}`
+        }`}
+        onWheel={handleWheelEvent}
+        onWheelCapture={handleWheelEvent}
+      >
+        {/* Left Sidebar */}
+        <div className="w-[240px] min-w-[240px] flex-shrink-0 border-r border-border/40 flex flex-col bg-muted/40">
+          <div className="px-3 py-3 border-b border-border/40 space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/80">
+            Connected ({data.linkedNodes?.length || 0})
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            {data.linkedNodes && data.linkedNodes.length > 0
+              ? `${data.linkedNodes.length} linked ${data.linkedNodes.length === 1 ? 'node' : 'nodes'}`
+              : 'No linked nodes yet'}
+          </p>
+        </div>
+
+        <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-border/40">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/80">
+            Chats
+          </p>
+          <Button
+            size="sm"
+            className="h-7 px-2 text-[11px] gap-1"
+            onClick={(e) => {
+              stopReactFlowPropagation(e);
+              createNewChat();
+            }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New
+          </Button>
+        </div>
+
+        <ScrollArea
+          className="flex-1"
+          viewportClassName="flowy-scrollable"
+          onWheel={handleWheelEvent}
+          onWheelCapture={handleWheelEvent}
+        >
+          <div className="px-3 py-2 space-y-2">
+            {data.sessions && data.sessions.length > 0 ? (
+              data.sessions.map((session) => {
+                const isActiveSession = session.id === currentSession?.id;
+                return (
+                  <div
+                    key={session.id}
+                    className={`flex items-center gap-2 rounded-md border px-3 py-2 text-[11px] transition-colors ${
+                      isActiveSession
+                        ? 'border-primary/30 bg-primary/5'
+                        : 'border-border/50 hover:border-border hover:bg-gray-50'
+                    }`}
+                  >
+                    <Button
+                      variant="ghost"
+                      className="h-6 px-0 flex-1 justify-start text-left text-current hover:bg-transparent min-w-0"
+                      onClick={(e) => {
+                        stopReactFlowPropagation(e);
+                        switchSession(session.id);
+                      }}
+                    >
+                      <span className="truncate block">{session.title}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-transparent"
+                      onClick={(e) => deleteSession(session.id, e)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span className="sr-only">Delete chat</span>
+                    </Button>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-[11px] text-muted-foreground px-1 py-4 text-center">
+                No chats yet
+              </p>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col bg-white min-w-0 overflow-hidden">
+        {/* Chat Header */}
+        <div
+          className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 bg-white flowy-drag-handle cursor-grab active:cursor-grabbing select-none"
+          data-flowy-drag-handle
+        >
+          <div className="flex items-center gap-2.5">
+            <MessageSquare className="h-4.5 w-4.5 text-primary" />
+            <h3 className="text-[13px] font-semibold text-gray-900">
+              {currentSession?.title || 'Chat'}
+            </h3>
+          </div>
+          {!isModal ? (
+            <button
+              onClick={(e) => {
+                stopReactFlowPropagation(e);
+                setIsMaximized(true);
+              }}
+              onMouseDown={(e) => stopReactFlowPropagation(e)}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Maximize chat"
+            >
+              <Maximize2 className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+            </button>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMaximized(false);
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Close chat"
+            >
+              <X className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+            </button>
+          )}
+        </div>
+
+        {/* Messages Area - Virtualized */}
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          onWheel={handleWheelEvent}
+          onWheelCapture={handleWheelEvent}
+          data-lenis-prevent
+          className="flowy-scrollable flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 bg-muted/30"
+          style={{ overscrollBehavior: 'contain', userSelect: 'text' }}
+        >
+          {renderMessageList(virtualizer, !isModal)}
+        </div>
+
+        {/* Input Area */}
+        <div className="px-4 py-3 border-t border-border/40 bg-white">
+          <div className="flex items-center gap-2 mb-2">
+            {/* Model Selector with Provider Branding */}
+            <div
+              onClick={(e) => stopReactFlowPropagation(e)}
+              onMouseDown={(e) => stopReactFlowPropagation(e)}
+              onPointerDown={(e) => stopReactFlowPropagation(e)}
+            >
+              <ModelSelectionDialog
+                currentModel={selectedModel}
+                onSelectModel={handleModelChange}
+              />
+            </div>
+          </div>
+
+          <div
+            onMouseDown={(e) => stopReactFlowPropagation(e)}
+            className="border border-border/60 rounded-lg bg-muted/40 hover:bg-background transition-colors px-2 py-1.5 mb-2"
+          >
+            <VoiceInputBar
+              value={input}
+              onChange={setInput}
+              onSend={handleSend}
+              placeholder="Ask anything or press / for actions"
+              disabled={isLoading}
+              voiceMode="replace"
+              showAddButton={false}
+              showRecordingHint={false}
+            />
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                stopReactFlowPropagation(e);
+                if (isLoading) return;
+                sendMessage('Summarize the key points from the context provided above in a clear and concise format.');
+              }}
+              disabled={isLoading}
+              className="px-3 py-1.5 text-[11px] font-medium rounded-lg bg-[#095D40]/10 text-[#095D40] hover:bg-[#095D40]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Summarize
+            </button>
+            <button
+              onClick={(e) => {
+                stopReactFlowPropagation(e);
+                if (isLoading) return;
+                sendMessage('Extract and highlight the key insights, important takeaways, and actionable points from the context above.');
+              }}
+              disabled={isLoading}
+              className="px-3 py-1.5 text-[11px] font-medium rounded-lg bg-[#095D40]/10 text-[#095D40] hover:bg-[#095D40]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Get Key Insights
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    );
+  };
+
   return (
     <div
       className="group relative"
@@ -798,213 +1178,19 @@ export const ChatNode = memo(({
         contentStyle={{ height: '100%' }}
         style={{ width: '100%', height: '100%' }}
       >
-        <div
-          className={`flex h-full w-full border-2 rounded-2xl overflow-hidden bg-white shadow-sm transition-all ${
-            isActive ? 'border-[#095D40]' : 'border-[#095D40]/20'
-          }`}
-          onWheel={handleWheelEvent}
-          onWheelCapture={handleWheelEvent}
-        >
-          {/* Left Sidebar */}
-          <div className="nodrag w-[280px] border-r border-[#095D40]/20 flex flex-col bg-[#095D40]/5">
-            {/* Connected Data Section */}
-            <div className="p-4 border-b border-[#095D40]/20">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-[12px] font-semibold text-[#095D40] uppercase tracking-wide">
-                  Connected Data ({data.linkedNodes?.length || 0})
-                </h3>
-              </div>
-              {data.linkedNodes && data.linkedNodes.length > 0 ? (
-                <div className="text-[11px] text-[#095D40]/80 px-2 py-1.5 bg-white border border-[#095D40]/20 rounded">
-                  {data.linkedNodes.length} {data.linkedNodes.length === 1 ? 'node' : 'nodes'} connected
-                </div>
-              ) : (
-                <p className="text-[11px] text-[#095D40]/60">No data connected</p>
-              )}
-            </div>
-
-            {/* Chats Section */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-4 pb-3">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[12px] font-semibold text-[#095D40] uppercase tracking-wide">
-                    Chats ({data.sessions?.length || 0})
-                  </h3>
-                </div>
-                <button
-                  onClick={(e) => {
-                    stopReactFlowPropagation(e);
-                    createNewChat();
-                  }}
-                  onMouseDown={(e) => stopReactFlowPropagation(e)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-[#095D40] hover:bg-[#074830] border-0 rounded-lg transition-colors text-[12px] font-medium text-white"
-                >
-                  <Plus className="h-4 w-4" />
-                  New Chat
-                </button>
-              </div>
-
-              {/* Chat List */}
-              <div
-                className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5"
-                onWheel={handleWheelEvent}
-                onMouseDown={(e) => stopReactFlowPropagation(e)}
-              >
-                {data.sessions && data.sessions.length > 0 ? (
-                  data.sessions.map((session) => (
-                    <div
-                      key={session.id}
-                      onClick={(e) => {
-                        stopReactFlowPropagation(e);
-                        switchSession(session.id);
-                      }}
-                      onMouseDown={(e) => stopReactFlowPropagation(e)}
-                      className={`group p-3 rounded-lg cursor-pointer transition-all ${
-                        session.id === currentSession?.id
-                          ? 'bg-[#095D40] text-white shadow-sm'
-                          : 'bg-white border border-[#095D40]/20 hover:bg-[#095D40]/10'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-[12px] font-medium truncate ${
-                            session.id === currentSession?.id ? 'text-white' : 'text-[#095D40]'
-                          }`}>
-                            {session.title}
-                          </p>
-                        </div>
-                        <button
-                          onClick={(e) => deleteSession(session.id, e)}
-                          onMouseDown={(e) => stopReactFlowPropagation(e)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#FF3B30]/10 rounded transition-all"
-                          title="Delete chat"
-                        >
-                          <Trash2 className={`h-3.5 w-3.5 ${
-                            session.id === currentSession?.id ? 'text-white/80' : 'text-[#FF3B30]'
-                          }`} />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-[11px] text-[#095D40]/60 text-center py-8">No chats yet</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Main Chat Area */}
-          <div className="flex-1 flex flex-col bg-white">
-            {/* Chat Header */}
-            <div className="flex items-center justify-between px-6 py-3.5 border-b border-border/50 bg-white">
-              <div className="flex items-center gap-2.5">
-                <MessageSquare className="h-4.5 w-4.5 text-primary" />
-                <h3 className="text-[13px] font-semibold text-gray-900">
-                  {currentSession?.title || 'Chat'}
-                </h3>
-              </div>
-              <button
-                onClick={(e) => {
-                  stopReactFlowPropagation(e);
-                  setIsMaximized(true);
-                }}
-                onMouseDown={(e) => stopReactFlowPropagation(e)}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Maximize chat"
-              >
-                <Maximize2 className="h-4 w-4 text-gray-500 hover:text-gray-700" />
-              </button>
-            </div>
-
-            {/* Messages Area - Virtualized */}
-            <div
-              ref={scrollContainerRef}
-              onScroll={handleScroll}
-              onWheel={handleWheelEvent}
-              onWheelCapture={handleWheelEvent}
-              data-lenis-prevent
-              className="nodrag flex-1 overflow-y-auto px-6 py-6 bg-[#FAFAFA]"
-              style={{ overscrollBehavior: 'contain', userSelect: 'text' }}
-            >
-              {messages.length > 0 ? (
-                <div
-                  style={{
-                    height: `${virtualizer.getTotalSize()}px`,
-                    width: '100%',
-                    position: 'relative',
-                  }}
-                >
-                  {virtualizer.getVirtualItems().map((virtualItem) => {
-                    const message = messages[virtualItem.index];
-                    return (
-                      <div
-                        key={message.id}
-                        data-index={virtualItem.index}
-                        ref={virtualizer.measureElement}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          transform: `translateY(${virtualItem.start}px)`,
-                        }}
-                        className="pb-6"
-                      >
-                        <MessageBubble
-                          message={message}
-                          isLoading={isLoading}
-                          copiedMessageId={copiedMessageId}
-                          getUserDisplayName={getUserDisplayName}
-                          handleCopyMessage={handleCopyMessage}
-                          stopReactFlowPropagation={stopReactFlowPropagation}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <MessageSquare className="h-12 w-12 text-gray-300 mb-3" />
-                  <p className="text-[13px] text-gray-500">Start a conversation</p>
-                </div>
-              )}
-            </div>
-
-            {/* Input Area */}
-            <div className="nodrag px-6 py-4 border-t border-border/50 bg-white">
-              <div className="flex items-center gap-3 mb-2.5">
-                {/* Model Selector with Provider Branding */}
-                <div
-                  onClick={(e) => stopReactFlowPropagation(e)}
-                  onMouseDown={(e) => stopReactFlowPropagation(e)}
-                  onPointerDown={(e) => stopReactFlowPropagation(e)}
-                >
-                  <ModelSelectionDialog
-                    currentModel={selectedModel}
-                    onSelectModel={handleModelChange}
-                  />
-                </div>
-              </div>
-
-              <div 
-                onMouseDown={(e) => stopReactFlowPropagation(e)}
-                className="border border-gray-200 rounded-xl bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-all duration-200 px-2 py-1.5"
-              >
-                <VoiceInputBar
-                  value={input}
-                  onChange={setInput}
-                  onSend={handleSend}
-                  placeholder="Ask anything or press / for actions"
-                  disabled={isLoading}
-                  voiceMode="replace"
-                  showAddButton={false}
-                  showRecordingHint={false}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        {renderChatLayout()}
       </BaseNode>
+
+      <Dialog open={isMaximized} onOpenChange={setIsMaximized}>
+        <DialogContent
+          className="sm:max-w-[96vw] w-[96vw] max-h-[90vh] h-[90vh] p-0 border-none shadow-2xl overflow-hidden"
+          showCloseButton={false}
+        >
+          <div className="h-full w-full overflow-hidden">
+            {renderChatLayout(true)}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

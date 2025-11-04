@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
+import { isGoogleWorkspaceUrl, fetchGoogleWorkspaceContent, detectDocumentType } from '@/lib/api/google-workspace';
 
 const USER_AGENT = 'Mozilla/5.0 (compatible; RemaltBot/1.0; +https://remalt.ai)';
 const FETCH_TIMEOUT_MS = 10_000;
@@ -12,6 +13,12 @@ type PreviewCacheEntry = {
     description: string | null;
     imageUrl: string | null;
     themeColor: string | null;
+    contentPreview?: string;
+    wordCount?: number;
+    isDocument?: boolean;
+    documentType?: 'document' | 'presentation' | 'spreadsheet';
+    rowCount?: number; // For spreadsheets
+    slideCount?: number; // For presentations (estimated)
   };
 };
 
@@ -102,6 +109,118 @@ async function postHandler(req: NextRequest) {
     const cachedEntry = PREVIEW_CACHE.get(normalizedUrl);
     if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
       return NextResponse.json(cachedEntry.response);
+    }
+
+    // Special handling for Google Workspace URLs (Docs, Slides, Sheets)
+    if (isGoogleWorkspaceUrl(normalizedUrl)) {
+      const docType = detectDocumentType(normalizedUrl);
+      console.log(`[Preview] Detected Google ${docType}, fetching content for preview`);
+
+      try {
+        const workspaceResult = await fetchGoogleWorkspaceContent(normalizedUrl);
+
+        if (!workspaceResult.success) {
+          const typeName = docType === 'document' ? 'Doc' : docType === 'presentation' ? 'Slides' : 'Sheets';
+          const fallbackPreview = {
+            title: `Google ${typeName}`,
+            description: 'Unable to load preview. Document may not be publicly shared.',
+            imageUrl: null,
+            themeColor: '#4285f4',
+            isDocument: true,
+            documentType: docType || undefined,
+          };
+          return NextResponse.json(fallbackPreview, { status: 200 });
+        }
+
+        const content = workspaceResult.content || '';
+        let contentPreview = content.substring(0, 500).trim();
+
+        // For spreadsheets, adjust preview length
+        if (docType === 'spreadsheet') {
+          contentPreview = content.substring(0, 400).trim();
+        }
+
+        // Try to end at a sentence (for docs and slides)
+        if (docType !== 'spreadsheet') {
+          const lastPeriod = contentPreview.lastIndexOf('.');
+          const lastQuestion = contentPreview.lastIndexOf('?');
+          const lastExclamation = contentPreview.lastIndexOf('!');
+          const lastSentenceEnd = Math.max(lastPeriod, lastQuestion, lastExclamation);
+
+          if (lastSentenceEnd > 200) {
+            contentPreview = contentPreview.substring(0, lastSentenceEnd + 1);
+          }
+        }
+
+        // Calculate statistics based on type
+        let wordCount: number | undefined;
+        let rowCount: number | undefined;
+        let slideCount: number | undefined;
+
+        if (docType === 'spreadsheet') {
+          const rows = content.split('\n').filter(row => row.trim());
+          rowCount = rows.length;
+        } else {
+          wordCount = content.split(/\s+/).filter(Boolean).length;
+
+          // Estimate slide count for presentations (rough approximation)
+          if (docType === 'presentation') {
+            // Assume ~100 words per slide on average
+            slideCount = Math.max(1, Math.ceil(wordCount / 100));
+          }
+        }
+
+        // Create description
+        let description: string;
+        if (docType === 'spreadsheet') {
+          description = `Spreadsheet with ${rowCount} rows`;
+        } else {
+          const firstSentenceMatch = content.match(/^[^.!?]+[.!?]/);
+          description = firstSentenceMatch
+            ? firstSentenceMatch[0].trim()
+            : contentPreview.substring(0, 150).trim() + '...';
+        }
+
+        const workspacePreview = {
+          title: workspaceResult.title || `Google ${docType}`,
+          description,
+          imageUrl: null,
+          themeColor: '#4285f4',
+          contentPreview,
+          wordCount,
+          rowCount,
+          slideCount,
+          isDocument: true,
+          documentType: docType || undefined,
+        };
+
+        PREVIEW_CACHE.set(normalizedUrl, {
+          expiresAt: Date.now() + CACHE_TTL_MS,
+          response: workspacePreview,
+        });
+
+        console.log('[Preview] Google Workspace preview generated:', {
+          type: docType,
+          title: workspacePreview.title,
+          wordCount,
+          rowCount,
+          slideCount,
+        });
+
+        return NextResponse.json(workspacePreview);
+      } catch (error) {
+        console.error('[Preview] Google Workspace preview error:', error);
+        const typeName = docType === 'document' ? 'Doc' : docType === 'presentation' ? 'Slides' : 'Sheets';
+        const errorPreview = {
+          title: `Google ${typeName}`,
+          description: 'Unable to load preview',
+          imageUrl: null,
+          themeColor: '#4285f4',
+          isDocument: true,
+          documentType: docType || undefined,
+        };
+        return NextResponse.json(errorPreview, { status: 200 });
+      }
     }
 
     let html: string | null = null;

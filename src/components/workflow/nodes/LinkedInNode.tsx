@@ -33,6 +33,7 @@ function formatNumber(num: number): string {
 }
 
 export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<LinkedInNodeData>) => {
+  void selected; // Not used - we use isActive instead
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [isContentExpanded, setIsContentExpanded] = useState(false);
@@ -40,6 +41,8 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
   const inputRef = useRef<HTMLInputElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const processedUrlRef = useRef<string | null>(null);
+  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
+  const isActive = activeNodeId === id;
 
   const hasPostData = data.fetchStatus === 'success' && !!data.content;
 
@@ -166,7 +169,7 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
         iconBg="bg-[#0A66C2]/10"
         parentId={parentId}
       >
-        <div className="w-[420px] space-y-3">
+        <div className="w-[320px] space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -327,8 +330,8 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
       </div>
     </BaseNode>
 
-    {/* Floating AI Instructions - Only show when node is selected */}
-    {selected && (
+    {/* Floating AI Instructions - visible once the node is active/selected */}
+    {(isActive || selected) && (
       <FloatingAIInstructions
         value={data.aiInstructions}
         onChange={(value) =>

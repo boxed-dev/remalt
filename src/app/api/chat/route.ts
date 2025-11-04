@@ -49,9 +49,14 @@ async function postHandler(req: NextRequest) {
     } = await req.json();
 
     // Normalize and determine model/provider
-    const rawModel = requestModel || 'google/gemini-2.5-flash';
+    const rawModel = requestModel || 'google/gemini-2.5-flash-preview-09-2025';
     const model = normalizeLegacyModel(rawModel);
     const provider = requestProvider || (model.includes('/') ? 'openrouter' : 'gemini');
+
+    console.log('[Chat API] Request model:', requestModel);
+    console.log('[Chat API] Normalized model:', model);
+    console.log('[Chat API] Provider:', provider);
+    console.log('[Chat API] Request provider:', requestProvider);
 
     const metadataCounts = {
       messageCount: messages?.length ?? 0,
@@ -75,20 +80,28 @@ async function postHandler(req: NextRequest) {
 
     // Validate API keys based on provider
     if (provider === 'openrouter') {
-      if (!isOpenRouterConfigured()) {
+      console.log('[Chat API] Using OpenRouter provider');
+      const configured = isOpenRouterConfigured();
+      console.log('[Chat API] OpenRouter configured:', configured);
+      if (!configured) {
+        console.error('[Chat API] OPENROUTER_API_KEY is not configured');
         return new Response(
           JSON.stringify({ error: 'OPENROUTER_API_KEY is not configured. Please set it in your environment variables.' }),
           { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
       }
+      console.log('[Chat API] OpenRouter API key validated');
     } else {
+      console.log('[Chat API] Using Gemini provider');
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
+        console.error('[Chat API] GEMINI_API_KEY is not configured');
         return new Response(
           JSON.stringify({ error: 'GEMINI_API_KEY is not configured' }),
           { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
       }
+      console.log('[Chat API] Gemini API key validated');
     }
 
     operationSpan = Sentry.startInactiveSpan({
@@ -107,8 +120,11 @@ async function postHandler(req: NextRequest) {
     let openrouterClient: ReturnType<typeof createOpenRouterClient> | null = null;
 
     if (provider === 'openrouter') {
+      console.log('[Chat API] Initializing OpenRouter client for model:', model);
       openrouterClient = createOpenRouterClient();
+      console.log('[Chat API] OpenRouter client created successfully');
     } else {
+      console.log('[Chat API] Initializing Gemini client');
       const apiKey = process.env.GEMINI_API_KEY!;
       const genAI = new GoogleGenerativeAI(apiKey);
 
@@ -117,6 +133,7 @@ async function postHandler(req: NextRequest) {
         ? model.replace('google/', '').replace('2.5', '2-5').replace('2.0', '2-0')
         : 'gemini-2-5-flash';
 
+      console.log('[Chat API] Using Gemini model:', geminiModelName);
       geminiModel = genAI.getGenerativeModel({
         model: geminiModelName,
         generationConfig: {
@@ -124,6 +141,7 @@ async function postHandler(req: NextRequest) {
           maxOutputTokens: 2048,
         },
       });
+      console.log('[Chat API] Gemini client created successfully');
     }
 
     // Build the context from linked nodes
@@ -994,24 +1012,38 @@ User: ${latestMessage.content}`;
 
           if (provider === 'openrouter' && openrouterClient) {
             // OpenRouter streaming using OpenAI SDK
-            const completion = await openrouterClient.chat.completions.create({
-              model,
-              messages: [{ role: 'user', content: prompt }],
-              stream: true,
-              temperature: 0.7,
-              max_tokens: 2048,
-            });
+            console.log('[OpenRouter] Starting stream with model:', model);
+            console.log('[OpenRouter] Prompt length:', prompt.length);
 
-            for await (const chunk of completion) {
-              const chunkText = chunk.choices[0]?.delta?.content || '';
-              if (chunkText) {
-                fullText += chunkText;
-                chunkCount += 1;
+            try {
+              const completion = await openrouterClient.chat.completions.create({
+                model,
+                messages: [{ role: 'user', content: prompt }],
+                stream: true,
+                temperature: 0.7,
+                max_tokens: 2048,
+              });
 
-                // Send each chunk as JSON
-                const data = JSON.stringify({ content: chunkText, done: false });
-                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              console.log('[OpenRouter] Stream created, waiting for chunks...');
+
+              for await (const chunk of completion) {
+                console.log('[OpenRouter] Received chunk:', JSON.stringify(chunk));
+
+                const chunkText = chunk.choices[0]?.delta?.content || '';
+                if (chunkText) {
+                  fullText += chunkText;
+                  chunkCount += 1;
+
+                  // Send each chunk as JSON
+                  const data = JSON.stringify({ content: chunkText, done: false });
+                  controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                }
               }
+
+              console.log('[OpenRouter] Stream completed. Total chunks:', chunkCount, 'Total length:', fullText.length);
+            } catch (openrouterError) {
+              console.error('[OpenRouter] Stream error:', openrouterError);
+              throw openrouterError;
             }
           } else if (geminiModel) {
             // Gemini streaming

@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Globe, Loader2, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { Globe, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, ExternalLink, FileText, Presentation, Table } from 'lucide-react';
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { BaseNode } from './BaseNode';
@@ -15,6 +15,12 @@ type WebpagePreviewData = {
   description?: string;
   imageUrl?: string;
   themeColor?: string;
+  contentPreview?: string;
+  wordCount?: number;
+  isDocument?: boolean;
+  documentType?: 'document' | 'presentation' | 'spreadsheet';
+  rowCount?: number;
+  slideCount?: number;
 };
 
 type WebpageAnalysisData = {
@@ -80,6 +86,8 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
   }>({ url: null, status: 'idle', data: null });
   const inputRef = useRef<HTMLInputElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
+  const isActive = activeNodeId === id;
   const scrapeControllerRef = useRef<AbortController | null>(null);
 
   const canPreview = useMemo(() => !!data.url, [data.url]);
@@ -201,7 +209,7 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
 
     if (data.scrapeStatus === 'success')
       return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-[#ECFDF5] px-2 py-1 text-[10px] text-[#047857]">
+        <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] text-emerald-600">
           <CheckCircle2 className="h-3 w-3" />
           <span>Content ready</span>
         </div>
@@ -449,7 +457,81 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
                     )}
                     {previewState.status === 'success' && previewState.data && (
                       <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
-                        {previewState.data.imageUrl && (
+                        {previewState.data.isDocument && previewState.data.contentPreview ? (
+                          // Rich document preview with actual content
+                          <div className="bg-white">
+                            {/* Document header with Google branding */}
+                            <div className="flex items-center justify-between border-b border-[#E5E7EB] bg-gradient-to-r from-[#4285f4] to-[#1a73e8] px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {previewState.data.documentType === 'presentation' ? (
+                                  <>
+                                    <Presentation className="h-5 w-5 text-white" strokeWidth={2} />
+                                    <span className="text-sm font-semibold text-white">Slides Preview</span>
+                                  </>
+                                ) : previewState.data.documentType === 'spreadsheet' ? (
+                                  <>
+                                    <Table className="h-5 w-5 text-white" strokeWidth={2} />
+                                    <span className="text-sm font-semibold text-white">Sheets Preview</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <FileText className="h-5 w-5 text-white" strokeWidth={2} />
+                                    <span className="text-sm font-semibold text-white">Document Preview</span>
+                                  </>
+                                )}
+                              </div>
+                              {previewState.data.wordCount && (
+                                <div className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                                  {previewState.data.wordCount.toLocaleString()} words
+                                </div>
+                              )}
+                              {previewState.data.slideCount && (
+                                <div className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                                  ~{previewState.data.slideCount} slides
+                                </div>
+                              )}
+                              {previewState.data.rowCount && (
+                                <div className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                                  {previewState.data.rowCount} rows
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Document content preview - styled based on type */}
+                            <div className="relative bg-gradient-to-b from-white to-gray-50 p-4">
+                              {previewState.data.documentType === 'spreadsheet' ? (
+                                // Spreadsheet style - monospace with grid feel
+                                <div className="relative space-y-2">
+                                  <div className="text-[10px] leading-relaxed text-[#1f2937] whitespace-pre font-mono overflow-x-auto">
+                                    {previewState.data.contentPreview}
+                                  </div>
+                                </div>
+                              ) : (
+                                // Document/Slides style - paper texture
+                                <>
+                                  {/* Paper texture effect */}
+                                  <div className="absolute inset-0 opacity-[0.03]" style={{
+                                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 1px, #000 1px, #000 2px)',
+                                    backgroundSize: '100% 24px'
+                                  }} />
+
+                                  {/* Content text */}
+                                  <div className="relative space-y-2">
+                                    <div className="text-[11px] leading-relaxed text-[#1f2937] whitespace-pre-wrap font-serif">
+                                      {previewState.data.contentPreview}
+                                      {previewState.data.contentPreview.length >= 400 && (
+                                        <span className="text-[#6b7280]">...</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+
+                              {/* Fade out gradient at bottom */}
+                              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-gray-50 to-transparent" />
+                            </div>
+                          </div>
+                        ) : previewState.data.imageUrl ? (
                           <div className="relative h-40 w-full">
                             <Image
                               src={previewState.data.imageUrl}
@@ -461,12 +543,18 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
                               unoptimized
                             />
                           </div>
+                        ) : (
+                          <div className="flex h-40 w-full items-center justify-center bg-gradient-to-br from-[#F3F4F6] to-[#E5E7EB]">
+                            <Globe className="h-12 w-12 text-gray-400" />
+                          </div>
                         )}
-                        <div className="space-y-2 p-3">
+
+                        {/* Title and description below preview */}
+                        <div className="space-y-2 p-3 border-t border-[#E5E7EB]">
                           <div className="text-[12px] font-semibold text-[#111827] line-clamp-2">
                             {previewState.data.title || data.pageTitle || data.url}
                           </div>
-                          {(previewState.data.description || data.pageContent) && (
+                          {!previewState.data.isDocument && (previewState.data.description || data.pageContent) && (
                             <div className="text-[11px] text-[#4B5563] line-clamp-3">
                               {previewState.data.description || data.pageContent}
                             </div>
@@ -526,8 +614,8 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
         </div>
       </BaseNode>
 
-      {/* Floating AI Instructions - Only show when node is selected */}
-      {selected && (
+      {/* Floating AI Instructions - visible once the node is active/selected */}
+      {(isActive || selected) && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<WebpageNodeData>)}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
+import { isGoogleWorkspaceUrl, fetchGoogleWorkspaceContent } from '@/lib/api/google-workspace';
 
 const JINA_API_KEY = process.env.JINA_API_KEY;
 const FETCH_TIMEOUT_MS = 20_000; // Increased for Jina API
@@ -179,6 +180,57 @@ async function postHandler(req: NextRequest) {
     if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
       console.log('[Webpage analysis] ✅ Cache hit for:', normalizedUrl);
       return NextResponse.json(cachedEntry.response);
+    }
+
+    // Check if this is a Google Workspace URL (Docs, Slides, Sheets)
+    if (isGoogleWorkspaceUrl(normalizedUrl)) {
+      console.log('[Webpage analysis] Detected Google Workspace URL');
+
+      const workspaceResult = await fetchGoogleWorkspaceContent(normalizedUrl);
+
+      if (!workspaceResult.success) {
+        return NextResponse.json(
+          {
+            error: workspaceResult.error || 'Failed to fetch Google Workspace content',
+            status: 'error',
+          },
+          { status: 500 },
+        );
+      }
+
+      // Format the response in the same structure as webpage analysis
+      const docType = workspaceResult.documentType || 'document';
+      const typeName = docType === 'document' ? 'Google Doc' : docType === 'presentation' ? 'Google Slides' : 'Google Sheets';
+
+      const result = {
+        pageTitle: workspaceResult.title || typeName,
+        pageContent: workspaceResult.content || '',
+        summary: generateSummary(workspaceResult.content || ''),
+        keyPoints: extractKeyPointsFromMarkdown(workspaceResult.content || ''),
+        metadata: {
+          description: workspaceResult.metadata?.description || generateSummary(workspaceResult.content || ''),
+          keywords: [],
+        },
+      };
+
+      const responseBody = {
+        url: normalizedUrl,
+        ...result,
+        status: 'success',
+      } as const;
+
+      ANALYSIS_CACHE.set(normalizedUrl, {
+        expiresAt: Date.now() + CACHE_TTL_MS,
+        response: responseBody,
+      });
+
+      console.log('[Webpage analysis] ✅ Success via Google Workspace', {
+        type: docType,
+        title: result.pageTitle,
+        contentLength: result.pageContent.length,
+      });
+
+      return NextResponse.json(responseBody);
     }
 
     const result = await fetchWithJinaReader(normalizedUrl);

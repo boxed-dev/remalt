@@ -70,6 +70,8 @@ export const YouTubeNode = memo(
     const [expandedVideos, setExpandedVideos] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
+  const isActive = activeNodeId === id;
     const processedUrlRef = useRef<string | null>(null);
 
     const isChannel = data.mode === "channel";
@@ -77,6 +79,14 @@ export const YouTubeNode = memo(
       () => data.transcriptStatus === "success" && !!data.transcript,
       [data.transcriptStatus, data.transcript]
     );
+
+    useEffect(() => {
+      if (isEditing && inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    }, [isEditing]);
+
     const displayTitle = useMemo(() => {
       if (isChannel) return data.channelTitle;
       const trimmed = data.title?.trim();
@@ -341,17 +351,26 @@ export const YouTubeNode = memo(
     }, [data.url, id, processUrl]);
 
     const handleSave = async () => {
-      // Prevent multiple simultaneous saves
       if (!isEditing) return;
 
-      // Immediately exit edit mode to prevent UI issues
       setIsEditing(false);
 
-      if (url.trim()) {
-        await processUrl(url.trim());
-        // Sync local state with the processed URL to prevent inconsistencies
-        setUrl(url.trim());
+      const trimmedUrl = url.trim();
+      if (!trimmedUrl) return;
+
+      const videoId = extractYouTubeId(trimmedUrl);
+      const isChannel = isChannelUrl(trimmedUrl);
+
+      if (!videoId && !isChannel) {
+        updateNodeData(id, {
+          transcriptStatus: 'error',
+          transcriptError: 'Invalid YouTube URL. Please paste a valid video or channel link.',
+        } as Partial<YouTubeNodeData>);
+        return;
       }
+
+      await processUrl(trimmedUrl);
+      setUrl(trimmedUrl);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -517,7 +536,7 @@ export const YouTubeNode = memo(
 
     // Render channel view
     const renderChannelView = () => (
-      <div className="w-[480px] space-y-3">
+      <div className="w-[320px] space-y-3">
         {/* Channel Header */}
         <div className="flex gap-3">
           {data.channelThumbnail && (
@@ -725,7 +744,7 @@ export const YouTubeNode = memo(
 
     // Render single video view
     const renderVideoView = () => (
-      <div className="w-[340px] space-y-2">
+      <div className="w-[320px] space-y-2">
         {displayTitle && (
           <div className="text-[13px] font-medium text-[#0F172A] leading-snug">
             {displayTitle}
@@ -738,10 +757,11 @@ export const YouTubeNode = memo(
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={handleKeyDown}
+            onBlur={handleSave}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             placeholder="Paste YouTube URL or channel..."
-            className="w-full px-4 py-2.5 text-[14px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] transition-all"
+            className="w-full px-4 py-2.5 text-[12px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] transition-all"
             style={{
               fontFamily:
                 '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif',
@@ -827,8 +847,8 @@ export const YouTubeNode = memo(
           {isChannel ? renderChannelView() : renderVideoView()}
         </BaseNode>
 
-        {/* Floating AI Instructions - Only show when node is selected */}
-        {selected && (
+        {/* Floating AI Instructions - visible once the node is active/selected */}
+        {(isActive || selected) && (
           <FloatingAIInstructions
             value={data.aiInstructions}
             onChange={(value) =>

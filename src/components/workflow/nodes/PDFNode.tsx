@@ -11,6 +11,8 @@ import type { PDFNodeData } from '@/types/workflow';
 export const PDFNode = memo(({ id, data, parentId, selected }: NodeProps<PDFNodeData>) => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
+  const isActive = activeNodeId === id;
 
   const hasParsedContent = useMemo(() => data.parseStatus === 'success' && (data.parsedText || (data.segments?.length ?? 0) > 0), [data.parseStatus, data.parsedText, data.segments]);
 
@@ -201,7 +203,7 @@ export const PDFNode = memo(({ id, data, parentId, selected }: NodeProps<PDFNode
 
     if (data.parseStatus === 'success')
       return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-[#ECFDF5] px-2 py-1 text-[10px] text-[#047857]">
+        <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] text-emerald-600">
           <CheckCircle2 className="h-3 w-3" />
           <span>Content extracted</span>
         </div>
@@ -344,8 +346,8 @@ export const PDFNode = memo(({ id, data, parentId, selected }: NodeProps<PDFNode
         </div>
       </BaseNode>
 
-      {/* Floating AI Instructions - Only show when node is selected */}
-      {selected && (
+      {/* Floating AI Instructions - visible once the node is active/selected */}
+      {(isActive || selected) && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<PDFNodeData>)}

@@ -240,12 +240,11 @@ export async function getDeepgramTranscript(videoId: string): Promise<Transcript
       const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
         audioStream,
         {
-          model: 'nova-2',
+          model: 'nova-3',
           smart_format: true,
           punctuate: true,
           paragraphs: true,
           utterances: false,
-          language: 'multi',
           detect_language: true,
         }
       );
@@ -412,11 +411,10 @@ export async function getYtDlpTranscript(videoId: string): Promise<Transcription
       const { result: dgResult, error } = await deepgram.listen.prerecorded.transcribeFile(
         audioStream,
         {
-          model: 'nova-2',
+          model: 'nova-3',
           smart_format: true,
           punctuate: true,
           paragraphs: true,
-          language: 'multi',
           detect_language: true,
         }
       );

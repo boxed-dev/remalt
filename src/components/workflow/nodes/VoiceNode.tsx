@@ -12,6 +12,7 @@ import { FloatingAIInstructions } from './FloatingAIInstructions';
 let currentRecordingNodeId: string | null = null;
 
 export const VoiceNode = memo(({ id, data, parentId, selected }: NodeProps<VoiceNodeData>) => {
+  void selected; // Not used - we use isActive instead
   const [mode, setMode] = useState<'idle' | 'upload'>('idle');
   const [showTranscript, setShowTranscript] = useState(false);
   const [isRecordingThisNode, setIsRecordingThisNode] = useState(false);
@@ -25,6 +26,8 @@ export const VoiceNode = memo(({ id, data, parentId, selected }: NodeProps<Voice
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
+  const isActive = activeNodeId === id;
 
   const hasTranscript = useMemo(() => data.transcriptStatus === 'success' && !!data.transcript, [data.transcriptStatus, data.transcript]);
   const hasAudio = useMemo(() => !!data.audioUrl || !!data.storageUrl, [data.audioUrl, data.storageUrl]);
@@ -374,7 +377,7 @@ export const VoiceNode = memo(({ id, data, parentId, selected }: NodeProps<Voice
             </div>
           )}
           {data.transcriptStatus === 'success' && !isRecordingThisNode && (
-            <div className="inline-flex items-center gap-1 rounded-full bg-[#ECFDF5] px-2 py-1 text-[10px] text-[#047857]">
+            <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] text-emerald-600">
               <CheckCircle2 className="h-3 w-3" />
               <span>Ready</span>
             </div>
@@ -636,8 +639,8 @@ export const VoiceNode = memo(({ id, data, parentId, selected }: NodeProps<Voice
       `}</style>
     </BaseNode>
 
-    {/* Floating AI Instructions - Only show when node is selected */}
-    {selected && (
+    {/* Floating AI Instructions - visible once the node is active/selected */}
+    {(isActive || selected) && (
       <FloatingAIInstructions
         value={data.aiInstructions}
         onChange={(value) =>

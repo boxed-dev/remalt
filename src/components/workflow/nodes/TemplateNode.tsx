@@ -28,6 +28,8 @@ export const TemplateNode = memo(({ id, data, parentId, selected }: NodeProps<Te
   const [isSelecting, setIsSelecting] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
+  const isActive = activeNodeId === id;
   const workflow = useWorkflowStore((state) => state.workflow);
 
   const templateLabel = useMemo(() => templateLabels[data.templateType], [data.templateType]);
@@ -183,8 +185,8 @@ export const TemplateNode = memo(({ id, data, parentId, selected }: NodeProps<Te
         </div>
       </BaseNode>
 
-      {/* Floating AI Instructions - Only show when node is selected */}
-      {selected && (
+      {/* Floating AI Instructions - visible once the node is active/selected */}
+      {(isActive || selected) && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<TemplateNodeData>)}

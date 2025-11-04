@@ -7,6 +7,8 @@ Remalt is a Next.js 15 AI workflow builder platform with a visual node-based edi
 
 ## Common Development Commands
 
+**IMPORTANT**: This project uses **pnpm** as the package manager. Always use `pnpm` commands, never `npm` or `yarn`.
+
 ```bash
 # Development server with Turbopack
 pnpm dev
@@ -20,8 +22,19 @@ pnpm start
 # Run linter
 pnpm lint
 
-# Note: YouTube transcription now uses Supadata API (no Python API needed)
+# Supabase Commands (requires Supabase CLI)
+supabase db push              # Push local schema to remote database
+supabase db pull              # Pull remote schema to local migrations
+supabase functions deploy <name>  # Deploy edge function
+supabase functions serve      # Run edge functions locally
+
+# Run maintenance scripts
+node scripts/cleanup-empty-workflows.ts    # Remove empty workflows
+node scripts/inspect-workflows.ts          # Debug workflow data
+node scripts/verify-sentry.mjs             # Verify Sentry setup
 ```
+
+**Note**: YouTube transcription uses Supadata API - no Python API needed
 
 ## Architecture Overview
 
@@ -49,7 +62,7 @@ src/
 │   │   ├── transcribe/         # YouTube transcription
 │   │   ├── voice/transcribe/   # Deepgram voice transcription
 │   │   ├── image/analyze/      # Gemini Vision image analysis
-│   │   ├── webpage/            # Web scraping (Jina AI + fallbacks)
+│   │   ├── webpage/            # Web scraping (Jina AI + Google Docs support)
 │   │   ├── pdf/parse/          # PDF document parsing
 │   │   ├── instagram/reel/     # Instagram reel data fetching
 │   │   ├── linkedin/post/      # LinkedIn post data fetching (Apify)
@@ -109,11 +122,19 @@ APIFY_API_TOKEN=                    # Apify API token (Instagram + LinkedIn node
 
 # Web Scraping & Screenshots (Optional)
 JINA_API_KEY=                       # Web scraping (20 RPM free, 200 RPM with key)
+GOOGLE_DOCS_API_KEY=                # Google Docs API key (for fetching public Google Docs)
 SCREENSHOTONE_API_KEY=              # Screenshot provider (Priority 1)
 APIFLASH_API_KEY=                   # Screenshot provider (Priority 2)
 URLBOX_API_KEY=                     # Screenshot provider (Priority 3)
 URLBOX_SECRET=                      # Urlbox API signing secret
 SCREENSHOTAPI_API_KEY=              # Screenshot provider (Priority 4)
+
+# Monitoring & Error Tracking (Optional)
+SENTRY_DSN=                         # Sentry error tracking
+SENTRY_ENVIRONMENT=                 # Defaults to NODE_ENV
+SENTRY_TRACES_SAMPLE_RATE=          # Default: 0.2 (20%)
+SENTRY_API_TRACES_SAMPLE_RATE=      # Default: 1.0 (100%)
+SENTRY_PROFILES_SAMPLE_RATE=        # Default: 0.2 (20%)
 ```
 
 ## Key Architectural Patterns
@@ -270,10 +291,13 @@ Image analysis via Gemini Vision:
 - Returns: `description`, `ocrText`, `objects`, `tags`
 
 ### `/api/webpage/analyze` (POST)
-Web scraping via Jina AI Reader with fallback:
-- Accepts: `url`
-- Uses Jina AI Reader with automatic fallback to direct HTML fetch
+Web scraping via Jina AI Reader with Google Docs support:
+- Accepts: `url` (regular webpage or Google Docs URL)
+- **Google Docs Support**: Automatically detects Google Docs URLs and fetches content using export API
+- Uses Jina AI Reader for regular webpages with automatic fallback to direct HTML fetch
 - Returns: `pageTitle`, `pageContent` (markdown), `summary`, `keyPoints`, `metadata`
+- **Google Docs Requirements**: Document must be publicly shared ("Anyone with the link" can view)
+- **Optional**: `GOOGLE_DOCS_API_KEY` for metadata verification (uses hardcoded key as fallback)
 
 ### `/api/webpage/preview` (POST)
 Webpage metadata preview:
@@ -303,6 +327,21 @@ Instagram post/reel/story data fetching via Apify Instagram Scraper:
 - **Note**: Stories expire after 24 hours and require public access
 - **Requires**: `APIFY_API_TOKEN` environment variable
 - **Processing**: Uses `/lib/instagram-processor.ts` for Gemini Vision/Flash analysis of images/videos
+
+### `/api/instagram/dual-transcribe` (POST)
+**NEW**: Dual transcription comparing Google Gemini and Deepgram for Instagram videos:
+- **Purpose**: Get transcriptions from BOTH Gemini and Deepgram, compare results
+- Accepts: `url` (Instagram video/reel URL only - images not supported)
+- Returns comprehensive JSON with:
+  - `gemini`: Full multimodal analysis (transcript + visual description + summary)
+  - `deepgram`: Pure audio transcription with word-level timestamps and confidence scores
+  - `comparison`: Side-by-side metrics (word count, length, similarity analysis)
+  - `metadata`: Processing times, video size, timestamps
+- **Use Case**: Compare AI transcription quality, get both context-aware and pure audio transcripts
+- **Requires**: `APIFY_API_TOKEN`, `GEMINI_API_KEY`, `DEEPGRAM_API_KEY`
+- **Processing**: Parallel processing (Gemini + Deepgram run simultaneously)
+- **Max Duration**: 60 seconds
+- **Test Script**: `node test-dual-transcribe.js <instagram-url>`
 
 ### `/api/linkedin/post` (POST)
 LinkedIn post data fetching via Apify:
@@ -354,6 +393,14 @@ When implementing or modifying nodes:
 - Smooth animations for interactive elements (recording, loading states)
 - Mobile-first responsive design approach
 
+### Error Handling & Security
+- **Sentry Monitoring**: All API routes and pages wrapped with Sentry for automatic error tracking
+- **Data Filtering**: Sensitive data (auth tokens, API keys, AI prompts) automatically stripped before sending to Sentry
+- **Supabase RLS**: Row-Level Security policies enforce data access control at the database level
+- **Auth Middleware**: All non-public routes protected via [middleware.ts](src/middleware.ts)
+- **Type Safety**: Strict TypeScript mode prevents many runtime errors
+- **API Authentication**: All API routes check authentication status using `createServerClient()`
+
 ### Audio Recording
 Voice nodes use browser MediaRecorder API with Deepgram live transcription:
 - Proper cleanup: stop all MediaStream tracks to release microphone
@@ -385,6 +432,69 @@ Text nodes use Novel editor for Notion-style editing experience:
 - **Inline Formatting**: Bold, italic, code, links via keyboard shortcuts
 - **Block Types**: Headings, lists, code blocks, quotes
 - **AI Instructions**: Every node supports optional AI instructions for context-aware processing
+
+### Critical Development Guidelines
+When making changes to the codebase, always follow these patterns:
+
+#### Always Fix Root Causes
+- NEVER apply temporary fixes or patches - always fix the root cause
+- Treat every fix as if it's going directly to production
+- Search for latest information before implementing features (don't assume)
+- Write super clean, minimal code without over-engineering
+
+#### When Adding New Node Types
+Follow this exact sequence:
+1. Define the node type and data interface in [workflow.ts](src/types/workflow.ts) using discriminated unions
+2. Add default data factory in `createDefaultNodeData()` in [workflow-store.ts](src/lib/stores/workflow-store.ts)
+3. Register node metadata in [node-registry.ts](src/lib/workflow/node-registry.ts) (label, icon, color, dimensions)
+4. Create the React component in `src/components/workflow/nodes/`
+5. Export the component in [index.ts](src/components/workflow/nodes/index.ts)
+6. Add context extraction logic in [context-builder.ts](src/lib/workflow/context-builder.ts) if the node provides data to chat nodes
+
+#### Supabase Client Pattern
+CRITICAL: Always use the correct Supabase client:
+```typescript
+// ❌ WRONG - Never mix clients
+import { createClient } from '@/lib/supabase/server' // In a client component
+
+// ✅ CORRECT - Server Components & Route Handlers
+import { createServerClient } from '@/lib/supabase/server'
+const supabase = await createServerClient()
+
+// ✅ CORRECT - Client Components
+import { createClient } from '@/lib/supabase/client'
+const supabase = createClient()
+```
+
+#### API Route Pattern
+All API routes should follow this structure:
+```typescript
+import { createServerClient } from '@/lib/supabase/server'
+
+export async function POST(req: Request) {
+  const supabase = await createServerClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Your logic here
+}
+```
+
+#### State Updates Pattern
+Always use Immer-based updates in the workflow store:
+```typescript
+// ✅ CORRECT - Immer automatically handles immutability
+updateNodeData: (nodeId, newData) =>
+  set((state) => {
+    const node = state.workflow?.nodes.find(n => n.id === nodeId)
+    if (node) {
+      node.data = { ...node.data, ...newData }
+    }
+  }),
+```
 
 ## Important Implementation Details
 
@@ -441,6 +551,17 @@ YouTube transcription powered by Supadata API:
 - **Response Format**: Returns `content` field with full transcript text
 - **Error Handling**: Graceful fallback with detailed error messages
 
+### Google Docs Integration
+Fetch content from public Google Docs:
+- **Service Location**: [google-docs.ts](src/lib/api/google-docs.ts)
+- **Export URL Format**: `https://docs.google.com/document/d/{ID}/export?format=txt`
+- **Features**: Automatic document ID extraction, HTML to plain text conversion, metadata fetching
+- **Authentication**: Uses export URL (no auth for public docs) + optional Drive API for metadata
+- **Supported Formats**: Plain text (txt) with automatic fallback to HTML
+- **Requirements**: Document must be publicly shared with "Anyone with the link" permissions
+- **API Key**: Optional `GOOGLE_DOCS_API_KEY` for Drive API metadata (uses hardcoded fallback)
+- **Important**: Google Docs API requires OAuth for private documents; this integration only works with public documents
+
 ### Uploadcare Media Storage
 Permanent media storage handled via Uploadcare CDN:
 - **Service Location**: [upload-service.ts](src/lib/uploadcare/upload-service.ts)
@@ -451,18 +572,89 @@ Permanent media storage handled via Uploadcare CDN:
 - **CDN Format**: `https://ucarecdn.com/{uuid}/{filename}`
 - **Upload Flow**: Upload from URL → Poll status → Get permanent CDN URL
 
+### Google Workspace Integration
+The platform supports fetching content from Google Workspace documents:
+- **Service Location**: [google-workspace.ts](src/lib/api/google-workspace.ts)
+- **Supported Services**: Google Docs, Google Sheets, Google Slides
+- **Features**: Automatic document ID extraction, content export, metadata fetching
+- **Requirements**: Documents must be publicly shared ("Anyone with the link" can view)
+- **API Key**: Optional `GOOGLE_DOCS_API_KEY` for enhanced metadata access
+- **Export Formats**:
+  - Google Docs → Plain text (txt)
+  - Google Sheets → CSV
+  - Google Slides → Plain text
+- **Integration**: Used by Webpage nodes when Google Workspace URLs are detected
+- **Test Script**: `node test-google-workspace.mjs <google-docs-url>`
+
+## Monitoring & Error Tracking
+
+### Sentry Integration
+The application uses Sentry for error tracking and performance monitoring:
+- **Configuration**: [sentry.server.config.ts](sentry.server.config.ts), [sentry.client.config.ts](sentry.client.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts)
+- **Instrumentation**: Automatic via [instrumentation.ts](instrumentation.ts) - loads appropriate config based on runtime
+- **Middleware Wrapping**: Auth middleware wrapped with `Sentry.wrapMiddlewareWithSentry()` in [middleware.ts](src/middleware.ts)
+- **Tunnel Route**: `/monitoring` - bypasses ad-blockers for client-side error reporting
+- **Smart Sampling**: 100% for API routes, 20% for pages (configurable via env)
+- **Security Filters**: Automatically strips auth headers, cookies, passwords, API keys, and AI prompts/outputs before sending
+- **Environment Variables**:
+  - `SENTRY_DSN` - Required for Sentry to be enabled
+  - `SENTRY_ENVIRONMENT` - Defaults to NODE_ENV
+  - `SENTRY_TRACES_SAMPLE_RATE` - Default: 0.2 (20%)
+  - `SENTRY_API_TRACES_SAMPLE_RATE` - Default: 1.0 (100%)
+  - `SENTRY_PROFILES_SAMPLE_RATE` - Default: 0.2 (20%)
+
 ### Next.js Configuration
 Key configuration in [next.config.ts](next.config.ts):
-- **Image Domains**: YouTube thumbnails, Microlink, Uploadcare CDN
-- **Transpiled Packages**: `@uploadcare/react-uploader`, `@blocknote/*`, `@deepgram/sdk`
+- **Sentry Plugin**: Wrapped with `withSentryConfig()` for automatic source map upload
+- **Image Domains**: YouTube thumbnails (`img.youtube.com`, `i.ytimg.com`), Microlink, Supabase Storage CDN
+- **Transpiled Packages**: `@deepgram/sdk` for WebSocket support
 - **Webpack Config**: Excludes Node.js-only modules (`ws`, `utf-8-validate`, `bufferutil`) from browser bundle
-- **Build Settings**: ESLint and TypeScript errors ignored during builds (set `ignoreDuringBuilds: true`)
+- **Build Settings**: ESLint and TypeScript errors ignored during builds (`ignoreDuringBuilds: true`)
+
+## Supabase Edge Functions
+
+The project includes Supabase Edge Functions for serverless operations:
+- **Location**: `supabase/functions/`
+- **Functions**:
+  - `parse-pdf`: Server-side PDF parsing (alternative to client-side parsing)
+  - `analyze-instagram`: Instagram content analysis
+- **Deployment**: Deploy with `supabase functions deploy <function-name>`
+- **Local Testing**: Run locally with `supabase functions serve`
+
+## Database Migrations & Scripts
+
+The `scripts/` directory contains utilities for database management:
+- **Schema Management**:
+  - `apply-schema.js` / `apply-schema.mjs` - Apply schema changes
+  - `check-schema.js` / `check-schema.mjs` - Verify schema state
+- **Data Migrations**:
+  - `apply-pdf-migration.js` - Migrate PDF node data
+  - `apply-notes-migration.mjs` - Migrate notes to TipTap format
+  - `migrate-notes-to-tiptap.mjs` - Convert BlockNote to TipTap
+- **Maintenance**:
+  - `cleanup-empty-workflows.ts` - Remove empty workflows
+  - `fix-missing-profiles.mjs` - Create missing user profiles
+  - `inspect-workflows.ts` - Debug workflow data
+- **Sentry**:
+  - `add-sentry-route-wrappers.mjs` - Wrap API routes with Sentry
+  - `fix-sentry-imports.mjs` - Fix Sentry import statements
+  - `verify-sentry.mjs` - Verify Sentry configuration
 
 ## Testing & Quality
 - No test framework currently configured
 - ESLint for code quality
 - TypeScript strict mode enabled
 - Build-time type checking (set to ignore in production builds via next.config.ts)
+- Sentry for production error tracking and performance monitoring
+
+### Manual Testing Scripts
+The repository includes test scripts for API endpoints:
+- **`test-dual-transcribe.js`**: Test Instagram dual transcription (Gemini vs Deepgram comparison)
+- **`test-google-docs.mjs`**: Test Google Docs content fetching
+- **`test-google-workspace.mjs`**: Test Google Workspace integration (Docs, Sheets, Slides)
+
+### Example Workflows
+The `examples/` directory contains sample workflow configurations to demonstrate platform capabilities and serve as templates for common use cases.
 
 ## Important UI/UX Patterns
 

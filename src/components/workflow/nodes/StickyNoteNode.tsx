@@ -50,9 +50,9 @@ export const StickyNoteNode = memo(({ id, data, parentId }: NodeProps<StickyNote
 
   return (
     <div
-      className="relative rounded-lg transition-all duration-200 ease-in-out"
+      className="relative rounded-2xl transition-all duration-200 ease-in-out"
       style={{
-        width: '240px',
+        width: '320px',
         minHeight: '240px',
         backgroundColor: bgColor,
         // Add subtle shadow and slight rotation for sticky note effect

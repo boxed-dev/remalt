@@ -16,14 +16,14 @@ import {
   type ModelInfo,
 } from '@/lib/models/model-registry';
 
-// Dynamic icon imports from @lobehub/icons
-import { OpenAI, Gemini, Anthropic, DeepSeek } from '@lobehub/icons';
+import { OpenAI, Gemini, Anthropic, DeepSeek, XAI } from '@lobehub/icons';
 
 const PROVIDER_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   OpenAI: OpenAI,
   Google: Gemini,
   Anthropic: Anthropic,
   DeepSeek: DeepSeek,
+  XAi: XAI,
 };
 
 interface ModelSelectionDialogProps {
@@ -48,28 +48,35 @@ const ModelItem: React.FC<ModelItemProps> = ({ model, isSelected, onSelect }) =>
     <button
       onClick={onSelect}
       className={cn(
-        'w-full flex items-center gap-2.5 px-3 py-1.5 text-left transition-all hover:bg-gray-50 rounded-md',
-        isSelected && 'bg-blue-50 hover:bg-blue-50'
+        'w-full flex items-center gap-2 px-2 py-1 text-left transition-colors hover:bg-gray-50 rounded group',
+        isSelected && 'bg-blue-50/50 hover:bg-blue-50/50'
       )}
     >
       {/* Provider icon */}
       {ProviderIcon && (
         <ProviderIcon
-          className="w-4 h-4 flex-shrink-0"
+          className="w-3.5 h-3.5 flex-shrink-0"
           style={{ color: provider?.colors.primary }}
         />
       )}
 
       {/* Model name */}
       <span className={cn(
-        'text-[13px] flex-1',
-        isSelected ? 'font-medium text-gray-900' : 'text-gray-700'
+        'text-xs flex-1 font-normal',
+        isSelected ? 'text-gray-900' : 'text-gray-700'
       )}>
         {model.displayName}
       </span>
 
+      {/* Badge */}
+      {model.badge && (
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 font-medium">
+          {model.badge}
+        </span>
+      )}
+
       {/* Selection check */}
-      {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />}
+      {isSelected && <Check className="w-3 h-3 text-blue-600 flex-shrink-0" />}
     </button>
   );
 };
@@ -86,12 +93,12 @@ const TierSection: React.FC<TierSectionProps> = ({ title, models, currentModel, 
 
   return (
     <div>
-      <div className="px-3 pt-2 pb-1">
-        <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
+      <div className="px-2 pt-1.5 pb-0.5">
+        <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
           {title}
         </h3>
       </div>
-      <div className="space-y-0.5 px-1.5">
+      <div className="space-y-0.5 px-1">
         {models.map((model) => (
           <ModelItem
             key={model.id}
@@ -127,27 +134,27 @@ export const ModelSelectionDialog: React.FC<ModelSelectionDialogProps> = ({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm"
+          className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
         >
           {ProviderIcon && (
             <ProviderIcon
-              className="w-4 h-4 flex-shrink-0"
+              className="w-3.5 h-3.5 flex-shrink-0"
               style={{ color: provider?.colors.primary }}
             />
           )}
-          <span className="text-[13px] font-medium text-gray-900">
+          <span className="text-xs font-normal text-gray-900">
             {getModelDisplayName(currentModel)}
           </span>
-          <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+          <ChevronDown className="w-3 h-3 text-gray-400" />
         </button>
       </PopoverTrigger>
-      <PopoverContent 
-        className="w-56 p-1.5" 
+      <PopoverContent
+        className="w-52 p-1"
         align="start"
         side="top"
         sideOffset={4}
       >
-        <div className="max-h-[240px] overflow-y-auto">
+        <div className="max-h-[280px] overflow-y-auto">
           <TierSection
             title="Smart (higher credits)"
             models={smartModels}
@@ -156,7 +163,7 @@ export const ModelSelectionDialog: React.FC<ModelSelectionDialogProps> = ({
           />
 
           {smartModels.length > 0 && cheapModels.length > 0 && (
-            <div className="my-1.5 mx-2 border-t border-gray-200" />
+            <div className="my-1 mx-1.5 border-t border-gray-100" />
           )}
 
           <TierSection

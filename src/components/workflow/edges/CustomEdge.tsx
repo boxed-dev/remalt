@@ -60,8 +60,8 @@ export function CustomEdge({
 
   // Calculate dynamic dash pattern based on zoom level
   const calculateDashArray = useCallback(() => {
-    const baseDash = 2;
-    const baseGap = 6;
+    const baseDash = 1.5;
+    const baseGap = 4;
     const scaleFactor = Math.pow(1 / Math.max(0.1, Math.min(2, zoom)), 0.5);
 
     const scaledDash = baseDash * scaleFactor;
@@ -93,64 +93,53 @@ export function CustomEdge({
   // Show delete button on hover OR when selected
   const showDeleteButton = shouldHighlight;
 
-  // Debug logging
-  useEffect(() => {
-    if (shouldHighlight) {
-      console.log(`Edge ${id} is highlighted (hovered: ${isHovered}, deleteHovered: ${isDeleteButtonHovered}, selected: ${selected})`);
-    }
-  }, [shouldHighlight, isHovered, isDeleteButtonHovered, selected, id]);
-
   // Generate unique ID for animation
-  const animationId = `edge-flow-${id}`;
+  const animationId = useMemo(() => `edge-flow-${id}`, [id]);
 
   return (
     <>
-      {/* Define the animated gradient in SVG defs */}
-      <defs>
-        <linearGradient id={animationId} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#D4AF7F" stopOpacity="0.3" />
-          <stop offset="25%" stopColor="#095D40" stopOpacity="0.8" />
-          <stop offset="50%" stopColor="#D4AF7F" stopOpacity="0.3" />
-          <stop offset="75%" stopColor="#095D40" stopOpacity="0.8" />
-          <stop offset="100%" stopColor="#D4AF7F" stopOpacity="0.3" />
-          <animate
-            attributeName="x1"
-            values="0%;100%;200%"
-            dur="2.0s"
-            repeatCount="indefinite"
-          />
-          <animate
-            attributeName="x2"
-            values="100%;200%;300%"
-            dur="2.0s"
-            repeatCount="indefinite"
-          />
-        </linearGradient>
-      </defs>
-
       {/* Wrap all edge paths in a group for better event handling */}
       <g
         ref={edgeRef}
-        onMouseEnter={() => {
-          console.log('MOUSE ENTER DETECTED on edge', id);
-          setIsHovered(true);
-        }}
+        onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={(e) => {
           // Only hide if we're not moving to the delete button
           const relatedTarget = e.relatedTarget as HTMLElement;
           if (!relatedTarget?.closest('.edge-delete-button')) {
-            console.log('MOUSE LEAVE DETECTED on edge', id);
             setIsHovered(false);
           }
         }}
         style={{ cursor: 'pointer' }}
       >
+        {/* Define the animated gradient in SVG defs */}
+        <defs>
+          <linearGradient id={animationId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#D4AF7F" stopOpacity="0.3" />
+            <stop offset="25%" stopColor="#095D40" stopOpacity="0.8" />
+            <stop offset="50%" stopColor="#D4AF7F" stopOpacity="0.3" />
+            <stop offset="75%" stopColor="#095D40" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#D4AF7F" stopOpacity="0.3" />
+            <animate
+              attributeName="x1"
+              values="0%;100%;200%"
+              dur="2.0s"
+              repeatCount="indefinite"
+            />
+            <animate
+              attributeName="x2"
+              values="100%;200%;300%"
+              dur="2.0s"
+              repeatCount="indefinite"
+            />
+          </linearGradient>
+        </defs>
+
         {/* Invisible wider hit area for better hover detection - FIRST for event capture */}
         <path
           d={edgePath}
           fill="none"
           stroke="transparent"
-          strokeWidth={calculateStrokeWidth(20)}
+          strokeWidth={calculateStrokeWidth(15)}
           style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
         />
 
@@ -160,12 +149,12 @@ export function CustomEdge({
             d={edgePath}
             fill="none"
             stroke="#095D40"
-            strokeWidth={calculateStrokeWidth(10)}
+            strokeWidth={calculateStrokeWidth(5)}
             strokeLinecap="round"
-            opacity={0.3}
+            opacity={0.25}
             style={{
               pointerEvents: 'none',
-              filter: 'blur(6px)',
+              filter: 'blur(4px)',
             }}
           />
         )}
@@ -175,13 +164,12 @@ export function CustomEdge({
           d={edgePath}
           fill="none"
           stroke={shouldHighlight ? '#095D40' : '#D4AF7F'}
-          strokeWidth={calculateStrokeWidth(shouldHighlight ? 4.5 : 2.5)}
+          strokeWidth={calculateStrokeWidth(shouldHighlight ? 2 : 1.25)}
           strokeDasharray={calculateDashArray()}
           strokeLinecap="round"
-          opacity={shouldHighlight ? 0.9 : 0.5}
+          opacity={shouldHighlight ? 0.85 : 0.4}
           style={{
-            pointerEvents: 'none',
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+            pointerEvents: 'none'
           }}
         />
 
@@ -190,15 +178,14 @@ export function CustomEdge({
           d={edgePath}
           fill="none"
           stroke={shouldHighlight ? '#095D40' : `url(#${animationId})`}
-          strokeWidth={calculateStrokeWidth(shouldHighlight ? 4.5 : 2.5)}
+          strokeWidth={calculateStrokeWidth(shouldHighlight ? 2 : 1.25)}
           strokeDasharray={calculateDashArray()}
           strokeLinecap="round"
           strokeDashoffset={0}
           markerEnd={markerEnd}
           style={{
             pointerEvents: 'none',
-            animation: shouldHighlight ? 'none' : 'dash-flow 1.5s linear infinite',
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+            animation: shouldHighlight ? 'none' : 'dash-flow 1.5s linear infinite'
           }}
         />
       </g>
@@ -211,7 +198,7 @@ export function CustomEdge({
               stroke-dashoffset: 0;
             }
             to {
-              stroke-dashoffset: ${-1 * (2 + 6) * Math.pow(1 / Math.max(0.1, Math.min(2, zoom)), 0.5)};
+              stroke-dashoffset: ${-1 * (1.5 + 4) * Math.pow(1 / Math.max(0.1, Math.min(2, zoom)), 0.5)};
             }
           }
         `}
@@ -228,22 +215,20 @@ export function CustomEdge({
             }}
             className="nodrag nopan edge-delete-button"
             onMouseEnter={() => {
-              console.log('Delete button mouse enter');
               setIsHovered(true);
               setIsDeleteButtonHovered(true);
             }}
             onMouseLeave={() => {
-              console.log('Delete button mouse leave');
               setIsDeleteButtonHovered(false);
               setIsHovered(false);
             }}
           >
             <button
               onClick={handleDelete}
-              className="flex items-center justify-center w-7 h-7 rounded-full bg-white border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-150 shadow-lg hover:shadow-xl hover:scale-110"
+              className="flex items-center justify-center w-5 h-5 rounded-full bg-white border border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-150 shadow-md hover:shadow-lg hover:scale-110"
               title="Delete connection"
             >
-              <X className="w-4 h-4" strokeWidth={2.5} />
+              <X className="w-3 h-3" strokeWidth={2} />
             </button>
           </div>
         </EdgeLabelRenderer>

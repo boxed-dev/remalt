@@ -14,6 +14,8 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
   const [imageLoading, setImageLoading] = useState(true);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
+  const isActive = activeNodeId === id;
   
   const isUploading = data.analysisStatus === 'loading' || data.analysisStatus === 'analyzing';
 
@@ -80,8 +82,9 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
 
       const decoder = new TextDecoder();
       let buffer = '';
+      let analysisFinished = false;
 
-      while (true) {
+      while (!analysisFinished) {
         const { done, value } = await reader.read();
         if (done) break;
 
@@ -106,8 +109,27 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
                   analysisStatus: 'success',
                   analysisError: undefined,
                 } as Partial<ImageNodeData>);
+                analysisFinished = true;
+                try {
+                  await reader.cancel();
+                } catch (cancelError) {
+                  console.warn('[ImageNode] Failed to cancel reader after success:', cancelError);
+                }
+                break;
               } else if (data.status === 'error') {
-                throw new Error(data.error || 'Analysis failed');
+                const errorMessage = data.error || 'Analysis failed';
+                console.error('[ImageNode] Streaming analysis error:', errorMessage);
+                updateNodeData(id, {
+                  analysisStatus: 'error',
+                  analysisError: errorMessage,
+                } as Partial<ImageNodeData>);
+                analysisFinished = true;
+                try {
+                  await reader.cancel();
+                } catch (cancelError) {
+                  console.warn('[ImageNode] Failed to cancel reader after error:', cancelError);
+                }
+                break;
               }
               // Progress updates are handled but don't update node data
             } catch (e) {
@@ -115,6 +137,14 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
             }
           }
         }
+      }
+
+      if (!analysisFinished) {
+        // If the stream ended without a completion or error event, mark as error
+        updateNodeData(id, {
+          analysisStatus: 'error',
+          analysisError: 'Image analysis did not complete',
+        } as Partial<ImageNodeData>);
       }
     } catch (error) {
       console.error('[ImageNode] Image analysis exception:', error);
@@ -164,7 +194,7 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
 
     if (data.analysisStatus === 'success')
       return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-[#ECFDF5] px-2 py-1 text-[10px] text-[#047857]">
+        <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] text-emerald-600">
           <CheckCircle2 className="h-3 w-3" />
           <span>Insights ready</span>
         </div>
@@ -298,8 +328,8 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
         </div>
       </BaseNode>
 
-      {/* Floating AI Instructions - Only show when node is selected */}
-      {selected && (
+      {/* Floating AI Instructions - visible once the node is active/selected */}
+      {(isActive || selected) && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ImageNodeData>)}

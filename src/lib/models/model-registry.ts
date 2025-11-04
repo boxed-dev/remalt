@@ -33,6 +33,7 @@ export interface ModelInfo {
   tier: 'smart' | 'cheap'; // For UI grouping
   description: string;
   recommended?: boolean;
+  badge?: string; // Simple badge label
 }
 
 /**
@@ -87,86 +88,77 @@ export const PROVIDERS: Record<string, ModelProvider> = {
   xai: {
     id: 'xai',
     name: 'xAI',
-    iconName: 'OpenAI', // Using OpenAI icon as placeholder
+    iconName: 'XAi',
     colors: {
       primary: '#000000',
       bg: 'bg-gray-50',
-      text: 'text-gray-800',
+      text: 'text-gray-900',
       border: 'border-gray-200',
     },
   },
 };
 
 /**
- * Comprehensive Model Registry (2025)
- * All models available via OpenRouter API
+ * Curated Model Registry (2025)
+ * Handpicked models optimized for content creation and reasoning
  */
 export const MODELS: ModelInfo[] = [
-  // ============ Anthropic Claude Models ============
+  // ============ Google Gemini Models ============
   {
-    id: 'anthropic/claude-4.5-sonnet',
-    name: 'Claude 4.5 Sonnet',
-    displayName: 'Claude 4.5 Sonnet',
-    provider: 'anthropic',
-    contextWindow: 200000,
-    pricing: { input: 3.5, output: 16.0 },
-    capabilities: ['text', 'code', 'reasoning', 'analysis', 'creative'],
+    id: 'google/gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    displayName: 'Gemini 2.5 Pro',
+    provider: 'google',
+    contextWindow: 1000000,
+    pricing: { input: 1.25, output: 5.0 },
+    capabilities: ['reasoning', 'coding', 'multimodal', 'long-context'],
     category: 'flagship',
     tier: 'smart',
-    description: 'Latest Claude model with enhanced reasoning and creative capabilities',
+    description: 'Most capable Gemini with advanced reasoning and 1M context',
     recommended: true,
+    badge: 'Reasoning',
   },
   {
-    id: 'anthropic/claude-4-sonnet',
-    name: 'Claude 4 Sonnet',
-    displayName: 'Claude 4 Sonnet',
-    provider: 'anthropic',
-    contextWindow: 200000,
-    pricing: { input: 3.2, output: 15.5 },
-    capabilities: ['text', 'code', 'reasoning', 'analysis', 'creative'],
-    category: 'flagship',
-    tier: 'smart',
-    description: 'Advanced Claude model with excellent reasoning capabilities',
-    recommended: true,
+    id: 'google/gemini-2.5-flash-preview-09-2025',
+    name: 'Gemini 2.5 Flash',
+    displayName: 'Gemini Flash',
+    provider: 'google',
+    contextWindow: 1000000,
+    pricing: { input: 0.5, output: 2.0 },
+    capabilities: ['fast', 'multimodal', 'coding', 'content'],
+    category: 'fast',
+    tier: 'cheap',
+    description: 'Fast content creation with 1M context window',
+    badge: 'Content',
   },
   {
-    id: 'anthropic/claude-4.1-opus',
-    name: 'Claude 4.1 Opus',
-    displayName: 'Claude 4.1 Opus',
-    provider: 'anthropic',
-    contextWindow: 200000,
-    pricing: { input: 4.0, output: 18.0 },
-    capabilities: ['text', 'code', 'reasoning', 'analysis', 'creative', 'complex-tasks'],
-    category: 'flagship',
-    tier: 'smart',
-    description: 'Most powerful Claude model for complex tasks',
+    id: 'google/gemini-2.5-flash-lite-preview-09-2025',
+    name: 'Gemini 2.5 Flash Lite',
+    displayName: 'Gemini Lite',
+    provider: 'google',
+    contextWindow: 1000000,
+    pricing: { input: 0.1, output: 0.4 },
+    capabilities: ['fast', 'cost-efficient', 'content'],
+    category: 'lite',
+    tier: 'cheap',
+    description: 'Ultra-fast and cost-efficient for simple tasks',
+    badge: 'Fast',
   },
 
-  // ============ OpenAI Models ============
+  // ============ OpenAI GPT-5 Models ============
   {
     id: 'openai/gpt-5',
     name: 'GPT-5',
     displayName: 'GPT-5',
     provider: 'openai',
     contextWindow: 128000,
-    pricing: { input: 2.5, output: 10.0 },
-    capabilities: ['text', 'code', 'reasoning', 'long-context'],
+    pricing: { input: 1.25, output: 10.0 },
+    capabilities: ['writing', 'reasoning', 'coding', 'multimodal'],
     category: 'flagship',
     tier: 'smart',
-    description: 'Most advanced OpenAI model with auto-switching capabilities and complex reasoning',
+    description: 'Most advanced OpenAI model for writing and reasoning',
     recommended: true,
-  },
-  {
-    id: 'openai/gpt-4o',
-    name: 'GPT-4o',
-    displayName: 'GPT-4o',
-    provider: 'openai',
-    contextWindow: 128000,
-    pricing: { input: 2.0, output: 8.0 },
-    capabilities: ['text', 'code', 'multimodal', 'long-context'],
-    category: 'flagship',
-    tier: 'smart',
-    description: 'Multimodal flagship model with strong reasoning capabilities',
+    badge: 'Writing',
   },
   {
     id: 'openai/gpt-5-mini',
@@ -174,40 +166,121 @@ export const MODELS: ModelInfo[] = [
     displayName: 'GPT-5 Mini',
     provider: 'openai',
     contextWindow: 128000,
-    pricing: { input: 0.1, output: 0.4 },
-    capabilities: ['text', 'code', 'fast', 'cost-efficient'],
+    pricing: { input: 0.25, output: 2.0 },
+    capabilities: ['fast', 'reasoning', 'content'],
     category: 'fast',
     tier: 'cheap',
-    description: 'Fast and cost-efficient GPT-5 variant',
+    description: 'Compact GPT-5 for faster content generation',
+    badge: 'Content',
+  },
+  {
+    id: 'openai/gpt-5-pro',
+    name: 'GPT-5 Pro',
+    displayName: 'GPT-5 Pro',
+    provider: 'openai',
+    contextWindow: 128000,
+    pricing: { input: 2.5, output: 10.0 },
+    capabilities: ['reasoning', 'coding', 'analysis'],
+    category: 'reasoning',
+    tier: 'smart',
+    description: 'Optimized for complex reasoning and high-stakes tasks',
+    badge: 'Reasoning',
   },
 
-  // ============ Google Gemini Models ============
+  // ============ xAI Grok Models ============
   {
-    id: 'google/gemini-2.5-pro',
-    name: 'Gemini 2.5 Pro',
-    displayName: 'Gemini 2.5 Pro',
-    provider: 'google',
-    contextWindow: 1000000, // 1M context
-    pricing: { input: 1.25, output: 5.0 },
-    capabilities: ['text', 'code', 'reasoning', 'deep-think', 'multimodal'],
+    id: 'x-ai/grok-4',
+    name: 'Grok 4',
+    displayName: 'Grok 4',
+    provider: 'xai',
+    contextWindow: 256000,
+    pricing: { input: 2.0, output: 8.0 },
+    capabilities: ['reasoning', 'real-time', 'multimodal', 'tools'],
     category: 'flagship',
     tier: 'smart',
-    description: 'Most advanced Gemini model with Deep Think mode for complex enterprise solutions',
+    description: 'Latest reasoning model with 256k context and parallel tools',
+    badge: 'Real-time',
     recommended: true,
   },
-
-  // ============ xAI Models ============
   {
-    id: 'xai/grok-3',
+    id: 'x-ai/grok-4-fast',
+    name: 'Grok 4 Fast',
+    displayName: 'Grok 4 Fast',
+    provider: 'xai',
+    contextWindow: 2000000,
+    pricing: { input: 1.0, output: 4.0 },
+    capabilities: ['fast', 'multimodal', 'cost-efficient', 'reasoning'],
+    category: 'fast',
+    tier: 'cheap',
+    description: 'SOTA cost-efficiency with 2M context window',
+    badge: 'Fast',
+  },
+  {
+    id: 'x-ai/grok-3',
     name: 'Grok 3',
     displayName: 'Grok 3',
     provider: 'xai',
     contextWindow: 128000,
-    pricing: { input: 2.0, output: 8.0 },
-    capabilities: ['text', 'code', 'reasoning', 'real-time'],
+    pricing: { input: 1.5, output: 6.0 },
+    capabilities: ['reasoning', 'coding', 'data-extraction'],
     category: 'flagship',
     tier: 'smart',
-    description: 'Latest xAI model with real-time information access',
+    description: 'Enterprise flagship for data extraction and coding',
+    badge: 'Enterprise',
+  },
+  {
+    id: 'x-ai/grok-3-mini',
+    name: 'Grok 3 Mini',
+    displayName: 'Grok 3 Mini',
+    provider: 'xai',
+    contextWindow: 128000,
+    pricing: { input: 0.4, output: 1.6 },
+    capabilities: ['fast', 'reasoning', 'thinking'],
+    category: 'fast',
+    tier: 'cheap',
+    description: 'Lightweight thinking model with reasoning capabilities',
+    badge: 'Thinking',
+  },
+  {
+    id: 'x-ai/grok-code-fast-1',
+    name: 'Grok Code Fast',
+    displayName: 'Grok Code Fast',
+    provider: 'xai',
+    contextWindow: 128000,
+    pricing: { input: 0.5, output: 2.0 },
+    capabilities: ['coding', 'fast', 'agentic'],
+    category: 'fast',
+    tier: 'cheap',
+    description: 'Speedy and economical for agentic coding tasks',
+    badge: 'Coding',
+  },
+
+  // ============ DeepSeek Models ============
+  {
+    id: 'deepseek/deepseek-r1',
+    name: 'DeepSeek R1',
+    displayName: 'DeepSeek R1',
+    provider: 'deepseek',
+    contextWindow: 64000,
+    pricing: { input: 0.8, output: 3.2 },
+    capabilities: ['reasoning', 'math', 'coding'],
+    category: 'reasoning',
+    tier: 'cheap',
+    description: 'Advanced reasoning for math and coding problems',
+    badge: 'Reasoning',
+  },
+  {
+    id: 'deepseek/deepseek-v3.2-exp',
+    name: 'DeepSeek V3.2',
+    displayName: 'DeepSeek V3.2',
+    provider: 'deepseek',
+    contextWindow: 128000,
+    pricing: { input: 0.5, output: 2.0 },
+    capabilities: ['coding', 'reasoning', 'cost-efficient'],
+    category: 'fast',
+    tier: 'cheap',
+    description: 'Excellent coding and reasoning at low cost',
+    badge: 'Coding',
   },
 ];
 
@@ -254,9 +327,24 @@ export const getModelsByTier = (tier: 'smart' | 'cheap'): ModelInfo[] => {
  * Legacy model mapping for backward compatibility
  */
 export const LEGACY_MODEL_MAP: Record<string, string> = {
-  'gemini-flash-latest': 'google/gemini-2.5-flash',
+  // Old Gemini model names
+  'gemini-flash-latest': 'google/gemini-2.5-flash-preview-09-2025',
   'gemini-pro': 'google/gemini-2.5-pro',
-  'gemini-flash': 'google/gemini-2.5-flash',
+  'gemini-flash': 'google/gemini-2.5-flash-preview-09-2025',
+  'google/gemini-2.5-flash': 'google/gemini-2.5-flash-preview-09-2025',
+  'google/gemini-flash-lite': 'google/gemini-2.5-flash-lite-preview-09-2025',
+
+  // Old OpenAI model names
+  'openai/gpt-4o': 'openai/gpt-5',
+  'openai/gpt-5-image': 'openai/gpt-5',
+  'openai/gpt-5-image-mini': 'openai/gpt-5-mini',
+
+  // Old xAI model names (incorrect format without hyphen)
+  'xai/grok-4': 'x-ai/grok-4',
+  'xai/grok-4-fast': 'x-ai/grok-4-fast',
+  'xai/grok-3': 'x-ai/grok-3',
+  'xai/grok-3-mini': 'x-ai/grok-3-mini',
+  'xai/grok-code-fast-1': 'x-ai/grok-code-fast-1',
 };
 
 export const normalizeLegacyModel = (model: string): string => {

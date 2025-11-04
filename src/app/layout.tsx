@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/nextjs';
 import './globals.css';
 import { GlobalHeader } from '@/components/layout/global-header';
 import { Toaster } from 'sonner';
+import { FeaturebaseWidget } from '@/components/featurebase/FeaturebaseWidget';
 
 export const metadata: Metadata = {
   title: "Remalt - Build AI Canvas That Actually Work",
@@ -29,6 +30,7 @@ function RootLayout({
           </Sentry.ErrorBoundary>
         </main>
         <Toaster position="bottom-right" richColors expand={true} />
+        <FeaturebaseWidget />
       </body>
     </html>
   );

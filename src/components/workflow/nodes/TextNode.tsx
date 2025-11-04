@@ -27,9 +27,9 @@ export const TextNode = memo(({
   style: nodeStyle,
 }: NodeProps<TextNodeData>) => {
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const updateNode = useWorkflowStore((state) => state.updateNode);
   const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
   const isActive = activeNodeId === id;
+  const updateNode = useWorkflowStore((state) => state.updateNode);
   const [wordCount, setWordCount] = useState(data.wordCount || 0);
   const [isResizing, setIsResizing] = useState(false);
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -128,7 +128,9 @@ export const TextNode = memo(({
           {/* Header */}
           <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
             <div className="flex items-center gap-2">
-              <Type className="h-4 w-4 text-[#6B7280]" />
+              <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
+                <Type className="h-4 w-4 text-gray-600" />
+              </div>
               <span className="text-[13px] font-medium text-[#1A1D21]">
                 Rich Text
               </span>
@@ -143,10 +145,22 @@ export const TextNode = memo(({
           {/* Novel Editor - Notion-style inline markdown */}
           <div
             ref={editorContainerRef}
-            className="flex-1 min-h-0 mx-5 mb-5 border border-[#E5E7EB] rounded-lg overflow-hidden bg-white cursor-text"
+            className="nodrag nopan flex-1 min-h-0 mx-5 mb-5 border border-[#E5E7EB] rounded-lg overflow-hidden bg-white cursor-text"
             onMouseDown={(e) => {
-              // Stop propagation to prevent ReactFlow from interfering
+              // Stop all propagation to prevent ReactFlow from interfering
               e.stopPropagation();
+              const nativeEvent = e.nativeEvent as any;
+              if (nativeEvent.stopImmediatePropagation) {
+                nativeEvent.stopImmediatePropagation();
+              }
+            }}
+            onPointerDown={(e) => {
+              // Also stop pointer events
+              e.stopPropagation();
+              const nativeEvent = e.nativeEvent as any;
+              if (nativeEvent.stopImmediatePropagation) {
+                nativeEvent.stopImmediatePropagation();
+              }
             }}
             onClick={(e) => {
               // Stop propagation and focus the editor
@@ -162,7 +176,7 @@ export const TextNode = memo(({
               contain: 'layout style paint',
             }}
           >
-            <div className="h-full overflow-auto">
+            <div className="nodrag nopan h-full overflow-auto">
               <NovelEditor
                 content={data.content}
                 onChange={handleContentChange}
@@ -173,8 +187,8 @@ export const TextNode = memo(({
         </div>
       </BaseNode>
 
-      {/* Floating AI Instructions - Only show when node is selected */}
-      {selected && (
+      {/* Floating AI Instructions - visible once the node is active/selected */}
+      {(isActive || selected) && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) =>

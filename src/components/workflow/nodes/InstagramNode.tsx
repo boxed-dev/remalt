@@ -38,9 +38,12 @@ function formatNumber(num: number): string {
 }
 
 export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<InstagramNodeData>) => {
+  void selected; // Not used - we use isActive instead
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
+  const isActive = activeNodeId === id;
 
   function formatDateShort(iso?: string): string | undefined {
     if (!iso) return undefined;
@@ -558,8 +561,8 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
       </div>
     </BaseNode>
 
-    {/* Floating AI Instructions - Only show when node is selected */}
-    {selected && (
+    {/* Floating AI Instructions - Only show when node is active */}
+    {isActive && (
       <FloatingAIInstructions
         value={data.aiInstructions}
         onChange={(value) =>

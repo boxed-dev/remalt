@@ -215,6 +215,7 @@ function WorkflowCanvasInner() {
 
   const addNode = useWorkflowStore((state) => state.addNode);
   const updateNode = useWorkflowStore((state) => state.updateNode);
+  const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const updateNodePosition = useWorkflowStore(
     (state) => state.updateNodePosition
   );
@@ -1433,11 +1434,43 @@ function WorkflowCanvasInner() {
 
   // Set up keyboard shortcuts (most node creation shortcuts handled in page.tsx)
   useKeyboardShortcuts({
-    "s": handleOpenSocialMediaDialog, // S for Social Media
-    "mod+g": createGroupFromSelection, // Ctrl+G / Cmd+G to group selected nodes
-    "mod+shift+g": ungroupSelectedNodes, // Ctrl+Shift+G / Cmd+Shift+G to ungroup
-    "mod+shift+c": selectGroupChildren, // Ctrl+Shift+C / Cmd+Shift+C to select group children
+    "s": handleOpenSocialMediaDialog,
+    "mod+g": createGroupFromSelection,
+    "mod+shift+g": ungroupSelectedNodes,
+    "mod+shift+c": selectGroupChildren,
   });
+
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      if (isEditableElement(e.target)) return;
+
+      const items = Array.from(e.clipboardData?.items || []);
+      const imageItem = items.find(item => item.type.startsWith('image/'));
+
+      if (imageItem) {
+        e.preventDefault();
+        const file = imageItem.getAsFile();
+        if (!file) return;
+
+        const { cursorPosition } = useWorkflowStore.getState();
+        const position = cursorPosition || { x: 100, y: 100 };
+        const node = addNode('image', position);
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result as string;
+          updateNodeData(node.id, {
+            uploadSource: 'clipboard',
+            imageUrl: base64,
+          } as Partial<ImageNodeData>);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [addNode, updateNodeData]);
 
   return (
     <div

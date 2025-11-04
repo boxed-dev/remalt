@@ -37,14 +37,16 @@ async function postHandler(req: NextRequest) {
 
     if (audioUrl) {
       // Transcribe from URL
+      // Using nova-3: Most accurate model (5.26% WER for batch, 47.4% better than competitors)
       const { result } = await deepgram.listen.prerecorded.transcribeUrl(
         { url: audioUrl },
         {
-          model: 'nova-2',
-          smart_format: true,
-          punctuate: true,
-          paragraphs: true,
-          language: 'en',
+          model: 'nova-3',
+          detect_language: true,  // Auto-detect language for multilingual support
+          smart_format: true,     // Format numbers, currency, emails
+          punctuate: true,        // Auto-punctuation
+          paragraphs: true,       // Add paragraph breaks
+          diarize: false,         // Speaker diarization (disabled for performance)
         }
       );
       transcriptionResult = result;
@@ -55,11 +57,12 @@ async function postHandler(req: NextRequest) {
       const { result } = await deepgram.listen.prerecorded.transcribeFile(
         audioBuffer,
         {
-          model: 'nova-2',
-          smart_format: true,
-          punctuate: true,
-          paragraphs: true,
-          language: 'en',
+          model: 'nova-3',
+          detect_language: true,  // Auto-detect language for multilingual support
+          smart_format: true,     // Format numbers, currency, emails
+          punctuate: true,        // Auto-punctuation
+          paragraphs: true,       // Add paragraph breaks
+          diarize: false,         // Speaker diarization (disabled for performance)
         }
       );
       transcriptionResult = result;

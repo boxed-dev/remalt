@@ -1,6 +1,6 @@
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import { useCallback, useRef } from 'react';
-import type { ReactNode, CSSProperties } from 'react';
+import { useCallback } from 'react';
+import type { ReactNode, CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 
 interface HandleConfig {
@@ -69,111 +69,15 @@ export function BaseNode({
   const node = getNode(id);
   const actualParentId = node?.parentId || parentId || parentNode;
 
-  const forwardedPointerRef = useRef(false);
-
-  const handleActivationPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (isActive) {
+  const handlePointerDownActivate = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const isPrimaryPointer = event.pointerType === 'touch' || event.button === 0;
+    if (!isPrimaryPointer) {
       return;
     }
 
-    const overlay = event.currentTarget;
-    const { clientX, clientY } = event;
-
-    forwardedPointerRef.current = true;
-    setActiveNode(id);
-
-    overlay.style.pointerEvents = 'none';
-
-    if (typeof window !== 'undefined') {
-      const restorePointerEvents = () => {
-        window.removeEventListener('pointerup', restorePointerEvents, true);
-        window.removeEventListener('pointercancel', restorePointerEvents, true);
-        window.removeEventListener('pointerleave', restorePointerEvents, true);
-        forwardedPointerRef.current = false;
-        if (overlay.isConnected) {
-          overlay.style.pointerEvents = 'auto';
-        }
-      };
-
-      window.addEventListener('pointerup', restorePointerEvents, true);
-      window.addEventListener('pointercancel', restorePointerEvents, true);
-      window.addEventListener('pointerleave', restorePointerEvents, true);
+    if (!isActive) {
+      setActiveNode(id);
     }
-
-    requestAnimationFrame(() => {
-      const targetElement = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
-      if (!targetElement || targetElement === overlay) {
-        return;
-      }
-
-      const pointerEventSupported = typeof window !== 'undefined' && typeof window.PointerEvent === 'function';
-
-      if (pointerEventSupported) {
-        const forwardedEvent = new PointerEvent('pointerdown', {
-          bubbles: true,
-          cancelable: true,
-          pointerId: event.pointerId,
-          pointerType: event.pointerType,
-          button: event.button,
-          buttons: event.buttons,
-          clientX,
-          clientY,
-          ctrlKey: event.ctrlKey,
-          metaKey: event.metaKey,
-          shiftKey: event.shiftKey,
-          altKey: event.altKey,
-          pressure: event.pressure,
-          tangentialPressure: event.tangentialPressure,
-          tiltX: event.tiltX,
-          tiltY: event.tiltY,
-          twist: event.twist,
-          width: event.width,
-          height: event.height,
-          isPrimary: event.isPrimary,
-        });
-
-        targetElement.dispatchEvent(forwardedEvent);
-      } else {
-        const forwardedMouseEvent = new MouseEvent('mousedown', {
-          bubbles: true,
-          cancelable: true,
-          button: event.button,
-          buttons: event.buttons,
-          clientX,
-          clientY,
-          ctrlKey: event.ctrlKey,
-          metaKey: event.metaKey,
-          shiftKey: event.shiftKey,
-          altKey: event.altKey,
-        });
-
-        targetElement.dispatchEvent(forwardedMouseEvent);
-      }
-    });
-  }, [id, isActive, setActiveNode]);
-
-  const handleActivationClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    if (isActive || forwardedPointerRef.current) {
-      forwardedPointerRef.current = false;
-      return;
-    }
-
-    const overlay = event.currentTarget;
-    const { clientX, clientY } = event;
-
-    setActiveNode(id);
-
-    overlay.style.pointerEvents = 'none';
-
-    requestAnimationFrame(() => {
-      const targetElement = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
-      if (targetElement && targetElement !== overlay && targetElement instanceof HTMLElement) {
-        targetElement.click();
-      }
-      if (overlay.isConnected) {
-        overlay.style.pointerEvents = 'auto';
-      }
-    });
   }, [id, isActive, setActiveNode]);
 
   // Hide handles when node is inside a group
@@ -199,16 +103,8 @@ export function BaseNode({
             }`
       } ${isConnectTarget ? 'flowy-magnetic-node' : ''} ${isPreviewTarget ? 'flowy-preview-node' : ''}`}
       style={style}
+      onPointerDownCapture={handlePointerDownActivate}
     >
-      {/* Activation overlay for inactive nodes - blocks interaction until activated */}
-      {!isActive && (
-        <div
-          onPointerDown={handleActivationPointerDown}
-          onClick={handleActivationClick}
-          className="absolute inset-0 z-10 cursor-pointer rounded-2xl"
-        />
-      )}
-
       {/* Content */}
       <div
         className={`relative z-0 ${contentClassName ?? 'p-5'}`}

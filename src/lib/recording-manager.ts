@@ -204,9 +204,12 @@ class RecordingManager {
   }
 
   /**
-   * Setup Deepgram connection for live transcription
+   * Setup Deepgram connection for live transcription with retry logic
    */
-  private async setupDeepgramConnection(): Promise<void> {
+  private async setupDeepgramConnection(retryCount = 0): Promise<void> {
+    const maxRetries = 3;
+    const baseDelay = 1000; // Start with 1 second
+
     try {
       console.log('[RecordingManager] Fetching Deepgram API key...');
 
@@ -235,26 +238,28 @@ class RecordingManager {
       console.log('[RecordingManager] Establishing live transcription connection...');
 
       // Establish live transcription connection with optimized settings
+      // Using nova-3: Most accurate model (6.84% WER, 54.2% better than competitors)
       const connection = deepgramClient.listen.live({
         model: 'nova-3',
-        language: 'en',
-        smart_format: true,
-        interim_results: true,
-        utterance_end_ms: 1000,
-        vad_events: true,
-        endpointing: 300,
-        punctuate: true,
-        filler_words: false,
+        detect_language: true,        // Auto-detect language for multilingual support
+        smart_format: true,           // Format numbers, currency, emails
+        interim_results: true,        // Enable real-time streaming
+        utterance_end_ms: 800,        // 800ms pause = end of utterance (reduced from 1000ms)
+        vad_events: true,             // Voice Activity Detection
+        endpointing: 250,             // 250ms silence = finalize (more responsive, reduced from 300ms)
+        punctuate: true,              // Auto-punctuation
+        filler_words: false,          // Remove "um", "uh", "like"
       });
 
       // Setup event handlers wrapped in Promise for initialization
       return new Promise((resolve, reject) => {
         let isResolved = false;
 
+        // Increased timeout to 30s for slower networks
         const timeout = setTimeout(() => {
           if (!isResolved) {
             isResolved = true;
-            console.error('[RecordingManager] ⏱️ Connection timeout after 15s');
+            console.error('[RecordingManager] ⏱️ Connection timeout after 30s');
 
             // Clean up connection on timeout
             try {
@@ -265,7 +270,7 @@ class RecordingManager {
 
             reject(new Error('Voice transcription unavailable. Check your network connection.'));
           }
-        }, 15000);
+        }, 30000); // Increased from 15s to 30s
 
         // Connection opened - this MUST fire for transcription to work
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -330,7 +335,7 @@ class RecordingManager {
       });
 
     } catch (error) {
-      console.error('[RecordingManager] Setup failed:', error);
+      console.error('[RecordingManager] Setup failed (attempt ' + (retryCount + 1) + '/' + maxRetries + '):', error);
 
       // Ensure cleanup on any error
       if (this.deepgramConnection) {
@@ -342,6 +347,17 @@ class RecordingManager {
         this.deepgramConnection = null;
       }
 
+      // Retry logic with exponential backoff
+      if (retryCount < maxRetries) {
+        const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff: 1s, 2s, 4s
+        console.log(`[RecordingManager] 🔄 Retrying in ${delay}ms...`);
+
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.setupDeepgramConnection(retryCount + 1);
+      }
+
+      // All retries exhausted
+      console.error('[RecordingManager] ❌ All retry attempts failed');
       throw error;
     }
   }
