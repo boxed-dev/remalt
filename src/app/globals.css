@@ -426,6 +426,10 @@
     background: rgba(0, 0, 0, 0.3);
   }
 
+  .flowy-scrollable {
+    touch-action: pan-y;
+  }
+
   /* Minimal textarea scrollbar for input fields */
   textarea.scrollbar-thin {
     scrollbar-width: thin;
@@ -552,4 +556,3 @@
 .resizing {
   transition: none !important;
 }
-

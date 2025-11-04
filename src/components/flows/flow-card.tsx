@@ -7,6 +7,7 @@ import { useState } from "react";
 interface ExtendedFlow extends Omit<Flow, 'created' | 'updated' | 'recentlyOpened'> {
   nodeCount?: number;
   lastEdited?: Date;
+  createdAt?: Date;
   isPublic?: boolean;
   category?: string;
 }
@@ -21,6 +22,24 @@ interface FlowCardProps {
 
 export function FlowCard({ flow, onClick, onDelete, onPublish, isTemplateAdmin }: FlowCardProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Format relative time
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSecs < 60) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+    return `${Math.floor(diffDays / 365)}y ago`;
+  };
 
   const handlePublish = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -118,7 +137,7 @@ export function FlowCard({ flow, onClick, onDelete, onPublish, isTemplateAdmin }
         )}
       </div>
 
-      {/* Content - Flexbox to push tags to bottom */}
+      {/* Content - Flexbox to push metadata to bottom */}
       <div className="flex-1 flex flex-col justify-between min-h-0">
         {/* Header */}
         <div className="mb-auto">
@@ -132,24 +151,37 @@ export function FlowCard({ flow, onClick, onDelete, onPublish, isTemplateAdmin }
           )}
         </div>
 
-        {/* Tags - Bottom aligned */}
-        {flow.tags && flow.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {flow.tags.slice(0, 3).map((tag) => (
-              <span
-                key={tag.name}
-                className="px-2.5 py-1 rounded-md bg-[#F3F4F6] text-[11px] font-medium text-[#6B7280] hover:bg-[#E5E7EB] transition-colors"
-              >
-                {tag.name}
-              </span>
-            ))}
-            {flow.tags.length > 3 && (
-              <span className="px-2.5 py-1 rounded-md bg-[#F3F4F6] text-[11px] font-medium text-[#6B7280]">
-                +{flow.tags.length - 3}
-              </span>
+        {/* Bottom metadata */}
+        <div className="mt-3 space-y-2">
+          {/* Tags */}
+          {flow.tags && flow.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {flow.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag.name}
+                  className="px-2.5 py-1 rounded-md bg-[#F3F4F6] text-[11px] font-medium text-[#6B7280] hover:bg-[#E5E7EB] transition-colors"
+                >
+                  {tag.name}
+                </span>
+              ))}
+              {flow.tags.length > 3 && (
+                <span className="px-2.5 py-1 rounded-md bg-[#F3F4F6] text-[11px] font-medium text-[#6B7280]">
+                  +{flow.tags.length - 3}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Timestamps */}
+          <div className="flex items-center gap-3 text-[11px] text-[#9CA3AF]">
+            {flow.createdAt && (
+              <span>Created {formatRelativeTime(flow.createdAt)}</span>
+            )}
+            {flow.lastEdited && (
+              <span>Edited {formatRelativeTime(flow.lastEdited)}</span>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

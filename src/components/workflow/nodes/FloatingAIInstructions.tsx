@@ -56,16 +56,26 @@ export function FloatingAIInstructions({
     [maxLength, debouncedSave]
   );
 
-  const stopPropagation = useCallback((e: React.MouseEvent | React.WheelEvent | React.TouchEvent | React.FocusEvent) => {
+  const stopPropagation = useCallback((e: React.MouseEvent | React.WheelEvent | React.TouchEvent | React.FocusEvent | React.PointerEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if ('nativeEvent' in e && typeof (e.nativeEvent as any).stopImmediatePropagation === 'function') {
       (e.nativeEvent as any).stopImmediatePropagation();
     }
   }, []);
 
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleDragStart = useCallback((e: React.DragEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+  }, []);
+
   return (
     <div
-      className="absolute w-full bg-white rounded-lg shadow-md flex"
+      className="absolute w-full bg-white rounded-lg shadow-md flex nodrag nopan"
       style={{
         zIndex: 100,
         top: '100%',
@@ -74,6 +84,8 @@ export function FloatingAIInstructions({
         overflow: 'hidden',
       }}
       onMouseDown={stopPropagation}
+      onPointerDown={handlePointerDown}
+      onDragStart={handleDragStart}
       onWheel={stopPropagation}
       onTouchStart={stopPropagation}
     >
@@ -113,6 +125,8 @@ export function FloatingAIInstructions({
           maxLength={maxLength}
           rows={1}
           onMouseDown={stopPropagation}
+          onPointerDown={handlePointerDown}
+          onDragStart={handleDragStart}
           onWheel={stopPropagation}
           onTouchStart={stopPropagation}
           onFocus={stopPropagation}
@@ -121,7 +135,7 @@ export function FloatingAIInstructions({
             focus:outline-none focus:ring-0 focus:border-transparent
             border-none shadow-none py-2.5 leading-normal font-sans
             h-auto min-h-[42px] overflow-y-hidden
-            opacity-100
+            opacity-100 nodrag nopan
           "
           style={{ height: '44px' }}
         />

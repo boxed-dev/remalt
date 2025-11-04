@@ -138,9 +138,9 @@ const MessageBubble = memo(({
     if (message.content === '' && isLoading) {
       return (
         <div className="flex items-center gap-2 py-2">
-          <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-          <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-          <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+          <div className="w-2 h-2 bg-[#095D40] rounded-full animate-pulse"></div>
+          <div className="w-2 h-2 bg-[#095D40] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+          <div className="w-2 h-2 bg-[#095D40] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
         </div>
       );
     }
@@ -195,56 +195,58 @@ const MessageBubble = memo(({
   }, [message.content, isLoading]);
 
   return (
-    <div className="group/message max-w-[85%] mb-1 min-w-0">
-      {/* Role indicator - more subtle */}
-      <div className="flex items-center gap-1.5 mb-1.5 ml-1">
-        {message.role === 'assistant' ? (
-          <>
-            <div className="w-1 h-1 bg-primary rounded-full"></div>
-            <span className="text-[10px] font-medium text-muted-foreground">Remic AI</span>
-          </>
-        ) : (
-          <>
-            <User className="w-2.5 h-2.5 text-muted-foreground" />
-            <span className="text-[10px] font-medium text-muted-foreground">{getUserDisplayName()}</span>
-          </>
-        )}
-      </div>
-
-      {/* Message bubble - borderless, modern design */}
-      <div className="relative">
-        <div
-          className={`px-3 py-2.5 rounded-xl text-[13px] leading-[1.6] select-text cursor-text transition-colors break-words ${
-            message.role === 'user'
-              ? 'bg-muted text-foreground'
-              : 'bg-background text-foreground border border-border/60'
-          }`}
-          style={{ userSelect: 'text', wordBreak: 'break-word', overflowWrap: 'break-word' }}
-        >
-          <div className="prose prose-sm max-w-none select-text break-words" style={{ userSelect: 'text', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-            {markdownContent}
-          </div>
+    <div className={`flex w-full mb-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+      <div className="group/message max-w-[75%] min-w-0">
+        {/* Role indicator - more subtle */}
+        <div className={`flex items-center gap-1.5 mb-1 ${message.role === 'user' ? 'justify-end ml-auto' : 'justify-start'}`}>
+          {message.role === 'assistant' ? (
+            <>
+              <div className="w-1 h-1 bg-[#095D40] rounded-full"></div>
+              <span className="text-[10px] font-medium text-gray-600">Remic AI</span>
+            </>
+          ) : (
+            <>
+              <span className="text-[10px] font-medium text-gray-600">{getUserDisplayName()}</span>
+              <User className="w-2.5 h-2.5 text-gray-600" />
+            </>
+          )}
         </div>
 
-        {/* Copy button - floating style */}
-        <Button
-          variant="secondary"
-          size="sm"
-          className={`absolute -bottom-2 right-2 h-6 px-2 text-[10px] gap-1 border-border/60 shadow-sm transition-opacity opacity-0 group-hover/message:opacity-100 ${
-            copiedMessageId === message.id ? 'text-primary' : ''
-          }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleCopyMessage(message.id, message.content);
-          }}
-        >
-          {copiedMessageId === message.id ? (
-            <Check className="h-3 w-3" />
-          ) : (
-            <Copy className="h-3 w-3" />
-          )}
-          {copiedMessageId === message.id ? 'Copied' : 'Copy'}
-        </Button>
+        {/* Message bubble - WhatsApp style */}
+        <div className="relative">
+          <div
+            className={`px-3 py-1.5 text-[13px] leading-[1.6] select-text cursor-text transition-colors break-words ${
+              message.role === 'user'
+                ? 'bg-[#095D40]/6 text-gray-900 rounded-tl-xl rounded-tr-xl rounded-bl-xl'
+                : 'bg-white text-gray-900 rounded-tl-xl rounded-tr-xl rounded-br-xl'
+            }`}
+            style={{ userSelect: 'text', wordBreak: 'break-word', overflowWrap: 'break-word' }}
+          >
+            <div className="prose prose-sm max-w-none select-text break-words" style={{ userSelect: 'text', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+              {markdownContent}
+            </div>
+          </div>
+
+          {/* Copy button - floating style */}
+          <Button
+            variant="secondary"
+            size="sm"
+            className={`absolute -bottom-2 ${message.role === 'user' ? 'left-2' : 'right-2'} h-6 px-2 text-[10px] gap-1 border-gray-200 bg-white hover:bg-[#095D40]/8 shadow-sm transition-opacity opacity-0 group-hover/message:opacity-100 ${
+              copiedMessageId === message.id ? 'text-[#095D40]' : ''
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopyMessage(message.id, message.content);
+            }}
+          >
+            {copiedMessageId === message.id ? (
+              <Check className="h-3 w-3" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+            {copiedMessageId === message.id ? 'Copied' : 'Copy'}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -382,6 +384,16 @@ export const ChatNode = memo(({
         return;
       }
 
+      const nativeEvent = event.nativeEvent as NativeEventWithStop;
+      const isPinchGesture = event.ctrlKey || event.metaKey;
+
+      if (isPinchGesture) {
+        event.preventDefault();
+        event.stopPropagation();
+        nativeEvent.stopImmediatePropagation?.();
+        return;
+      }
+
       const target = event.target as HTMLElement | null;
       const scrollable = target?.closest<HTMLElement>('.flowy-scrollable');
       if (!scrollable) {
@@ -389,7 +401,7 @@ export const ChatNode = memo(({
       }
 
       event.stopPropagation();
-      (event.nativeEvent as NativeEventWithStop).stopImmediatePropagation?.();
+      nativeEvent.stopImmediatePropagation?.();
     },
     [isActive],
   );
@@ -879,7 +891,7 @@ export const ChatNode = memo(({
     if (!messages.length) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-center">
-          <MessageSquare className="h-12 w-12 text-gray-300 mb-3" />
+          <MessageSquare className="h-12 w-12 text-gray-200 mb-3" />
           <p className="text-[13px] text-gray-500">Start a conversation</p>
         </div>
       );
@@ -946,29 +958,29 @@ export const ChatNode = memo(({
 
     return (
       <div
-        className={`flex h-full w-full border-2 rounded-2xl overflow-hidden bg-white ${
+        className={`flex h-full w-full border-2 rounded-2xl overflow-hidden bg-[#F9FAFB] ${
           isModal
             ? 'border-[#095D40] shadow-2xl'
-            : `shadow-sm transition-all ${isActive ? 'border-[#095D40]' : 'border-[#E8ECEF]'}`
+            : `shadow-sm transition-all ${isActive ? 'border-[#095D40]' : 'border-gray-200'}`
         }`}
         onWheel={handleWheelEvent}
         onWheelCapture={handleWheelEvent}
       >
         {/* Left Sidebar */}
-        <div className="w-[240px] min-w-[240px] flex-shrink-0 border-r border-border/40 flex flex-col bg-muted/40">
-          <div className="px-3 py-3 border-b border-border/40 space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/80">
+        <div className="w-[240px] min-w-[240px] flex-shrink-0 border-r border-gray-200/60 flex flex-col bg-[#F8FAF9]">
+          <div className="px-3 py-3 border-b border-gray-200/60 space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#095D40]">
             Connected ({data.linkedNodes?.length || 0})
           </p>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[11px] text-gray-600">
             {data.linkedNodes && data.linkedNodes.length > 0
               ? `${data.linkedNodes.length} linked ${data.linkedNodes.length === 1 ? 'node' : 'nodes'}`
               : 'No linked nodes yet'}
           </p>
         </div>
 
-        <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-border/40">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/80">
+        <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-gray-200/60">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#095D40]">
             Chats
           </p>
           <Button
@@ -999,8 +1011,8 @@ export const ChatNode = memo(({
                     key={session.id}
                     className={`flex items-center gap-2 rounded-md border px-3 py-2 text-[11px] transition-colors ${
                       isActiveSession
-                        ? 'border-primary/30 bg-primary/5'
-                        : 'border-border/50 hover:border-border hover:bg-gray-50'
+                        ? 'border-[#095D40]/30 bg-[#095D40]/5'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/60'
                     }`}
                   >
                     <Button
@@ -1038,12 +1050,12 @@ export const ChatNode = memo(({
       <div className="flex-1 flex flex-col bg-white min-w-0 overflow-hidden">
         {/* Chat Header */}
         <div
-          className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 bg-white flowy-drag-handle cursor-grab active:cursor-grabbing select-none"
+          className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200/60 bg-[#FAFBFA] flowy-drag-handle cursor-grab active:cursor-grabbing select-none"
           data-flowy-drag-handle
         >
           <div className="flex items-center gap-2.5">
-            <MessageSquare className="h-4.5 w-4.5 text-primary" />
-            <h3 className="text-[13px] font-semibold text-gray-900">
+            <MessageSquare className="h-4.5 w-4.5 text-[#095D40]" />
+            <h3 className="text-[13px] font-semibold text-[#095D40]">
               {currentSession?.title || 'Chat'}
             </h3>
           </div>
@@ -1054,10 +1066,10 @@ export const ChatNode = memo(({
                 setIsMaximized(true);
               }}
               onMouseDown={(e) => stopReactFlowPropagation(e)}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-[#095D40]/8 rounded-lg transition-colors"
               title="Maximize chat"
             >
-              <Maximize2 className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+              <Maximize2 className="h-4 w-4 text-gray-600 hover:text-[#095D40]" />
             </button>
           ) : (
             <button
@@ -1066,10 +1078,10 @@ export const ChatNode = memo(({
                 setIsMaximized(false);
               }}
               onMouseDown={(e) => e.stopPropagation()}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-[#095D40]/8 rounded-lg transition-colors"
               title="Close chat"
             >
-              <X className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+              <X className="h-4 w-4 text-gray-600 hover:text-[#095D40]" />
             </button>
           )}
         </div>
@@ -1081,14 +1093,14 @@ export const ChatNode = memo(({
           onWheel={handleWheelEvent}
           onWheelCapture={handleWheelEvent}
           data-lenis-prevent
-          className="flowy-scrollable flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 bg-muted/30"
-          style={{ overscrollBehavior: 'contain', userSelect: 'text' }}
+          className="flowy-scrollable flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 bg-gradient-to-b from-[#FAFBFA]/50 to-white"
+          style={{ overscrollBehavior: 'contain', userSelect: 'text', touchAction: 'pan-y' }}
         >
           {renderMessageList(virtualizer, !isModal)}
         </div>
 
         {/* Input Area */}
-        <div className="px-4 py-3 border-t border-border/40 bg-white">
+        <div className="px-4 py-3 border-t border-gray-200/60 bg-[#FAFBFA]">
           <div className="flex items-center gap-2 mb-2">
             {/* Model Selector with Provider Branding */}
             <div
@@ -1105,13 +1117,13 @@ export const ChatNode = memo(({
 
           <div
             onMouseDown={(e) => stopReactFlowPropagation(e)}
-            className="border border-border/60 rounded-lg bg-muted/40 hover:bg-background transition-colors px-2 py-1.5 mb-2"
+            className="border border-gray-200 rounded-lg bg-white hover:bg-gray-50/30 transition-colors px-2 py-1.5 mb-2"
           >
             <VoiceInputBar
               value={input}
               onChange={setInput}
               onSend={handleSend}
-              placeholder="Ask anything or press / for actions"
+              placeholder="Ask Remic anything"
               disabled={isLoading}
               voiceMode="replace"
               showAddButton={false}

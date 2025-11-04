@@ -248,18 +248,6 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
           {/* Flow Grid */}
           {workflows.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {/* New Flow Card */}
-              <button
-                onClick={handleNewFlow}
-                className="group cursor-pointer border-2 border-dashed border-[#E5E7EB] rounded-xl p-6 hover:border-[#095D40] hover:bg-white transition-all duration-200 aspect-[4/3] flex flex-col items-center justify-center gap-3"
-              >
-                <div className="h-12 w-12 rounded-full bg-[#F3F4F6] flex items-center justify-center group-hover:bg-[#095D40] transition-all duration-200">
-                  <Plus className="h-6 w-6 text-[#9CA3AF] group-hover:text-white transition-all duration-200" />
-                </div>
-                <span className="text-[14px] font-medium text-[#6B7280] group-hover:text-[#095D40] transition-all duration-200">
-                  New Canvas
-                </span>
-              </button>
 
               {/* Flow Cards */}
               {filteredFlows.map((flow) => (
@@ -270,6 +258,7 @@ export function FlowsClient({ initialWorkflows }: FlowsClientProps) {
                     name: flow.name,
                     description: flow.description || "",
                     nodeCount: flow.nodeCount,
+                    createdAt: new Date(flow.createdAt),
                     lastEdited: new Date(flow.updatedAt),
                     tags:
                       flow.metadata?.tags?.map((tag) => ({
