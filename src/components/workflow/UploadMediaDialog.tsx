@@ -6,6 +6,7 @@ import { FileText, Image as ImageIcon, X, Loader2 } from 'lucide-react';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { uploadFile } from '@/lib/supabase/storage-service';
+import { findBlankSpaceForMultiple } from '@/lib/workflow/positioning';
 import type { Position } from '@/types/workflow';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -43,6 +44,7 @@ export function UploadMediaDialog({
   const { user } = useCurrentUser();
   const addNode = useWorkflowStore((state) => state.addNode);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+  const workflowNodes = useWorkflowStore((state) => state.workflow?.nodes || []);
 
   const acceptedTypes = mediaType === 'image' ? 'image/*' : 'application/pdf';
   const maxFiles = selectedNodeIds.length > 0 ? selectedNodeIds.length : 10;
@@ -126,9 +128,20 @@ export function UploadMediaDialog({
     const filesToUpload = files.filter((f) => !f.error);
     if (filesToUpload.length === 0) return;
 
-    // Calculate positions for new nodes
-    const basePosition = position || { x: 100, y: 100 };
+    // Calculate positions for new nodes using smart positioning
+    const nodeWidth = mediaType === 'image' ? 300 : 280;
+    const nodeHeight = mediaType === 'image' ? 200 : 180;
     const spacing = 320; // Horizontal spacing between nodes
+
+    // Find blank space for multiple nodes
+    const positions = findBlankSpaceForMultiple(
+      workflowNodes,
+      filesToUpload.length,
+      nodeWidth,
+      nodeHeight,
+      spacing,
+      position
+    );
 
     try {
       // Upload files and create/update nodes
@@ -189,11 +202,8 @@ export function UploadMediaDialog({
               });
             }
           } else {
-            // Create new node
-            const nodePosition = {
-              x: basePosition.x + index * spacing,
-              y: basePosition.y,
-            };
+            // Create new node at calculated position
+            const nodePosition = positions[index] || positions[positions.length - 1];
 
             if (mediaType === 'image') {
               addNode('image', nodePosition, {
@@ -263,7 +273,18 @@ export function UploadMediaDialog({
       return;
     }
 
-    const basePosition = position || { x: 100, y: 100 };
+    // Use smart positioning for single node
+    const nodeWidth = mediaType === 'image' ? 300 : 280;
+    const nodeHeight = mediaType === 'image' ? 200 : 180;
+    const positions = findBlankSpaceForMultiple(
+      workflowNodes,
+      1,
+      nodeWidth,
+      nodeHeight,
+      320,
+      position
+    );
+    const nodePosition = positions[0];
 
     if (selectedNodeIds.length > 0) {
       // Update first selected node
@@ -290,16 +311,16 @@ export function UploadMediaDialog({
         });
       }
     } else {
-      // Create new node
+      // Create new node at calculated position
       if (mediaType === 'image') {
-        addNode('image', basePosition, {
+        addNode('image', nodePosition, {
           imageUrl: urlInput,
           thumbnail: urlInput,
           uploadSource: 'url',
           analysisStatus: 'loading',
         });
       } else {
-        addNode('pdf', basePosition, {
+        addNode('pdf', nodePosition, {
           url: urlInput,
           fileName: urlInput.split('/').pop() || 'Document',
           uploadSource: 'url',
@@ -429,8 +450,8 @@ export function UploadMediaDialog({
                       )}
 
                       {/* File Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13px] font-medium text-[#1A1D21] truncate">
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="w-full text-[13px] font-medium text-[#1A1D21] truncate" title={fileWithPreview.file.name}>
                           {fileWithPreview.file.name}
                         </div>
                         <div className="text-[11px] text-[#6B7280]">

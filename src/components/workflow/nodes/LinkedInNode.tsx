@@ -1,8 +1,9 @@
 import { memo } from 'react';
-import { Linkedin, Loader2, CheckCircle2, ExternalLink, ThumbsUp, MessageCircle, Repeat2 } from 'lucide-react';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { Linkedin, Loader2, CheckCircle2, ExternalLink, ThumbsUp, MessageCircle, Repeat2, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { SyntheticEvent } from 'react';
 import { BaseNode } from './BaseNode';
+import { NodeHeader, NodeHeaderBadge } from './NodeHeader';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { LinkedInNodeData } from '@/types/workflow';
@@ -45,6 +46,37 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
   const isActive = activeNodeId === id;
 
   const hasPostData = data.fetchStatus === 'success' && !!data.content;
+
+  const fetchStatusBadge = useMemo(() => {
+    if (data.fetchStatus === 'loading') {
+      return (
+        <NodeHeaderBadge tone="accent">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Fetching</span>
+        </NodeHeaderBadge>
+      );
+    }
+
+    if (data.fetchStatus === 'error') {
+      return (
+        <NodeHeaderBadge tone="danger">
+          <AlertCircle className="h-3 w-3" />
+          <span>Failed</span>
+        </NodeHeaderBadge>
+      );
+    }
+
+    if (hasPostData) {
+      return (
+        <NodeHeaderBadge tone="success">
+          <CheckCircle2 className="h-3 w-3" />
+          <span>Loaded</span>
+        </NodeHeaderBadge>
+      );
+    }
+
+    return null;
+  }, [data.fetchStatus, hasPostData]);
 
   type NativeEventWithStop = Event & { stopImmediatePropagation?: () => void };
 
@@ -164,27 +196,19 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
     <>
       <BaseNode
         id={id}
-        type="linkedin"
-        icon={<Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />}
-        iconBg="bg-[#0A66C2]/10"
         parentId={parentId}
+        header={
+          <NodeHeader
+            title="LinkedIn Post"
+            subtitle={data.author?.name || data.url || 'Add LinkedIn URL'}
+            icon={<Linkedin />}
+            themeKey="linkedin"
+            trailing={fetchStatusBadge}
+          />
+        }
+        headerClassName="overflow-hidden"
       >
         <div className="w-[320px] space-y-3">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 flex items-center justify-center bg-[#0A66C2]/10 rounded-full">
-              <Linkedin className="w-4 h-4 text-[#0A66C2]" />
-            </div>
-            <span className="text-[14px] font-medium text-gray-800">LinkedIn Post</span>
-          </div>
-          {hasPostData && (
-            <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded-full">
-              <CheckCircle2 className="h-3 w-3" />
-              <span>Loaded</span>
-            </div>
-          )}
-        </div>
 
         {/* URL Input / Author Info */}
         {isEditing ? (

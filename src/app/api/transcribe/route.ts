@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { transcriptCache } from '@/lib/cache/transcript-cache';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
 import { fetchSupadataTranscript } from '@/lib/api/supadata';
+import { generateNodeTitle } from '@/lib/ai/title-generator';
 
 // Extract YouTube video ID from URL
 function extractYouTubeId(url: string): string | null {
@@ -82,13 +83,39 @@ async function postHandler(req: NextRequest) {
     console.log(`[Cache] Stored transcript for ${videoId}`);
     console.log(`[Result] ✅ Success via Supadata (${elapsed}ms)\n`);
 
-    return NextResponse.json({
+    // Generate AI title in parallel
+    const titlePromise = generateNodeTitle({
+      nodeType: 'youtube',
+      content: result.transcript || '',
+    }).then(title => {
+      if (title) {
+        console.log('[Title Generator] ✅ Generated title:', title);
+      }
+      return title;
+    }).catch(error => {
+      console.error('[Title Generator] Error:', error);
+      return null;
+    });
+
+    // Prepare response data
+    const responseData = {
       transcript: result.transcript,
       method: 'supadata',
       videoId,
       cached: false,
       elapsed_ms: elapsed,
-    });
+    };
+
+    // Wait for title generation to complete
+    const generatedTitle = await titlePromise;
+    if (generatedTitle) {
+      return NextResponse.json({
+        ...responseData,
+        suggestedTitle: generatedTitle,
+      });
+    }
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Transcription API Error:', error);

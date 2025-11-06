@@ -64,6 +64,329 @@ const AUDIO_EXTENSIONS = new Set([
 const EMPTY_NODES: WorkflowNode[] = [];
 const EMPTY_EDGES: WorkflowEdge[] = [];
 
+type Rect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+const DEFAULT_NODE_WIDTH = 300;
+const DEFAULT_NODE_HEIGHT = 200;
+const DEFAULT_GROUP_WIDTH = 640;
+const DEFAULT_GROUP_HEIGHT = 420;
+const GROUP_HEADER_HEIGHT = 44;
+const GROUP_CONTENT_PADDING = 2;
+const CONNECT_MAGNET_RADIUS = 72;
+const CONNECT_PREVIEW_RADIUS = 144;
+const CONNECT_INDEX_CELL_SIZE = 320;
+const GROUP_INDEX_CELL_SIZE = 360;
+
+type ConnectableEntry = {
+  id: string;
+  handleX: number;
+  handleY: number;
+  rect: Rect;
+};
+
+type ConnectableIndex = {
+  cellSize: number;
+  entries: Map<string, ConnectableEntry>;
+  cells: Map<string, string[]>;
+};
+
+type GroupEntry = {
+  id: string;
+  rect: Rect;
+  contentRect: Rect;
+  zIndex: number;
+  area: number;
+};
+
+type GroupIndex = {
+  cellSize: number;
+  entries: Map<string, GroupEntry>;
+  cells: Map<string, string[]>;
+};
+
+type ExtendedNode = Node & { parentId?: string };
+type NodeDataWithDrag = Record<string, unknown> & { isDragOver?: boolean };
+
+const EMPTY_CONNECTABLE_INDEX: ConnectableIndex = {
+  cellSize: CONNECT_INDEX_CELL_SIZE,
+  entries: new Map(),
+  cells: new Map(),
+};
+
+const EMPTY_GROUP_INDEX: GroupIndex = {
+  cellSize: GROUP_INDEX_CELL_SIZE,
+  entries: new Map(),
+  cells: new Map(),
+};
+
+type ReactFlowInstanceLike = Pick<ReturnType<typeof useReactFlow>, "getNode">;
+
+function makeCellKey(x: number, y: number): string {
+  return `${x}:${y}`;
+}
+
+function getNodeRect(node: Node): Rect {
+  const width = node.width ?? node.measured?.width ?? DEFAULT_NODE_WIDTH;
+  const height = node.height ?? node.measured?.height ?? DEFAULT_NODE_HEIGHT;
+  const position = node.positionAbsolute ?? node.position;
+  return { x: position.x, y: position.y, width, height };
+}
+
+function computeAbsoluteRect(
+  node: Node,
+  instance: ReactFlowInstanceLike,
+  fallbackRelative?: { x: number; y: number }
+): Rect {
+  const width = node.width ?? node.measured?.width ?? DEFAULT_NODE_WIDTH;
+  const height = node.height ?? node.measured?.height ?? DEFAULT_NODE_HEIGHT;
+
+  if (node.positionAbsolute) {
+    return {
+      x: node.positionAbsolute.x,
+      y: node.positionAbsolute.y,
+      width,
+      height,
+    };
+  }
+
+  if (fallbackRelative) {
+    const parentId = (node as ExtendedNode).parentId;
+    if (parentId) {
+      const parent = instance.getNode(parentId);
+      if (parent) {
+        const parentPosition = parent.positionAbsolute ?? parent.position;
+        return {
+          x: parentPosition.x + fallbackRelative.x,
+          y: parentPosition.y + fallbackRelative.y,
+          width,
+          height,
+        };
+      }
+    }
+
+    return { x: fallbackRelative.x, y: fallbackRelative.y, width, height };
+  }
+
+  const parentId = (node as ExtendedNode).parentId;
+  if (parentId) {
+    const parent = instance.getNode(parentId);
+    if (parent) {
+      const parentPosition = parent.positionAbsolute ?? parent.position;
+      return {
+        x: parentPosition.x + node.position.x,
+        y: parentPosition.y + node.position.y,
+        width,
+        height,
+      };
+    }
+  }
+
+  return { x: node.position.x, y: node.position.y, width, height };
+}
+
+function buildConnectableIndex(nodes: Node[]): ConnectableIndex {
+  if (!nodes.length) {
+    return EMPTY_CONNECTABLE_INDEX;
+  }
+
+  const entries = new Map<string, ConnectableEntry>();
+  const cells = new Map<string, string[]>();
+  const margin = CONNECT_PREVIEW_RADIUS;
+
+  for (const node of nodes) {
+    if (node.type === "group" || node.hidden) {
+      continue;
+    }
+
+    const rect = getNodeRect(node);
+    const handleX = rect.x;
+    const handleY = rect.y + rect.height / 2;
+
+    const entry: ConnectableEntry = {
+      id: node.id,
+      handleX,
+      handleY,
+      rect,
+    };
+
+    entries.set(node.id, entry);
+
+    const minCellX = Math.floor((rect.x - margin) / CONNECT_INDEX_CELL_SIZE);
+    const maxCellX = Math.floor((rect.x + rect.width + margin) / CONNECT_INDEX_CELL_SIZE);
+    const minCellY = Math.floor((rect.y - margin) / CONNECT_INDEX_CELL_SIZE);
+    const maxCellY = Math.floor((rect.y + rect.height + margin) / CONNECT_INDEX_CELL_SIZE);
+
+    for (let cx = minCellX; cx <= maxCellX; cx += 1) {
+      for (let cy = minCellY; cy <= maxCellY; cy += 1) {
+        const key = makeCellKey(cx, cy);
+        const bucket = cells.get(key);
+        if (bucket) {
+          bucket.push(node.id);
+        } else {
+          cells.set(key, [node.id]);
+        }
+      }
+    }
+  }
+
+  return { cellSize: CONNECT_INDEX_CELL_SIZE, entries, cells };
+}
+
+function queryConnectableIndex(
+  index: ConnectableIndex,
+  x: number,
+  y: number,
+  radius: number
+): ConnectableEntry[] {
+  if (!index.entries.size) {
+    return [];
+  }
+
+  const minCellX = Math.floor((x - radius) / index.cellSize);
+  const maxCellX = Math.floor((x + radius) / index.cellSize);
+  const minCellY = Math.floor((y - radius) / index.cellSize);
+  const maxCellY = Math.floor((y + radius) / index.cellSize);
+  const candidateIds = new Set<string>();
+
+  for (let cx = minCellX; cx <= maxCellX; cx += 1) {
+    for (let cy = minCellY; cy <= maxCellY; cy += 1) {
+      const bucket = index.cells.get(makeCellKey(cx, cy));
+      if (!bucket) continue;
+      for (const id of bucket) {
+        candidateIds.add(id);
+      }
+    }
+  }
+
+  const result: ConnectableEntry[] = [];
+  const radiusSq = radius * radius;
+
+  for (const id of candidateIds) {
+    const entry = index.entries.get(id);
+    if (!entry) continue;
+    const dx = x - entry.handleX;
+    const dy = y - entry.handleY;
+    if (dx * dx + dy * dy <= radiusSq) {
+      result.push(entry);
+    }
+  }
+
+  return result;
+}
+
+function buildGroupIndex(nodes: Node[]): GroupIndex {
+  if (!nodes.length) {
+    return EMPTY_GROUP_INDEX;
+  }
+
+  const entries = new Map<string, GroupEntry>();
+  const cells = new Map<string, string[]>();
+
+  for (const node of nodes) {
+    if (node.type !== "group") {
+      continue;
+    }
+
+    const width = node.width ?? node.measured?.width ?? DEFAULT_GROUP_WIDTH;
+    const height = node.height ?? node.measured?.height ?? DEFAULT_GROUP_HEIGHT;
+    const position = node.positionAbsolute ?? node.position;
+
+    const rect: Rect = { x: position.x, y: position.y, width, height };
+    const contentRect: Rect = {
+      x: rect.x,
+      y: rect.y + GROUP_HEADER_HEIGHT,
+      width: rect.width,
+      height: Math.max(rect.height - GROUP_HEADER_HEIGHT, 0),
+    };
+
+    const entry: GroupEntry = {
+      id: node.id,
+      rect,
+      contentRect,
+      zIndex: node.zIndex ?? 0,
+      area: rect.width * rect.height,
+    };
+
+    entries.set(node.id, entry);
+
+    const minCellX = Math.floor(rect.x / GROUP_INDEX_CELL_SIZE);
+    const maxCellX = Math.floor((rect.x + rect.width) / GROUP_INDEX_CELL_SIZE);
+    const minCellY = Math.floor(rect.y / GROUP_INDEX_CELL_SIZE);
+    const maxCellY = Math.floor((rect.y + rect.height) / GROUP_INDEX_CELL_SIZE);
+
+    for (let cx = minCellX; cx <= maxCellX; cx += 1) {
+      for (let cy = minCellY; cy <= maxCellY; cy += 1) {
+        const key = makeCellKey(cx, cy);
+        const bucket = cells.get(key);
+        if (bucket) {
+          bucket.push(node.id);
+        } else {
+          cells.set(key, [node.id]);
+        }
+      }
+    }
+  }
+
+  return { cellSize: GROUP_INDEX_CELL_SIZE, entries, cells };
+}
+
+function isRectFullyInside(container: Rect, rect: Rect): boolean {
+  return (
+    rect.x >= container.x + GROUP_CONTENT_PADDING &&
+    rect.y >= container.y + GROUP_CONTENT_PADDING &&
+    rect.x + rect.width <= container.x + container.width - GROUP_CONTENT_PADDING &&
+    rect.y + rect.height <= container.y + container.height - GROUP_CONTENT_PADDING
+  );
+}
+
+function queryGroupsContainingRect(
+  index: GroupIndex,
+  rect: Rect,
+  excludeIds: Set<string>
+): GroupEntry[] {
+  if (!index.entries.size) {
+    return [];
+  }
+
+  const minCellX = Math.floor(rect.x / index.cellSize);
+  const maxCellX = Math.floor((rect.x + rect.width) / index.cellSize);
+  const minCellY = Math.floor(rect.y / index.cellSize);
+  const maxCellY = Math.floor((rect.y + rect.height) / index.cellSize);
+  const candidateIds = new Set<string>();
+
+  for (let cx = minCellX; cx <= maxCellX; cx += 1) {
+    for (let cy = minCellY; cy <= maxCellY; cy += 1) {
+      const bucket = index.cells.get(makeCellKey(cx, cy));
+      if (!bucket) continue;
+      for (const id of bucket) {
+        if (!excludeIds.has(id)) {
+          candidateIds.add(id);
+        }
+      }
+    }
+  }
+
+  const hits: GroupEntry[] = [];
+  for (const id of candidateIds) {
+    const entry = index.entries.get(id);
+    if (!entry) continue;
+    if (isRectFullyInside(entry.contentRect, rect)) {
+      hits.push(entry);
+    }
+  }
+
+  return hits.sort((a, b) => {
+    const zDiff = (b.zIndex ?? 0) - (a.zIndex ?? 0);
+    if (zDiff !== 0) return zDiff;
+    return a.area - b.area;
+  });
+}
+
 function isEditableElement(element: EventTarget | null): boolean {
   if (!element || !(element instanceof HTMLElement)) {
     return false;
@@ -193,6 +516,8 @@ function WorkflowCanvasInner() {
   const setCursorPosition = useWorkflowStore((state) => state.setCursorPosition);
   const connectSourceRef = useRef<string | null>(null);
   const connectedViaNativeRef = useRef(false);
+  const connectableIndexRef = useRef<ConnectableIndex>(EMPTY_CONNECTABLE_INDEX);
+  const groupIndexRef = useRef<GroupIndex>(EMPTY_GROUP_INDEX);
 
   // Sticky notes state
   const isStickyActive = useStickyNotesStore((state) => state.isActive);
@@ -210,6 +535,9 @@ function WorkflowCanvasInner() {
   );
   const controlMode = useWorkflowStore((state) => state.controlMode);
   const snapToGrid = useWorkflowStore((state) => state.snapToGrid);
+  const isCanvasPinchDisabled = useWorkflowStore(
+    (state) => state.isCanvasPinchDisabled
+  );
   const selectedNodes = useWorkflowStore((state) => state.selectedNodes);
   const clipboard = useWorkflowStore((state) => state.clipboard);
 
@@ -336,6 +664,12 @@ function WorkflowCanvasInner() {
   }, [mappedEdges]);
 
   useEffect(() => {
+    const rfNodes = reactFlowInstance.getNodes();
+    connectableIndexRef.current = buildConnectableIndex(rfNodes);
+    groupIndexRef.current = buildGroupIndex(rfNodes);
+  }, [nodes, reactFlowInstance]);
+
+  useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
       const wrapper = reactFlowWrapper.current;
       if (!wrapper) {
@@ -364,46 +698,38 @@ function WorkflowCanvasInner() {
       // Magnetic targeting while connecting - two-zone detection
       const store = useWorkflowStore.getState();
       if (store.isConnecting) {
-        const nodesRf = reactFlowInstance
-          .getNodes()
-          .filter((n) => n.type !== "group" && n.id !== connectSourceRef.current);
+        const candidates = queryConnectableIndex(
+          connectableIndexRef.current,
+          flowPosition.x,
+          flowPosition.y,
+          CONNECT_PREVIEW_RADIUS
+        );
 
-        const MAGNET_RADIUS = 72; // px in flow coords - auto-connect zone
-        const PREVIEW_RADIUS = 144; // px in flow coords - visual preview zone (2x magnetic)
-        let bestId: string | null = null;
+        let bestEntry: ConnectableEntry | null = null;
         let bestDist = Infinity;
 
-        for (const n of nodesRf) {
-          const w = n.width || n.measured?.width || 300;
-          const h = n.height || n.measured?.height || 200;
-          // Assume primary target handle on LEFT edge center
-          const hx = n.position.x; // left edge
-          const hy = n.position.y + h / 2; // vertical center
-          const dx = flowPosition.x - hx;
-          const dy = flowPosition.y - hy;
+        for (const entry of candidates) {
+          if (entry.id === connectSourceRef.current) continue;
+          const dx = flowPosition.x - entry.handleX;
+          const dy = flowPosition.y - entry.handleY;
           const dist = Math.hypot(dx, dy);
           if (dist < bestDist) {
             bestDist = dist;
-            bestId = n.id;
+            bestEntry = entry;
           }
         }
 
-        // Update magnetic zone (72px - strong snap + auto-connect)
-        if (bestId && bestDist <= MAGNET_RADIUS) {
-          if (store.connectHoveredTargetId !== bestId) {
-            setConnectHoveredTarget(bestId);
-          }
-        } else if (store.connectHoveredTargetId) {
-          setConnectHoveredTarget(null);
+        const hoveredId =
+          bestEntry && bestDist <= CONNECT_MAGNET_RADIUS ? bestEntry.id : null;
+        const previewId =
+          bestEntry && bestDist <= CONNECT_PREVIEW_RADIUS ? bestEntry.id : null;
+
+        if (hoveredId !== store.connectHoveredTargetId) {
+          setConnectHoveredTarget(hoveredId);
         }
 
-        // Update preview zone (144px - early visual feedback)
-        if (bestId && bestDist <= PREVIEW_RADIUS) {
-          if (store.connectPreviewTargetId !== bestId) {
-            setConnectPreviewTarget(bestId);
-          }
-        } else if (store.connectPreviewTargetId) {
-          setConnectPreviewTarget(null);
+        if (previewId !== store.connectPreviewTargetId) {
+          setConnectPreviewTarget(previewId);
         }
       }
     };
@@ -419,7 +745,7 @@ function WorkflowCanvasInner() {
       window.removeEventListener("pointerleave", resetCursor);
       window.removeEventListener("blur", resetCursor);
     };
-  }, [screenToFlowPosition, setCursorPosition]);
+  }, [screenToFlowPosition, setCursorPosition, setConnectHoveredTarget, setConnectPreviewTarget]);
 
   // FIXED: Add proper debouncing (500ms) to prevent excessive viewport updates
   const viewportDebounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -510,14 +836,18 @@ function WorkflowCanvasInner() {
               updateNodePosition(child.id, child.position);
             });
           }
-        } else if (change.type === "dimensions" && (change as any).dimensions) {
-          // Handle dimension changes from NodeResizer
-          const dimChange = change as any;
-          if (dimChange.resizing === false && dimChange.dimensions) {
+        } else if (change.type === "dimensions") {
+          const { dimensions, resizing } = change;
+          if (
+            resizing === false &&
+            dimensions &&
+            typeof dimensions.width === "number" &&
+            typeof dimensions.height === "number"
+          ) {
             updateNode(change.id, {
               style: {
-                width: dimChange.dimensions.width,
-                height: dimChange.dimensions.height,
+                width: dimensions.width,
+                height: dimensions.height,
               },
             });
           }
@@ -786,18 +1116,18 @@ function WorkflowCanvasInner() {
       const draggedNode = reactFlowInstance.getNode(nodeId);
       if (!draggedNode) return;
 
-      // BUG FIX: Prevent groups from being dropped into other groups
       if (draggedNode.type === "group") {
         // Clear any existing drag-over highlights when dragging a group
         setNodes((prev) =>
           prev.map((n) => {
             if (n.type !== "group") return n;
-            const prevFlag = Boolean((n.data as any)?.isDragOver);
+            const existingData = (n.data ?? {}) as Record<string, unknown>;
+            const prevFlag = Boolean((existingData as NodeDataWithDrag).isDragOver);
             if (!prevFlag) return n;
             return {
               ...n,
               data: {
-                ...(n.data as Record<string, unknown>),
+                ...existingData,
                 isDragOver: false,
               },
             };
@@ -806,86 +1136,38 @@ function WorkflowCanvasInner() {
         return;
       }
 
-      // Get node dimensions for proper intersection testing
-      const nodeWidth = draggedNode.width || draggedNode.measured?.width || 300;
-      const nodeHeight =
-        draggedNode.height || draggedNode.measured?.height || 200;
+      const nodeRect = computeAbsoluteRect(draggedNode, reactFlowInstance, point);
+      const excludeIds = new Set<string>([nodeId]);
+      const store = useWorkflowStore.getState();
 
-      // Calculate absolute position of the node
-      // If node has a parent, its position is relative to parent, so convert to absolute
-      let absoluteX = point.x;
-      let absoluteY = point.y;
-
-      if (draggedNode.parentId) {
-        const parent = reactFlowInstance.getNode(draggedNode.parentId);
-        if (parent) {
-          absoluteX = parent.position.x + point.x;
-          absoluteY = parent.position.y + point.y;
+      const candidateGroups = queryGroupsContainingRect(
+        groupIndexRef.current,
+        nodeRect,
+        excludeIds
+      ).filter((entry) => {
+        let current = store.getNode(entry.id);
+        while (current?.parentId) {
+          if (current.parentId === nodeId) {
+            return false;
+          }
+          current = store.getNode(current.parentId);
         }
-      }
+        return true;
+      });
 
-      // Create rectangle representing the dragged node's bounds in absolute coordinates
-      const nodeRect = {
-        x: absoluteX,
-        y: absoluteY,
-        width: nodeWidth,
-        height: nodeHeight,
-      };
-
-      const groups = reactFlowInstance
-        .getNodes()
-        .filter((n) => n.type === "group" && n.id !== nodeId)
-        .map((g) => {
-          const groupWidth = g.width || g.measured?.width || 640;
-          const groupHeight = g.height || g.measured?.height || 420;
-
-          // Group header height (the dark bar at the top)
-          const headerHeight = 44;
-
-          const groupRect = {
-            x: g.position.x,
-            y: g.position.y,
-            width: groupWidth,
-            height: groupHeight,
-          };
-
-          // Content area is the drop zone (excludes the header)
-          const contentArea = {
-            x: groupRect.x,
-            y: groupRect.y + headerHeight,
-            width: groupRect.width,
-            height: groupRect.height - headerHeight,
-          };
-
-          // Calculate the right and bottom edges of both rectangles
-          const nodeRight = nodeRect.x + nodeRect.width;
-          const nodeBottom = nodeRect.y + nodeRect.height;
-          const contentRight = contentArea.x + contentArea.width;
-          const contentBottom = contentArea.y + contentArea.height;
-
-          // Check if the ENTIRE node is contained within the group's CONTENT AREA
-          // This ensures nodes can only be dropped in the white area, not covering the header
-          // Add small padding (2px) to account for border rendering and floating point precision
-          const padding = 2;
-          const isFullyContained =
-            nodeRect.x >= contentArea.x + padding &&
-            nodeRect.y >= contentArea.y + padding &&
-            nodeRight <= contentRight - padding &&
-            nodeBottom <= contentBottom - padding;
-
-          return { g, hit: isFullyContained };
-        });
+      const hitIds = new Set(candidateGroups.map((entry) => entry.id));
 
       setNodes((prev) =>
         prev.map((n) => {
           if (n.type !== "group") return n;
-          const hit = !!groups.find((x) => x.g.id === n.id && x.hit);
-          const prevFlag = Boolean((n.data as any)?.isDragOver);
+          const hit = hitIds.has(n.id);
+          const existingData = (n.data ?? {}) as Record<string, unknown>;
+          const prevFlag = Boolean((existingData as NodeDataWithDrag).isDragOver);
           if (hit === prevFlag) return n;
           return {
             ...n,
             data: {
-              ...(n.data as Record<string, unknown>),
+              ...existingData,
               isDragOver: hit,
             },
           };
@@ -923,15 +1205,14 @@ function WorkflowCanvasInner() {
   );
 
   const onNodeDragStop = useCallback(
-    (event: React.MouseEvent, node: Node) => {
-      // clear highlights
+    (_event: React.MouseEvent, node: Node) => {
       setNodes((prev) =>
         prev.map((n) =>
           n.type === "group"
             ? {
                 ...n,
                 data: {
-                  ...(n.data as Record<string, unknown>),
+                  ...((n.data ?? {}) as Record<string, unknown>),
                   isDragOver: false,
                 },
               }
@@ -939,16 +1220,13 @@ function WorkflowCanvasInner() {
         )
       );
 
-      // BUG FIX: Prevent groups from being children of other groups
-      if (node.type === "group") {
-        // Ensure group nodes are never assigned a parent
-        const current = useWorkflowStore.getState().getNode(node.id);
-        if (current?.parentId) {
-          // If somehow a group has a parent, remove it
-          useWorkflowStore.getState().updateNode(node.id, { parentId: null });
-        }
+      const store = useWorkflowStore.getState();
 
-        // Reset z-index locally and ensure no stray highlights
+      if (node.type === "group") {
+        const current = store.getNode(node.id);
+        if (current?.parentId) {
+          store.updateNode(node.id, { parentId: null });
+        }
         setNodes((prev) =>
           prev.map((n) =>
             n.id === node.id ? { ...n, zIndex: 1, parentId: undefined } : n
@@ -958,7 +1236,9 @@ function WorkflowCanvasInner() {
         return;
       }
 
-      const store = useWorkflowStore.getState();
+      const nodeRect = computeAbsoluteRect(node, reactFlowInstance);
+      const excludeIds = new Set<string>([node.id]);
+
       const isAncestor = (ancestorId: string, nodeId: string): boolean => {
         let current = store.getNode(nodeId);
         while (current?.parentId) {
@@ -970,181 +1250,52 @@ function WorkflowCanvasInner() {
         return false;
       };
 
-      // Get node dimensions for proper hit testing
-      const nodeWidth = node.width || node.measured?.width || 300;
-      const nodeHeight = node.height || node.measured?.height || 200;
+      const candidateGroups = queryGroupsContainingRect(
+        groupIndexRef.current,
+        nodeRect,
+        excludeIds
+      ).filter((entry) => !isAncestor(node.id, entry.id));
 
-      // Calculate absolute position of the node
-      // If node has a parent, its position is relative to parent, so convert to absolute
-      let absoluteX = node.position.x;
-      let absoluteY = node.position.y;
+      const targetEntry = candidateGroups[0];
 
-      if (node.parentId) {
-        const parent = reactFlowInstance.getNode(node.parentId);
-        if (parent) {
-          absoluteX = parent.position.x + node.position.x;
-          absoluteY = parent.position.y + node.position.y;
-        }
-      }
+      if (targetEntry) {
+        const parentNode = store.getNode(targetEntry.id);
+        const currentNode = store.getNode(node.id);
+        if (parentNode) {
+          const absX = nodeRect.x;
+          const absY = nodeRect.y;
 
-      // Create a rectangle representing the node's bounds in absolute coordinates
-      // React Flow provides the correct position during drag regardless of extent setting
-      const nodeRect = {
-        x: absoluteX,
-        y: absoluteY,
-        width: nodeWidth,
-        height: nodeHeight,
-      };
-
-      // Find all groups that intersect with the node's bounds
-      const hitGroups = reactFlowInstance
-        .getNodes()
-        .filter((n) => n.type === "group" && n.id !== node.id)
-        .filter((g) => !isAncestor(node.id, g.id))
-        .filter((g) => {
-          const groupWidth = g.width || g.measured?.width || 640;
-          const groupHeight = g.height || g.measured?.height || 420;
-
-          // Group header height (the dark bar at the top)
-          const headerHeight = 44;
-
-          const groupRect = {
-            x: g.position.x,
-            y: g.position.y,
-            width: groupWidth,
-            height: groupHeight,
-          };
-
-          // Content area is the drop zone (excludes the header)
-          const contentArea = {
-            x: groupRect.x,
-            y: groupRect.y + headerHeight,
-            width: groupRect.width,
-            height: groupRect.height - headerHeight,
-          };
-
-          // Calculate the right and bottom edges of both rectangles
-          const nodeRight = nodeRect.x + nodeRect.width;
-          const nodeBottom = nodeRect.y + nodeRect.height;
-          const contentRight = contentArea.x + contentArea.width;
-          const contentBottom = contentArea.y + contentArea.height;
-
-          // Check if the ENTIRE node is contained within the group's CONTENT AREA
-          // This ensures nodes can only be dropped in the white area, not covering the header
-          // Add small padding (2px) to account for border rendering and floating point precision
-          const padding = 2;
-          const isFullyContained =
-            nodeRect.x >= contentArea.x + padding &&
-            nodeRect.y >= contentArea.y + padding &&
-            nodeRight <= contentRight - padding &&
-            nodeBottom <= contentBottom - padding;
-
-          return isFullyContained;
-        });
-
-      if (hitGroups.length > 0) {
-        // Sort by z-index first (highest first - group on top), then by smallest group
-        // When using full containment, prefer the innermost (smallest) group if multiple groups contain the node
-        const target = hitGroups.sort((a, b) => {
-          // Primary: Sort by z-index (highest first - group on top)
-          const zDiff = (b.zIndex || 0) - (a.zIndex || 0);
-          if (zDiff !== 0) return zDiff;
-
-          // Secondary: Prefer smallest group (innermost group in case of nested groups)
-          const areaA = (a.width || 0) * (a.height || 0);
-          const areaB = (b.width || 0) * (b.height || 0);
-          return areaA - areaB; // Smaller first
-        })[0];
-
-        const parent = store.getNode(target.id);
-        if (parent) {
-          // Check if node is already a child of this group
-          const current = useWorkflowStore.getState().getNode(node.id);
-          const isAlreadyChild = current?.parentId === parent.id;
-
-          if (isAlreadyChild) {
-            // Node is already a child of this group AND still within boundaries
-            // Position is already relative and ReactFlow will handle the position update via handleNodesChange
-            // No need to recalculate parent relationship
-            console.log(
-              `⏭️ Node "${node.id}" moved within parent group "${
-                (parent.data as any)?.title || "Unnamed"
-              }" - keeping parent relationship`
-            );
-            // Note: handleNodesChange will save the new position to Zustand store automatically
+          if (currentNode?.parentId === parentNode.id) {
+            // Existing relationship; position updates handled via node changes
           } else {
-            // Node is being adopted by a new group (or was not in any group)
-            // Calculate relative position from absolute position
-            let absX = node.position.x;
-            let absY = node.position.y;
-
-            // If node had a different parent, convert to absolute first
-            if (current?.parentId) {
-              const oldParent = useWorkflowStore
-                .getState()
-                .getNode(current.parentId);
-              if (oldParent) {
-                absX = oldParent.position.x + node.position.x;
-                absY = oldParent.position.y + node.position.y;
-              }
-            }
-
-            // Calculate relative position for new parent
-            const relX = absX - parent.position.x;
-            const relY = absY - parent.position.y;
-
-            // Update node with parent relationship and relative position
-            useWorkflowStore
-              .getState()
-              .updateNode(node.id, { parentId: parent.id, zIndex: 2 });
-            useWorkflowStore
-              .getState()
-              .updateNodePosition(node.id, { x: relX, y: relY });
-
-            // Force React Flow to update with new parent relationship
-            // Keep extent undefined to allow free dragging
+            const relX = absX - parentNode.position.x;
+            const relY = absY - parentNode.position.y;
+            store.updateNode(node.id, { parentId: parentNode.id, zIndex: 2 });
+            store.updateNodePosition(node.id, { x: relX, y: relY });
             setNodes((prev) =>
               prev.map((n) =>
                 n.id === node.id
                   ? {
                       ...n,
                       position: { x: relX, y: relY },
-                      parentId: parent.id,
+                      parentId: parentNode.id,
                       extent: undefined,
                       zIndex: 2,
                     }
                   : n
               )
             );
-
-            // Provide user feedback through console (can be replaced with toast notifications)
-            console.log(
-              `✅ Node "${node.id}" adopted by group "${
-                (parent.data as any)?.title || "Unnamed"
-              }"`
-            );
           }
         }
       } else {
-        // If dragged out from a group, convert back to absolute
-        const current = useWorkflowStore.getState().getNode(node.id);
-        if (current?.parentId) {
-          const parent = useWorkflowStore.getState().getNode(current.parentId);
-          if (parent) {
-            // Convert relative position to absolute
-            const absX = parent.position.x + current.position.x;
-            const absY = parent.position.y + current.position.y;
-
-            // First remove parent relationship in store
-            useWorkflowStore
-              .getState()
-              .updateNode(node.id, { parentId: null, zIndex: 2 });
-            // Then update to absolute position in store
-            useWorkflowStore
-              .getState()
-              .updateNodePosition(node.id, { x: absX, y: absY });
-
-            // Force React Flow to update immediately
+        const currentNode = store.getNode(node.id);
+        if (currentNode?.parentId) {
+          const parentNode = store.getNode(currentNode.parentId);
+          if (parentNode) {
+            const absX = parentNode.position.x + currentNode.position.x;
+            const absY = parentNode.position.y + currentNode.position.y;
+            store.updateNode(node.id, { parentId: null, zIndex: 2 });
+            store.updateNodePosition(node.id, { x: absX, y: absY });
             setNodes((prev) =>
               prev.map((n) =>
                 n.id === node.id
@@ -1158,17 +1309,10 @@ function WorkflowCanvasInner() {
                   : n
               )
             );
-
-            console.log(
-              `⬅️ Node "${node.id}" removed from group "${
-                (parent.data as any)?.title || "Unnamed"
-              }"`
-            );
           }
         }
       }
 
-      // reset elevated z-index locally and ensure no stray highlights
       setNodes((prev) =>
         prev.map((n) =>
           n.id === node.id
@@ -1189,7 +1333,8 @@ function WorkflowCanvasInner() {
         setNodes((prev) =>
           prev.map((n) => {
             if (n.id === selectedGroup.id) return { ...n, zIndex: 50 };
-            if ((n as any).parentId === selectedGroup.id)
+            const parentId = (n as ExtendedNode).parentId;
+            if (parentId === selectedGroup.id)
               return { ...n, zIndex: 51 };
             return n;
           })
@@ -1198,7 +1343,7 @@ function WorkflowCanvasInner() {
         setNodes((prev) =>
           prev.map((n) => {
             if (n.type === "group") return { ...n, zIndex: 1 };
-            if ((n as any).parentId) return { ...n, zIndex: 2 };
+            if ((n as ExtendedNode).parentId) return { ...n, zIndex: 2 };
             return n;
           })
         );
@@ -1381,10 +1526,14 @@ function WorkflowCanvasInner() {
     const minX = Math.min(...nodes.map((n) => n.position.x));
     const minY = Math.min(...nodes.map((n) => n.position.y));
     const maxX = Math.max(
-      ...nodes.map((n) => n.position.x + ((n as any).width || 200))
+      ...nodes.map((n) =>
+        n.position.x + (typeof n.style?.width === "number" ? n.style.width : 200)
+      )
     );
     const maxY = Math.max(
-      ...nodes.map((n) => n.position.y + ((n as any).height || 100))
+      ...nodes.map((n) =>
+        n.position.y + (typeof n.style?.height === "number" ? n.style.height : 100)
+      )
     );
 
     // Create group with some padding
@@ -1646,8 +1795,8 @@ function WorkflowCanvasInner() {
         panOnScroll={true}
         panOnScrollSpeed={1.2}
         panOnDrag={controlMode === "hand" || spacePressed}
-        zoomOnScroll={true}
-        zoomOnPinch={true}
+        zoomOnScroll={!isCanvasPinchDisabled}
+        zoomOnPinch={!isCanvasPinchDisabled}
         zoomOnDoubleClick={false}
         selectionOnDrag={controlMode === "pointer" && !spacePressed}
         panActivationKeyCode={null}

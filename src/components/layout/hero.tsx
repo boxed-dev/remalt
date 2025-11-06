@@ -34,14 +34,14 @@ export function Hero() {
 
           {/* Main Headline - Powerful and Simple */}
           <h1 className={`text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-[#333333] mb-6 leading-[1.1] ${mounted ? 'animate-slide-up' : 'opacity-0'}`}>
-            Your Ideas.
+            Your ideas,
             <br />
-            <span className="text-[#095D40]">Amplified by AI.</span>
+            <span className="text-[#095D40]">amplified by AI.</span>
           </h1>
 
           {/* Subheadline - Clear value proposition */}
           <p className={`mx-auto max-w-2xl text-xl sm:text-2xl text-[#6B7280] mb-12 leading-relaxed ${mounted ? 'animate-slide-up-delay' : 'opacity-0'}`}>
-            Drag. Drop. Create. The simplest way to build AI canvas that transform how you work.
+            Drag. Drop. Create.<br />The simplest way to build AI canvases that actually work.
           </p>
 
           {/* CTA Buttons - Clear hierarchy */}
@@ -68,7 +68,7 @@ export function Hero() {
           {/* Trust Indicators - Numbers speak */}
           <div className={`grid grid-cols-3 gap-8 max-w-3xl mx-auto ${mounted ? 'animate-fade-in-delay' : 'opacity-0'}`}>
             <div>
-              <div className="text-3xl font-bold text-[#095D40]">10k+</div>
+              <div className="text-3xl font-bold text-[#095D40]">10K+</div>
               <div className="text-sm text-[#6B7280] mt-1">Canvas Created</div>
             </div>
             <div>
@@ -76,8 +76,8 @@ export function Hero() {
               <div className="text-sm text-[#6B7280] mt-1">AI Operations</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-[#095D40]">5min</div>
-              <div className="text-sm text-[#6B7280] mt-1">To First Workflow</div>
+              <div className="text-3xl font-bold text-[#095D40]">5 Min</div>
+              <div className="text-sm text-[#6B7280] mt-1">to First Workflow</div>
             </div>
           </div>
         </div>

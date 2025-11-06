@@ -15,22 +15,22 @@ import { useEffect, useRef, useState } from "react";
 
 const features = [
   {
-    title: "Just Drag & Drop",
-    description: "No code. No complexity. Build powerful AI canvas in minutes, not months.",
+    title: "Drag & Drop Simplicity",
+    description: "Build powerful AI canvases in minutes, not months. No code. No chaos. Just clarity.",
     icon: Layers,
     color: "text-[#095D40]",
     bgColor: "bg-[#095D40]/10",
   },
   {
-    title: "AI That Understands",
-    description: "Connect GPT-4, Claude, and Gemini. Your AI arsenal, unified.",
+    title: "Smart AI Stack",
+    description: "Connect GPT-4, Claude, and Gemini. Your entire AI arsenal, in one space.",
     icon: Sparkles,
     color: "text-[#D4AF7F]",
     bgColor: "bg-[#D4AF7F]/10",
   },
   {
-    title: "Real-Time Magic",
-    description: "Watch your canvas come alive. Instant results, infinite possibilities.",
+    title: "Real-Time Creation",
+    description: "See your canvas think, write, and build — live. Instant output. Infinite flow.",
     icon: Zap,
     color: "text-[#095D40]",
     bgColor: "bg-[#095D40]/10",
@@ -78,7 +78,7 @@ export function Features() {
             <span className="text-[#095D40]">Nothing you don't.</span>
           </h2>
           <p className={`text-xl text-[#6B7280] max-w-3xl mx-auto ${isVisible ? 'animate-fade-in-delay' : 'opacity-0'}`}>
-            Stop wrestling with complicated tools. Start creating with intuitive simplicity.
+            Stop fighting messy tools. Start creating with clarity.
           </p>
         </div>
 
@@ -111,7 +111,7 @@ export function Features() {
               Connect Everything
             </h3>
             <p className="text-xl text-[#6B7280] max-w-2xl mx-auto">
-              From social media to documents, from voice to vision. One canvas, infinite connections.
+              From PDFs to voice, from YouTube to chat. Every source, one system.
             </p>
           </div>
 

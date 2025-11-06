@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { FileText, Upload, Loader2, CheckCircle2, AlertCircle, Download, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
+import { NodeHeader, NodeHeaderBadge } from './NodeHeader';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { UploadMediaDialog } from '../UploadMediaDialog';
 import { FloatingAIInstructions } from './FloatingAIInstructions';
@@ -85,13 +86,21 @@ export const PDFNode = memo(({ id, data, parentId, selected }: NodeProps<PDFNode
         } else {
           // Immediate success
           console.log('[PDFNode] Parse successful');
-          updateNodeData(id, {
+          const updates: Partial<PDFNodeData> = {
             parsedText: result.parsedText,
             segments: result.segments,
             pageCount: result.pageCount,
             parseStatus: 'success',
             parseError: undefined,
-          } as Partial<PDFNodeData>);
+          };
+
+          // Apply suggested title if available
+          if (result.suggestedTitle) {
+            console.log('[PDFNode] ✅ Applying AI-generated title:', result.suggestedTitle);
+            updates.customLabel = result.suggestedTitle;
+          }
+
+          updateNodeData(id, updates);
         }
       } else {
         // Handle specific error codes
@@ -151,13 +160,21 @@ export const PDFNode = memo(({ id, data, parentId, selected }: NodeProps<PDFNode
 
         if (result.status === 'completed') {
           console.log('[PDFNode] Background job completed');
-          updateNodeData(id, {
+          const updates: Partial<PDFNodeData> = {
             parsedText: result.result.parsedText,
             segments: result.result.segments,
             pageCount: result.result.pageCount,
             parseStatus: 'success',
             parseError: undefined,
-          } as Partial<PDFNodeData>);
+          };
+
+          // Apply suggested title if available
+          if (result.result.suggestedTitle) {
+            console.log('[PDFNode] ✅ Applying AI-generated title:', result.result.suggestedTitle);
+            updates.customLabel = result.result.suggestedTitle;
+          }
+
+          updateNodeData(id, updates);
         } else if (result.status === 'failed') {
           updateNodeData(id, {
             parseStatus: 'error',
@@ -192,33 +209,50 @@ export const PDFNode = memo(({ id, data, parentId, selected }: NodeProps<PDFNode
     event.stopPropagation();
   };
 
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return null;
+    return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
+  };
+
   const renderStatus = () => {
-    if (data.parseStatus === 'parsing')
+    if (data.parseStatus === 'parsing') {
       return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2 py-1 text-[10px] text-[#1D4ED8]">
+        <NodeHeaderBadge tone="accent">
           <Loader2 className="h-3 w-3 animate-spin" />
           <span>Parsing</span>
-        </div>
+        </NodeHeaderBadge>
       );
+    }
 
-    if (data.parseStatus === 'success')
+    if (data.parseStatus === 'success') {
       return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] text-emerald-600">
+        <NodeHeaderBadge tone="success">
           <CheckCircle2 className="h-3 w-3" />
-          <span>Content extracted</span>
-        </div>
+          <span>Ready</span>
+        </NodeHeaderBadge>
       );
+    }
 
-    if (data.parseStatus === 'error')
+    if (data.parseStatus === 'error') {
       return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-[#FEF2F2] px-2 py-1 text-[10px] text-[#B91C1C]">
+        <NodeHeaderBadge tone="danger">
           <AlertCircle className="h-3 w-3" />
           <span>Parse failed</span>
-        </div>
+        </NodeHeaderBadge>
       );
+    }
 
     return null;
   };
+
+  const statusBadge = renderStatus();
+  const fileSizeLabel = formatFileSize(data.fileSize);
+  const headerTrailing = statusBadge || fileSizeLabel ? (
+    <div className="flex items-center gap-2">
+      {fileSizeLabel && <NodeHeaderBadge tone="muted">{fileSizeLabel}</NodeHeaderBadge>}
+      {statusBadge}
+    </div>
+  ) : null;
 
   const downloadParsedText = (event: React.MouseEvent<HTMLButtonElement>) => {
     stopPropagation(event);
@@ -233,43 +267,45 @@ export const PDFNode = memo(({ id, data, parentId, selected }: NodeProps<PDFNode
     URL.revokeObjectURL(urlObject);
   };
 
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return null;
-    return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
-  };
-
   const openFileDialog = (event: React.MouseEvent) => {
     stopPropagation(event);
     setShowUploadDialog(true);
   };
 
   return (
-    <div className="relative">
-      <BaseNode id={id} showTargetHandle={false} parentId={parentId}>
+    <div className="relative w-[280px] max-h-[460px]">
+      <BaseNode
+        id={id}
+        showTargetHandle={false}
+        parentId={parentId}
+        header={
+          <NodeHeader
+            title={data.customLabel || 'PDF'}
+            subtitle={data.fileName || 'Upload or link a document'}
+            icon={<FileText />}
+            themeKey="pdf"
+            trailing={headerTrailing}
+          />
+        }
+        headerClassName="overflow-hidden"
+      >
         <UploadMediaDialog
           open={showUploadDialog}
           onOpenChange={setShowUploadDialog}
           mediaType="pdf"
           selectedNodeIds={[id]}
         />
-        <div className="w-[280px] space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-[#EF4444]" />
-            <span className="text-[13px] font-medium text-[#1A1D21]">PDF</span>
-          </div>
-          {renderStatus()}
-        </div>
+        <div className="w-full h-full space-y-2 overflow-y-auto">
 
         {data.fileName ? (
           <div className="space-y-2">
             {/* PDF Preview */}
             {pdfUrl && (
               <div className="relative group">
-                <div className="rounded-lg border border-[#E5E7EB] overflow-hidden bg-white">
+                <div className="rounded-lg border border-[#E5E7EB] overflow-hidden bg-white flex-shrink-0">
                   <iframe
                     src={`${pdfUrl}#view=FitH&toolbar=0&navpanes=0&scrollbar=0`}
-                    className="w-full h-32 pointer-events-none"
+                    className="w-full h-40 pointer-events-none"
                     title="PDF Preview"
                   />
                   {/* Overlay with file info */}
@@ -323,14 +359,6 @@ export const PDFNode = memo(({ id, data, parentId, selected }: NodeProps<PDFNode
                 Export parsed text
               </button>
             )}
-
-            <button
-              onClick={resetNode}
-              onMouseDown={stopPropagation}
-              className="w-full px-3 py-2 text-[11px] text-[#6B7280] hover:text-[#1A1D21] border border-[#E5E7EB] rounded-lg transition-colors cursor-pointer"
-            >
-              Remove PDF
-            </button>
           </div>
         ) : (
           <button

@@ -70,6 +70,15 @@ export function AIInstructionsInput({
 
   // Stop event propagation to prevent ReactFlow interference
   const stopPropagation = useCallback((e: React.MouseEvent | React.WheelEvent | React.TouchEvent) => {
+    // Allow pinch/zoom gestures to pass through to React Flow
+    if ('nativeEvent' in e && e.nativeEvent instanceof WheelEvent) {
+      const wheelEvent = e.nativeEvent;
+      const isPinchGesture = wheelEvent.ctrlKey || wheelEvent.metaKey || Math.abs(wheelEvent.deltaZ ?? 0) > 0;
+      if (isPinchGesture) {
+        return; // Let React Flow handle zoom
+      }
+    }
+
     e.stopPropagation();
     if ('nativeEvent' in e && typeof (e.nativeEvent as any).stopImmediatePropagation === 'function') {
       (e.nativeEvent as any).stopImmediatePropagation();

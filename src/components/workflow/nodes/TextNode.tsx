@@ -8,6 +8,7 @@ import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { NovelEditor } from '../NovelEditor';
 import { FloatingAIInstructions } from './FloatingAIInstructions';
 import { BaseNode } from './BaseNode';
+import { NodeHeader, NodeHeaderBadge } from './NodeHeader';
 import type { TextNodeData } from '@/types/workflow';
 
 const TEXT_NODE_DEFAULT_WIDTH = 560;
@@ -121,31 +122,28 @@ export const TextNode = memo(({
         showTargetHandle={true}
         parentId={parentId}
         contentClassName="p-0 h-full"
+        header={
+          <NodeHeader
+            title="Rich Text"
+            icon={<Type />}
+            themeKey="text"
+            trailing={
+              wordCount > 0 ? (
+                <NodeHeaderBadge tone="muted">
+                  {wordCount} word{wordCount !== 1 ? 's' : ''}
+                </NodeHeaderBadge>
+              ) : null
+            }
+          />
+        }
+        headerClassName="overflow-hidden"
         style={{ width: '100%', height: '100%' }}
       >
         {/* Content Container */}
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
-                <Type className="h-4 w-4 text-gray-600" />
-              </div>
-              <span className="text-[13px] font-medium text-[#1A1D21]">
-                Rich Text
-              </span>
-            </div>
-            {wordCount > 0 && (
-              <span className="text-[11px] text-[#9CA3AF]">
-                {wordCount} word{wordCount !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-
-          {/* Novel Editor - Notion-style inline markdown */}
+        <div className="flex h-full flex-col">
           <div
             ref={editorContainerRef}
-            className="nodrag nopan flex-1 min-h-0 mx-5 mb-5 border border-[#E5E7EB] rounded-lg overflow-hidden bg-white cursor-text"
+            className="nodrag nopan mx-5 mb-5 flex-1 min-h-0 cursor-text overflow-hidden rounded-xl border border-[#E5E7EB] bg-white"
             onMouseDown={(e) => {
               // Stop all propagation to prevent ReactFlow from interfering
               e.stopPropagation();

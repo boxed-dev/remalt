@@ -1,6 +1,7 @@
 import { createClient } from '@deepgram/sdk';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
+import { generateNodeTitle } from '@/lib/ai/title-generator';
 
 async function postHandler(req: NextRequest) {
   // Require authentication
@@ -81,13 +82,42 @@ async function postHandler(req: NextRequest) {
     console.log('  Language:', language);
     console.log('===================\n');
 
-    return NextResponse.json({
+    // Generate AI title in parallel
+    const titlePromise = generateNodeTitle({
+      nodeType: 'voice',
+      content: transcript,
+      metadata: {
+        duration,
+      },
+    }).then(title => {
+      if (title) {
+        console.log('[Title Generator] ✅ Generated title:', title);
+      }
+      return title;
+    }).catch(error => {
+      console.error('[Title Generator] Error:', error);
+      return null;
+    });
+
+    // Prepare response data
+    const responseData = {
       transcript,
       language,
       confidence,
       duration,
       status: 'success',
-    });
+    };
+
+    // Wait for title generation to complete
+    const generatedTitle = await titlePromise;
+    if (generatedTitle) {
+      return NextResponse.json({
+        ...responseData,
+        suggestedTitle: generatedTitle,
+      });
+    }
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Voice Transcription Error:', error);

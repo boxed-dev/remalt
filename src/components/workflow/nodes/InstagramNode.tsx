@@ -1,8 +1,9 @@
 import { memo } from 'react';
-import { Instagram, Loader2, CheckCircle2, ExternalLink, Heart, Eye, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { Instagram, Loader2, CheckCircle2, ExternalLink, Heart, Eye, MessageCircle, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { SyntheticEvent } from 'react';
 import { BaseNode } from './BaseNode';
+import { NodeHeader, NodeHeaderBadge } from './NodeHeader';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { InstagramNodeData } from '@/types/workflow';
@@ -110,6 +111,37 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
   const processedUrlRef = useRef<string | null>(null);
 
   const hasReelData = data.fetchStatus === 'success' && (!!data.videoUrl || !!data.thumbnail || data.isVideo === false);
+
+  const fetchStatusBadge = useMemo(() => {
+    if (data.fetchStatus === 'loading') {
+      return (
+        <NodeHeaderBadge tone="accent">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Fetching</span>
+        </NodeHeaderBadge>
+      );
+    }
+
+    if (data.fetchStatus === 'error') {
+      return (
+        <NodeHeaderBadge tone="danger">
+          <AlertCircle className="h-3 w-3" />
+          <span>Failed</span>
+        </NodeHeaderBadge>
+      );
+    }
+
+    if (hasReelData) {
+      return (
+        <NodeHeaderBadge tone="success">
+          <CheckCircle2 className="h-3 w-3" />
+          <span>Loaded</span>
+        </NodeHeaderBadge>
+      );
+    }
+
+    return null;
+  }, [data.fetchStatus, hasReelData]);
 
   type NativeEventWithStop = Event & { stopImmediatePropagation?: () => void };
 
@@ -311,29 +343,19 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
     <>
       <BaseNode
         id={id}
-        type="instagram"
-        icon={<Instagram className="h-3.5 w-3.5 text-[#E4405F]" />}
-        iconBg="bg-[#E4405F]/10"
         parentId={parentId}
+        header={
+          <NodeHeader
+            title={data.isStory ? 'Instagram Story' : 'Instagram Post'}
+            subtitle={data.author?.username ? `@${data.author.username}` : data.url || 'Add Instagram URL'}
+            icon={<Instagram />}
+            themeKey="instagram"
+            trailing={fetchStatusBadge}
+          />
+        }
+        headerClassName="overflow-hidden"
       >
         <div className="w-[320px] space-y-3">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 flex items-center justify-center bg-[#E4405F]/10 rounded-full">
-              <Instagram className="w-4 h-4 text-[#E4405F]" />
-            </div>
-            <span className="text-[14px] font-medium text-gray-800">
-              {data.isStory ? 'Instagram Story' : 'Instagram Post'}
-            </span>
-          </div>
-          {hasReelData && (
-            <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded-full">
-              <CheckCircle2 className="h-3 w-3" />
-              <span>Loaded</span>
-            </div>
-          )}
-        </div>
 
         {/* URL Input / Author Info */}
         {isEditing ? (

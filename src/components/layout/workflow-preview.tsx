@@ -11,7 +11,7 @@ export function WorkflowPreview() {
           <div>
             <div className="mb-6">
               <span className="inline-flex items-center rounded-full bg-[#D4AF7F]/20 px-4 py-2 text-sm font-medium text-[#095D40]">
-                🚀 Workflow Builder
+                Workflow Builder
               </span>
             </div>
 
@@ -19,28 +19,28 @@ export function WorkflowPreview() {
               Build canvas
               <br />
               <span className="bg-gradient-to-r from-[#095D40] to-[#D4AF7F] bg-clip-text text-transparent">
-                visually
+                visually.
               </span>
             </h2>
 
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              No coding required. Simply drag and drop components to create
+              No coding required. Drag and drop components to create
               sophisticated AI canvas. Connect data sources, apply AI models,
-              and automate your processes with ease.
+              and test in real time.
             </p>
 
             <div className="space-y-4 mb-8">
               <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-gray-700">Drag & drop interface</span>
+                <div className="w-2 h-2 bg-[#095D40] rounded-full"></div>
+                <span className="text-gray-700">Drag, drop, and connect data sources</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-gray-700">Pre-built AI components</span>
+                <div className="w-2 h-2 bg-[#095D40] rounded-full"></div>
+                <span className="text-gray-700">Apply AI models</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-gray-700">Real-time testing</span>
+                <div className="w-2 h-2 bg-[#095D40] rounded-full"></div>
+                <span className="text-gray-700">Test in real time</span>
               </div>
             </div>
 
@@ -91,8 +91,8 @@ export function WorkflowPreview() {
                       </div>
                       <div className="flex-1">
                         <div className="bg-gray-100 rounded-lg p-3">
-                          <div className="text-sm font-medium mb-1">AI Processing</div>
-                          <div className="text-xs text-gray-600">Generate content using GPT-4</div>
+                          <div className="text-sm font-medium mb-1">AI</div>
+                          <div className="text-xs text-gray-600">Processes via GPT-4</div>
                         </div>
                       </div>
                     </div>
@@ -110,7 +110,7 @@ export function WorkflowPreview() {
                       <div className="flex-1">
                         <div className="bg-gray-100 rounded-lg p-3">
                           <div className="text-sm font-medium mb-1">Output</div>
-                          <div className="text-xs text-gray-600">Save to CMS or export as PDF</div>
+                          <div className="text-xs text-gray-600">Ready to publish or export to CMS</div>
                         </div>
                       </div>
                     </div>

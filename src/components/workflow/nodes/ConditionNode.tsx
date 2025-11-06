@@ -1,5 +1,6 @@
 import { GitBranch } from 'lucide-react';
 import { BaseNode } from './BaseNode';
+import { NodeHeader } from './NodeHeader';
 import type { NodeProps } from '@xyflow/react';
 import type { ConditionNodeData } from '@/types/workflow';
 
@@ -7,10 +8,15 @@ export function ConditionNode({ id, data, parentId }: NodeProps<ConditionNodeDat
   return (
     <BaseNode
       id={id}
-      type="Condition"
-      icon={<GitBranch className="h-3.5 w-3.5 text-pink-600" />}
-      iconBg="bg-pink-100"
       parentId={parentId}
+      header={
+        <NodeHeader
+          title="Condition"
+          subtitle={data.operator}
+          icon={<GitBranch />}
+          themeKey="condition"
+        />
+      }
     >
       <div className="w-[260px] space-y-3">
         <div className="inline-block px-2 py-1 rounded-md bg-[#F5F5F7] text-[11px] font-mono font-semibold text-[#6B7280] capitalize">

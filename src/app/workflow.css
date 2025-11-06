@@ -118,6 +118,32 @@ marker {
   color: #095D40 !important;
 }
 
+.flowy-node .flowy-node-header {
+  position: relative;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  backdrop-filter: blur(6px);
+}
+
+.flowy-node .flowy-node-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+/* Premium solid color hover/active states */
+.flowy-node .flowy-node-header:hover {
+  background-color: var(--node-header-surface-hover) !important;
+}
+
+.flowy-node .flowy-node-header:active {
+  background-color: var(--node-header-surface-active) !important;
+}
+
 /* Keep threads above group surfaces while preserving node interactivity */
 .react-flow__edges {
   z-index: 5 !important;

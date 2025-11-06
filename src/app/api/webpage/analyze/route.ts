@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
 import { isGoogleWorkspaceUrl, fetchGoogleWorkspaceContent } from '@/lib/api/google-workspace';
+import { generateNodeTitle } from '@/lib/ai/title-generator';
 
 const JINA_API_KEY = process.env.JINA_API_KEY;
 const FETCH_TIMEOUT_MS = 20_000; // Increased for Jina API
@@ -230,6 +231,31 @@ async function postHandler(req: NextRequest) {
         contentLength: result.pageContent.length,
       });
 
+      // Generate AI title in parallel for Google Workspace content
+      const workspaceTitlePromise = generateNodeTitle({
+        nodeType: 'webpage',
+        content: result.pageContent,
+        metadata: {
+          description: result.metadata.description,
+        },
+      }).then(title => {
+        if (title) {
+          console.log('[Title Generator] ✅ Generated title:', title);
+        }
+        return title;
+      }).catch(error => {
+        console.error('[Title Generator] Error:', error);
+        return null;
+      });
+
+      const workspaceGeneratedTitle = await workspaceTitlePromise;
+      if (workspaceGeneratedTitle) {
+        return NextResponse.json({
+          ...responseBody,
+          suggestedTitle: workspaceGeneratedTitle,
+        });
+      }
+
       return NextResponse.json(responseBody);
     }
 
@@ -242,6 +268,23 @@ async function postHandler(req: NextRequest) {
       hasApiKey: !!JINA_API_KEY,
     });
 
+    // Generate AI title in parallel
+    const titlePromise = generateNodeTitle({
+      nodeType: 'webpage',
+      content: result.pageContent,
+      metadata: {
+        description: result.metadata.description,
+      },
+    }).then(title => {
+      if (title) {
+        console.log('[Title Generator] ✅ Generated title:', title);
+      }
+      return title;
+    }).catch(error => {
+      console.error('[Title Generator] Error:', error);
+      return null;
+    });
+
     const responseBody = {
       url: normalizedUrl,
       ...result,
@@ -252,6 +295,15 @@ async function postHandler(req: NextRequest) {
       expiresAt: Date.now() + CACHE_TTL_MS,
       response: responseBody,
     });
+
+    // Wait for title generation to complete
+    const generatedTitle = await titlePromise;
+    if (generatedTitle) {
+      return NextResponse.json({
+        ...responseBody,
+        suggestedTitle: generatedTitle,
+      });
+    }
 
     return NextResponse.json(responseBody);
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
 import { createClient } from '@/lib/supabase/server';
+import { generateNodeTitle } from '@/lib/ai/title-generator';
 
 // API timeout: 2 minutes for edge function call
 const API_TIMEOUT_MS = 120000;
@@ -100,7 +101,25 @@ async function postHandler(req: NextRequest) {
     console.log('  Duration:', data.parseDurationMs, 'ms');
     console.log('===================\n');
 
-    return NextResponse.json({
+    // Generate AI title in parallel
+    const titlePromise = generateNodeTitle({
+      nodeType: 'pdf',
+      content: data.parsedText || '',
+      metadata: {
+        pageCount: data.pageCount,
+      },
+    }).then(title => {
+      if (title) {
+        console.log('[Title Generator] ✅ Generated title:', title);
+      }
+      return title;
+    }).catch(error => {
+      console.error('[Title Generator] Error:', error);
+      return null;
+    });
+
+    // Prepare response data
+    const responseData = {
       parsedText: data.parsedText || '',
       segments: data.segments || [],
       pageCount: data.pageCount || 1,
@@ -111,7 +130,18 @@ async function postHandler(req: NextRequest) {
         parseDurationMs: data.parseDurationMs,
         edgeFunction: true,
       }
-    });
+    };
+
+    // Wait for title generation to complete
+    const generatedTitle = await titlePromise;
+    if (generatedTitle) {
+      return NextResponse.json({
+        ...responseData,
+        suggestedTitle: generatedTitle,
+      });
+    }
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('PDF Parsing Error:', error);

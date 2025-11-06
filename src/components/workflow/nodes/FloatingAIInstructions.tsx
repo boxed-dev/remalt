@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { SyntheticEvent } from 'react';
 import { Info } from 'lucide-react';
 import { useDebouncedCallback } from 'use-debounce';
 
@@ -56,22 +57,32 @@ export function FloatingAIInstructions({
     [maxLength, debouncedSave]
   );
 
-  const stopPropagation = useCallback((e: React.MouseEvent | React.WheelEvent | React.TouchEvent | React.FocusEvent | React.PointerEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if ('nativeEvent' in e && typeof (e.nativeEvent as any).stopImmediatePropagation === 'function') {
-      (e.nativeEvent as any).stopImmediatePropagation();
+  const stopPropagation = useCallback((event: SyntheticEvent) => {
+    // Allow pinch/zoom gestures to pass through to React Flow
+    if ('nativeEvent' in event && event.nativeEvent instanceof WheelEvent) {
+      const wheelEvent = event.nativeEvent;
+      const isPinchGesture = wheelEvent.ctrlKey || wheelEvent.metaKey || Math.abs(wheelEvent.deltaZ ?? 0) > 0;
+      if (isPinchGesture) {
+        return; // Let React Flow handle zoom
+      }
     }
+
+    event.stopPropagation();
+
+    const nativeEvent = event.nativeEvent as Event & {
+      stopImmediatePropagation?: () => void;
+    };
+
+    nativeEvent.stopImmediatePropagation?.();
   }, []);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation();
-  }, []);
-
-  const handleDragStart = useCallback((e: React.DragEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-  }, []);
+  const stopPropagationAndPreventDefault = useCallback(
+    (event: SyntheticEvent) => {
+      stopPropagation(event);
+      event.preventDefault();
+    },
+    [stopPropagation]
+  );
 
   return (
     <div
@@ -84,10 +95,8 @@ export function FloatingAIInstructions({
         overflow: 'hidden',
       }}
       onMouseDown={stopPropagation}
-      onPointerDown={handlePointerDown}
-      onDragStart={handleDragStart}
-      onWheel={stopPropagation}
-      onTouchStart={stopPropagation}
+      onPointerDown={stopPropagation}
+      onDragStart={stopPropagationAndPreventDefault}
     >
       <div className="w-full overflow-auto relative" style={{ maxHeight: '200px' }}>
         {/* Info icon */}
@@ -125,10 +134,10 @@ export function FloatingAIInstructions({
           maxLength={maxLength}
           rows={1}
           onMouseDown={stopPropagation}
-          onPointerDown={handlePointerDown}
-          onDragStart={handleDragStart}
-          onWheel={stopPropagation}
-          onTouchStart={stopPropagation}
+          onPointerDown={stopPropagation}
+          onDragStart={stopPropagationAndPreventDefault}
+          onWheel={stopPropagationAndPreventDefault}
+          onTouchStart={stopPropagationAndPreventDefault}
           onFocus={stopPropagation}
           className="
             w-full px-4 bg-white rounded-lg resize-none text-base

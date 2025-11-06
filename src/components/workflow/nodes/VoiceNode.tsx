@@ -310,11 +310,19 @@ export const VoiceNode = memo(({ id, data, parentId, selected }: NodeProps<Voice
 
       if (response.ok && result.transcript) {
         console.log('[VoiceNode] Transcription successful');
-        updateNodeData(id, {
+        const updates: Partial<VoiceNodeData> = {
           transcript: result.transcript,
           transcriptStatus: 'success',
           transcriptError: undefined,
-        } as Partial<VoiceNodeData>);
+        };
+
+        // Apply suggested title if available
+        if (result.suggestedTitle) {
+          console.log('[VoiceNode] ✅ Applying AI-generated title:', result.suggestedTitle);
+          updates.customLabel = result.suggestedTitle;
+        }
+
+        updateNodeData(id, updates);
       } else {
         console.error('[VoiceNode] Transcription failed:', result.error);
         updateNodeData(id, {

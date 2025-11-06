@@ -8,10 +8,10 @@ const plans = [
     name: "Starter",
     price: "$0",
     period: "forever",
-    description: "Perfect for trying out AI canvas",
+    description: "Perfect for trying out Remalt.",
     badge: null,
     features: [
-      "5 canvas per month",
+      "5 canvases per month",
       "Basic AI models",
       "Community support",
       "Template library access",
@@ -23,10 +23,10 @@ const plans = [
     name: "Pro",
     price: "$29",
     period: "month",
-    description: "For professionals and growing teams",
+    description: "For professionals and growing teams.",
     badge: "Most Popular",
     features: [
-      "Unlimited canvas",
+      "Unlimited canvases",
       "Advanced AI models (GPT-4, Claude)",
       "Priority support",
       "Custom templates",
@@ -39,14 +39,14 @@ const plans = [
   {
     name: "Enterprise",
     price: "Custom",
-    period: "contact us",
-    description: "For large organizations with specific needs",
+    period: "",
+    description: "For teams that scale with clarity.",
     badge: null,
     features: [
       "Everything in Pro",
-      "Custom AI model training",
+      "Custom model training",
       "Dedicated support",
-      "SSO & advanced security",
+      "SSO & enterprise security",
       "Custom integrations",
       "SLA guarantee",
     ],
@@ -61,14 +61,11 @@ export function Pricing() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center mb-16">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-gray-900 mb-6">
-            Simple,
+            Simple, transparent
             <span className="bg-gradient-to-r from-[#095D40] to-[#D4AF7F] bg-clip-text text-transparent">
-              {" "}transparent pricing
+              {" "}pricing.
             </span>
           </h2>
-          <p className="text-lg sm:text-xl text-gray-600 leading-relaxed">
-            Choose the plan that fits your needs. Upgrade or downgrade at any time.
-          </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -97,7 +94,7 @@ export function Pricing() {
                   <span className="text-4xl font-bold text-gray-900">
                     {plan.price}
                   </span>
-                  {plan.price !== "Custom" && (
+                  {plan.period && (
                     <span className="text-gray-600">/{plan.period}</span>
                   )}
                 </div>

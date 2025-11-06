@@ -3,6 +3,7 @@
 import { memo, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Image as ImageIcon, Loader2, Eye, CheckCircle2, AlertCircle, Upload, X } from 'lucide-react';
 import { BaseNode } from './BaseNode';
+import { NodeHeader, NodeHeaderBadge } from './NodeHeader';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { UploadMediaDialog } from '../UploadMediaDialog';
 import type { NodeProps } from '@xyflow/react';
@@ -116,7 +117,7 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
 
               if (data.status === 'complete' && data.success) {
                 console.log('[ImageNode] STREAMING analysis completed successfully');
-                updateNodeData(id, {
+                const updates: Partial<ImageNodeData> = {
                   ocrText: data.ocrText,
                   analysisData: {
                     description: data.description,
@@ -125,7 +126,15 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
                   },
                   analysisStatus: 'success',
                   analysisError: undefined,
-                } as Partial<ImageNodeData>);
+                };
+
+                // Apply suggested title if available
+                if (data.suggestedTitle) {
+                  console.log('[ImageNode] ✅ Applying AI-generated title:', data.suggestedTitle);
+                  updates.customLabel = data.suggestedTitle;
+                }
+
+                updateNodeData(id, updates);
                 analysisFinished = true;
                 try {
                   await reader.cancel();
@@ -206,33 +215,36 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
     event.stopPropagation();
   };
 
-  const renderStatus = () => {
-    if (data.analysisStatus === 'analyzing')
+  const statusBadge = useMemo(() => {
+    if (data.analysisStatus === 'analyzing') {
       return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-[#FEF3C7] px-2 py-1 text-[10px] text-[#F59E0B]">
+        <NodeHeaderBadge tone="accent">
           <Loader2 className="h-3 w-3 animate-spin" />
           <span>Analyzing</span>
-        </div>
+        </NodeHeaderBadge>
       );
+    }
 
-    if (data.analysisStatus === 'success')
+    if (data.analysisStatus === 'success') {
       return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] text-emerald-600">
+        <NodeHeaderBadge tone="success">
           <CheckCircle2 className="h-3 w-3" />
           <span>Insights ready</span>
-        </div>
+        </NodeHeaderBadge>
       );
+    }
 
-    if (data.analysisStatus === 'error')
+    if (data.analysisStatus === 'error') {
       return (
-        <div className="inline-flex items-center gap-1 rounded-full bg-[#FEF2F2] px-2 py-1 text-[10px] text-[#B91C1C]">
+        <NodeHeaderBadge tone="danger">
           <AlertCircle className="h-3 w-3" />
           <span>Analysis failed</span>
-        </div>
+        </NodeHeaderBadge>
       );
+    }
 
     return null;
-  };
+  }, [data.analysisStatus]);
 
   const openFullImage = (event: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
     stopPropagation(event);
@@ -246,28 +258,32 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
   };
 
   return (
-    <div className="relative">
-      <BaseNode id={id} parentId={parentId}>
+    <div className="relative w-[280px] max-h-[460px]">
+      <BaseNode
+        id={id}
+        parentId={parentId}
+        header={
+          <NodeHeader
+            title={data.customLabel || 'Image'}
+            subtitle={data.caption || (safeImageUrl ? 'Image added' : 'Upload or paste a URL')}
+            icon={<ImageIcon />}
+            themeKey="image"
+            trailing={statusBadge}
+          />
+        }
+        headerClassName="overflow-hidden"
+      >
         <UploadMediaDialog
           open={showUploadDialog}
           onOpenChange={setShowUploadDialog}
           mediaType="image"
           selectedNodeIds={[id]}
         />
-        <div className="w-[280px] space-y-2">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <ImageIcon className="h-4 w-4 text-[#F59E0B]" />
-            <span className="text-[13px] font-medium text-[#1A1D21]">Image</span>
-          </div>
-          {renderStatus()}
-        </div>
-
+        <div className="w-full h-full space-y-2 overflow-y-auto">
         {safeImageUrl ? (
           /* Image loaded state */
           <div className="space-y-2">
-            <div className="relative w-full h-56 bg-[#F5F5F7] rounded-lg overflow-hidden group">
+            <div className="relative w-full h-40 bg-[#F5F5F7] rounded-lg overflow-hidden group flex-shrink-0">
               {imageLoading && !imageError && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Loader2 className="h-6 w-6 animate-spin text-[#F59E0B]" />

@@ -27,6 +27,7 @@ interface WorkflowStore {
   clipboard: WorkflowNode[];
   activeNodeId: string | null;
   cursorPosition: Position | null;
+  isCanvasPinchDisabled: boolean;
   // Connection UI State
   isConnecting: boolean;
   connectHoveredTargetId: string | null;
@@ -118,6 +119,7 @@ interface WorkflowStore {
   // Canvas Control Actions
   setControlMode: (mode: "pointer" | "hand") => void;
   toggleSnapToGrid: () => void;
+  setCanvasPinchDisabled: (disabled: boolean) => void;
 
   // Cursor Tracking
   setCursorPosition: (position: Position | null) => void;
@@ -284,6 +286,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
     controlMode: "hand",
     snapToGrid: false,
     cursorPosition: null,
+    isCanvasPinchDisabled: false,
     isConnecting: false,
     connectHoveredTargetId: null,
     connectPreviewTargetId: null,
@@ -869,6 +872,12 @@ export const useWorkflowStore = create<WorkflowStore>()(
     toggleSnapToGrid: () => {
       set((state) => {
         state.snapToGrid = !state.snapToGrid;
+      });
+    },
+
+    setCanvasPinchDisabled: (disabled) => {
+      set((state) => {
+        state.isCanvasPinchDisabled = disabled;
       });
     },
 

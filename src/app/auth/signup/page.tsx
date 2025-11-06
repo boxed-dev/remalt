@@ -90,34 +90,6 @@ export default function SignUpPage() {
     }
   };
 
-  const handleLinkedInSignUp = async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const supabase = createClient();
-      console.log('[LinkedIn SignUp] Starting OAuth flow...');
-
-      const { error: signInError } = await supabase.auth.signInWithOAuth({
-        provider: 'linkedin_oidc',
-        options: {
-          scopes: 'openid email profile',
-        },
-      });
-
-      if (signInError) {
-        console.error('[LinkedIn SignUp] OAuth error:', signInError);
-        setError(signInError.message);
-        setLoading(false);
-      } else {
-        console.log('[LinkedIn SignUp] OAuth initiated successfully');
-      }
-    } catch (err: any) {
-      console.error('[LinkedIn SignUp] Exception:', err);
-      setError(err.message || 'An unexpected error occurred');
-      setLoading(false);
-    }
-  };
 
   if (success) {
     return (
@@ -136,7 +108,7 @@ export default function SignUpPage() {
             </p>
             <Link
               href="/auth/signin"
-              className="inline-block px-6 py-2.5 bg-[#007AFF] text-white rounded-lg font-medium text-[14px] hover:bg-[#0051D5] transition-all"
+              className="inline-block px-6 py-2.5 bg-[#095D40] text-white rounded-lg font-medium text-[14px] hover:bg-[#074730] transition-all"
             >
               Back to Sign In
             </Link>
@@ -176,7 +148,7 @@ export default function SignUpPage() {
                 required
                 disabled={loading}
                 placeholder="John Doe"
-                className="w-full px-4 py-3 text-[14px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#007AFF] focus:border-transparent transition-all disabled:bg-[#F5F5F7] disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 text-[14px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#095D40] focus:border-transparent transition-all disabled:bg-[#F5F5F7] disabled:cursor-not-allowed"
               />
             </div>
 
@@ -192,7 +164,7 @@ export default function SignUpPage() {
                 required
                 disabled={loading}
                 placeholder="you@example.com"
-                className="w-full px-4 py-3 text-[14px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#007AFF] focus:border-transparent transition-all disabled:bg-[#F5F5F7] disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 text-[14px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#095D40] focus:border-transparent transition-all disabled:bg-[#F5F5F7] disabled:cursor-not-allowed"
               />
             </div>
 
@@ -208,7 +180,7 @@ export default function SignUpPage() {
                 required
                 disabled={loading}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 text-[14px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#007AFF] focus:border-transparent transition-all disabled:bg-[#F5F5F7] disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 text-[14px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#095D40] focus:border-transparent transition-all disabled:bg-[#F5F5F7] disabled:cursor-not-allowed"
               />
               <p className="mt-1.5 text-[12px] text-[#9CA3AF]">Must be at least 6 characters</p>
             </div>
@@ -216,7 +188,7 @@ export default function SignUpPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-[#007AFF] text-white rounded-lg font-medium text-[14px] hover:bg-[#0051D5] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[#095D40] text-white rounded-lg font-medium text-[14px] hover:bg-[#074730] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -267,18 +239,6 @@ export default function SignUpPage() {
               </svg>
               Google
             </button>
-
-            {/* LinkedIn Sign Up */}
-            <button
-              onClick={handleLinkedInSignUp}
-              disabled={loading}
-              className="w-full py-3 bg-white border border-[#E8ECEF] text-[#1A1D21] rounded-lg font-medium text-[14px] hover:bg-[#FAFBFC] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#0A66C2">
-                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-              </svg>
-              LinkedIn
-            </button>
           </div>
 
           {/* Sign In Link */}
@@ -286,7 +246,7 @@ export default function SignUpPage() {
             Already have an account?{' '}
             <Link
               href="/auth/signin"
-              className="text-[#007AFF] hover:underline font-medium"
+              className="text-[#095D40] hover:underline font-medium"
             >
               Sign in
             </Link>

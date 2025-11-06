@@ -31,6 +31,8 @@ interface BaseNodeProps {
   parentNode?: string | null;
   className?: string;
   style?: CSSProperties;
+  header?: ReactNode;
+  headerClassName?: string;
   contentClassName?: string;
   contentStyle?: CSSProperties;
 }
@@ -52,6 +54,8 @@ export function BaseNode({
   parentNode,
   className,
   style,
+  header,
+  headerClassName,
   contentClassName,
   contentStyle,
 }: BaseNodeProps) {
@@ -91,23 +95,29 @@ export function BaseNode({
   const connectPreviewTargetId = useWorkflowStore((state) => state.connectPreviewTargetId);
   const isConnectTarget = isConnecting && connectHoveredTargetId === id;
   const isPreviewTarget = isConnecting && connectPreviewTargetId === id && !isConnectTarget;
+  const hasHeader = Boolean(header);
   return (
     <div
-      className={`flowy-node min-w-[280px] rounded-2xl bg-white transition-all duration-200 ${
+      className={`flowy-node min-w-[280px] min-h-[200px] flex flex-col rounded-2xl bg-white transition-all duration-200 ${
         allowOverflow ? 'relative' : 'overflow-hidden relative'
       } ${
         className
           ? className
-          : `border-2 shadow-md hover:shadow-xl ${
-              isActive ? '!border-[#095D40]' : 'border-[#E8ECEF] hover:border-[#D1D5DB]'
+          : `border border-[#E6E8EC] shadow-sm hover:shadow-md ${
+              isActive ? '!border-[#0F766E]' : 'hover:border-[#CBD5F0]'
             }`
       } ${isConnectTarget ? 'flowy-magnetic-node' : ''} ${isPreviewTarget ? 'flowy-preview-node' : ''}`}
       style={style}
       onPointerDownCapture={handlePointerDownActivate}
     >
+      {header && (
+        <div className={`flex-shrink-0 ${headerClassName}`}>{header}</div>
+      )}
       {/* Content */}
       <div
-        className={`relative z-0 ${contentClassName ?? 'p-5'}`}
+        className={`relative z-0 flex-1 overflow-hidden ${
+          contentClassName ?? (hasHeader ? 'px-5 pb-5 pt-4' : 'p-5')
+        }`}
         style={contentStyle}
       >
         {children}

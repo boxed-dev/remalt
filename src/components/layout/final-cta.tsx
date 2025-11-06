@@ -48,22 +48,21 @@ export function FinalCTA() {
 
           {/* Headline */}
           <h2 className={`text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 ${isVisible ? 'animate-slide-up' : 'opacity-0'}`}>
-            Ready to revolutionize
+            Ready to think clearer,
             <br />
-            <span className="text-[#D4AF7F]">your workflow?</span>
+            <span className="text-[#D4AF7F]">build faster, and sell smarter?</span>
           </h2>
 
           {/* Subheadline */}
           <p className={`text-xl sm:text-2xl text-white/90 mb-12 max-w-2xl mx-auto ${isVisible ? 'animate-slide-up-delay' : 'opacity-0'}`}>
-            Join thousands who've already transformed their work with AI.
-            Start building in seconds.
+            Join thousands already creating smarter with Remalt.
           </p>
 
           {/* CTA Buttons */}
           <div className={`flex flex-col sm:flex-row items-center justify-center gap-4 ${isVisible ? 'animate-slide-up-delay-2' : 'opacity-0'}`}>
             <Button asChild size="lg" className="bg-white text-[#095D40] hover:bg-white/90 px-8 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-200 w-full sm:w-auto">
-              <Link href="/flows/new">
-                Start Building Now
+              <Link href="/flows">
+                Start Building Free
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>

@@ -166,11 +166,20 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
           metadata: result.metadata,
         };
         setCachedEntry(analysisCache, normalizedUrl, payload);
-        updateNodeData(id, {
+
+        const updates: Partial<WebpageNodeData> = {
           ...payload,
           scrapeStatus: 'success',
           scrapeError: undefined,
-        } as Partial<WebpageNodeData>);
+        };
+
+        // Apply suggested title if available
+        if (result.suggestedTitle) {
+          console.log('[WebpageNode] ✅ Applying AI-generated title:', result.suggestedTitle);
+          updates.customLabel = result.suggestedTitle;
+        }
+
+        updateNodeData(id, updates);
       } else {
         updateNodeData(id, {
           scrapeStatus: 'error',

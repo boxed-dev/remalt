@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
 import { recordAIMetadata, withAISpan } from '@/lib/sentry/ai';
+import { generateNodeTitle } from '@/lib/ai/title-generator';
 
 async function postHandler(req: NextRequest) {
   // Require authentication
@@ -195,14 +196,44 @@ Format your response as JSON:
     console.log('  Tags:', analysisData.tags?.join(', ') || 'None');
     console.log('===================\n');
 
-    return NextResponse.json({
+    // Generate AI title in parallel (don't wait for it)
+    const titlePromise = generateNodeTitle({
+      nodeType: 'image',
+      content: analysisData.ocrText || '',
+      metadata: {
+        description: analysisData.description,
+        caption: analysisData.theme,
+      },
+    }).then(title => {
+      if (title) {
+        console.log('[Title Generator] ✅ Generated title:', title);
+      }
+      return title;
+    }).catch(error => {
+      console.error('[Title Generator] Error:', error);
+      return null;
+    });
+
+    // Return immediately with analysis data
+    const responseData = {
       ocrText: analysisData.ocrText || '',
       description: analysisData.description || '',
       tags: analysisData.tags || [],
       colors: analysisData.colors || [],
       theme: analysisData.theme,
       status: 'success',
-    });
+    };
+
+    // Wait for title generation to complete before responding
+    const generatedTitle = await titlePromise;
+    if (generatedTitle) {
+      return NextResponse.json({
+        ...responseData,
+        suggestedTitle: generatedTitle,
+      });
+    }
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Image Analysis Error:', error);

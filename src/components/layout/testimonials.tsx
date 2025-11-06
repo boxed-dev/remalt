@@ -7,24 +7,24 @@ const testimonials = [
   {
     name: "Sarah Chen",
     role: "Product Designer",
-    company: "TechFlow",
-    content: "I went from idea to working AI workflow in 15 minutes. This is what no-code should have always been.",
+    company: "",
+    content: "I went from idea to workflow in 15 minutes. This is what no-code should have always been.",
     rating: 5,
     image: "SC"
   },
   {
     name: "Marcus Rodriguez",
     role: "Marketing Director",
-    company: "Growth Labs",
-    content: "We automated our entire content pipeline. What took 3 days now takes 3 hours. Game changer.",
+    company: "",
+    content: "We automated our content pipeline. What took 3 days now takes 3 hours.",
     rating: 5,
     image: "MR"
   },
   {
     name: "Emily Watson",
     role: "CEO",
-    company: "Innovate AI",
-    content: "Finally, AI that my entire team can use. No engineers required. Just pure creativity.",
+    company: "",
+    content: "Finally, AI that my team actually uses. No engineers required.",
     rating: 5,
     image: "EW"
   }
@@ -90,7 +90,7 @@ export function Testimonials() {
                 <div>
                   <div className="font-semibold text-[#333333]">{testimonial.name}</div>
                   <div className="text-sm text-[#6B7280]">
-                    {testimonial.role} at {testimonial.company}
+                    {testimonial.role}
                   </div>
                 </div>
               </div>
@@ -107,7 +107,7 @@ export function Testimonials() {
             </div>
             <div>
               <div className="text-4xl lg:text-5xl font-bold text-white mb-2">3x</div>
-              <div className="text-white/80">Faster Canvas</div>
+              <div className="text-white/80">Faster Canvas Creation</div>
             </div>
             <div>
               <div className="text-4xl lg:text-5xl font-bold text-white mb-2">500+</div>
@@ -115,7 +115,7 @@ export function Testimonials() {
             </div>
             <div>
               <div className="text-4xl lg:text-5xl font-bold text-white mb-2">24/7</div>
-              <div className="text-white/80">Support Team</div>
+              <div className="text-white/80">Support</div>
             </div>
           </div>
         </div>

@@ -4,16 +4,17 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Download,
   ExternalLink,
   Users,
   ChevronDown,
   ChevronUp,
-  PlayCircle,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import type { SyntheticEvent } from "react";
+import type { SyntheticEvent, ReactNode } from "react";
 import { BaseNode } from "./BaseNode";
+import { NodeHeader, NodeHeaderBadge } from "./NodeHeader";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
 import type { NodeProps } from "@xyflow/react";
 import type { YouTubeNodeData } from "@/types/workflow";
@@ -103,6 +104,15 @@ export const YouTubeNode = memo(
     };
 
     const stopReactFlowPropagation = useCallback((event: SyntheticEvent) => {
+      // Allow pinch/zoom gestures to pass through to React Flow
+      if ('nativeEvent' in event && event.nativeEvent instanceof WheelEvent) {
+        const wheelEvent = event.nativeEvent;
+        const isPinchGesture = wheelEvent.ctrlKey || wheelEvent.metaKey || Math.abs(wheelEvent.deltaZ ?? 0) > 0;
+        if (isPinchGesture) {
+          return; // Let React Flow handle zoom
+        }
+      }
+
       event.stopPropagation();
       (event.nativeEvent as NativeEventWithStop).stopImmediatePropagation?.();
     }, []);
@@ -292,12 +302,20 @@ export const YouTubeNode = memo(
         console.log(`[YouTubeNode] Fetching transcript for video: ${videoId}`);
         const result = await fetchTranscript(safeUrl);
 
-        updateNodeData(id, {
+        const updates: Partial<YouTubeNodeData> = {
           transcript: result.transcript,
           transcriptStatus: result.status,
           transcriptMethod: result.method,
           transcriptError: result.error,
-        } as Partial<YouTubeNodeData>);
+        };
+
+        // Apply suggested title if available
+        if ((result as any).suggestedTitle) {
+          console.log('[YouTubeNode] ✅ Applying AI-generated title:', (result as any).suggestedTitle);
+          updates.customLabel = (result as any).suggestedTitle;
+        }
+
+        updateNodeData(id, updates);
       },
       [fetchTranscript, id, updateNodeData, fetchVideoTitle]
     );
@@ -745,11 +763,6 @@ export const YouTubeNode = memo(
     // Render single video view
     const renderVideoView = () => (
       <div className="w-[320px] space-y-2">
-        {displayTitle && (
-          <div className="text-[13px] font-medium text-[#0F172A] leading-snug">
-            {displayTitle}
-          </div>
-        )}
         {isEditing ? (
           <input
             ref={inputRef}
@@ -827,22 +840,99 @@ export const YouTubeNode = memo(
       </div>
     );
 
+    const transcriptBadge = useMemo(() => {
+      if (data.transcriptStatus === "loading") {
+        return (
+          <NodeHeaderBadge tone="accent">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span>Fetching captions</span>
+          </NodeHeaderBadge>
+        );
+      }
+
+      if (data.transcriptStatus === "success" && hasTranscript) {
+        return (
+          <NodeHeaderBadge tone="success">
+            <CheckCircle2 className="h-3 w-3" />
+            <span>Transcript ready</span>
+          </NodeHeaderBadge>
+        );
+      }
+
+      if (data.transcriptStatus === "unavailable") {
+        return (
+          <NodeHeaderBadge tone="warning">
+            <AlertTriangle className="h-3 w-3" />
+            <span>No captions</span>
+          </NodeHeaderBadge>
+        );
+      }
+
+      if (data.transcriptStatus === "error") {
+        return (
+          <NodeHeaderBadge tone="danger">
+            <AlertCircle className="h-3 w-3" />
+            <span>Failed to fetch</span>
+          </NodeHeaderBadge>
+        );
+      }
+
+      return null;
+    }, [data.transcriptStatus, hasTranscript]);
+
+    const channelBadges = useMemo(() => {
+      if (!isChannel) {
+        return null;
+      }
+
+      const badges: ReactNode[] = [];
+
+      if (data.channelSubscriberCount) {
+        badges.push(
+          <NodeHeaderBadge key="subs" tone="muted">
+            {formatViewCount(data.channelSubscriberCount)} subs
+          </NodeHeaderBadge>
+        );
+      }
+
+      if (selectedVideosCount > 0) {
+        badges.push(
+          <NodeHeaderBadge key="selected" tone="accent">
+            {selectedVideosCount} selected
+          </NodeHeaderBadge>
+        );
+      }
+
+      if (badges.length === 0) {
+        return null;
+      }
+
+      return <div className="flex items-center gap-2">{badges}</div>;
+    }, [data.channelSubscriberCount, isChannel, selectedVideosCount]);
+
+    const headerSubtitle = isChannel
+      ? data.channelTitle || "Link a channel"
+      : displayTitle || "Paste a YouTube link";
+
+    const headerTrailing = isChannel ? channelBadges : transcriptBadge;
+
     return (
       <div className="relative">
         <BaseNode
           id={id}
-          type={isChannel ? "YouTube Channel" : "YouTube"}
-          icon={
-            isChannel ? (
-              <Users className="h-3.5 w-3.5 text-red-600" />
-            ) : (
-              <Youtube className="h-3.5 w-3.5 text-red-600" />
-            )
-          }
-          iconBg="bg-red-100"
           showTargetHandle={false}
           allowOverflow={true}
           parentId={parentId}
+          header={
+            <NodeHeader
+              title={data.customLabel || (isChannel ? "YouTube Channel" : "YouTube Video")}
+              subtitle={headerSubtitle}
+              icon={isChannel ? <Users /> : <Youtube />}
+              themeKey="youtube"
+              trailing={headerTrailing}
+            />
+          }
+          headerClassName="overflow-hidden"
         >
           {isChannel ? renderChannelView() : renderVideoView()}
         </BaseNode>

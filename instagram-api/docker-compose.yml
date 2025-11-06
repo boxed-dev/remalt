@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  instagram-api:
+    build: .
+    container_name: instagram-transcribe-api
+    ports:
+      - "3001:3001"
+    environment:
+      - APIFY_API_TOKEN=${APIFY_API_TOKEN}
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:3001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+

@@ -169,6 +169,46 @@ Format your response in clear sections.`;
             colors = colorsText.split(/[,\n]/).map(c => c.trim()).filter(c => c);
           }
 
+          // Generate AI title using Gemini Flash Lite
+          let suggestedTitle: string | null = null;
+          try {
+            const titlePrompt = `Generate a concise, descriptive title (max 6 words) for this content. Return ONLY the title, no quotes or extra text.
+
+Content Type: Image
+${ocrText ? `OCR Text: ${ocrText.substring(0, 500)}` : ''}
+${description ? `AI Description: ${description.substring(0, 500)}` : ''}`;
+
+            const titleResponse = await genAI.models.generateContent({
+              model: 'gemini-2.0-flash-lite',
+              contents: [
+                {
+                  role: 'user',
+                  parts: [{ text: titlePrompt }],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 20,
+              },
+            });
+
+            const titleText = titleResponse.text?.trim() || '';
+            // Remove quotes if the model added them
+            suggestedTitle = titleText.replace(/^["']|["']$/g, '');
+
+            // Ensure title is not too long (max 50 chars)
+            if (suggestedTitle && suggestedTitle.length > 50) {
+              suggestedTitle = suggestedTitle.substring(0, 47) + '...';
+            }
+
+            if (suggestedTitle) {
+              console.log('[Title Generator] ✅ Generated title:', suggestedTitle);
+            }
+          } catch (error) {
+            console.error('[Title Generator] Error:', error);
+            suggestedTitle = null;
+          }
+
           // Send final complete data
           controller.enqueue(
             encoder.encode(
@@ -181,6 +221,7 @@ Format your response in clear sections.`;
                 tags,
                 colors,
                 fullAnalysis,
+                suggestedTitle,
               })}\n\n`
             )
           );

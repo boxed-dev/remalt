@@ -10,6 +10,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { BaseNode } from './BaseNode';
+import { NodeHeader, NodeHeaderBadge } from './NodeHeader';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { buildChatContext, getLinkedNodeIds } from '@/lib/workflow/context-builder';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -34,9 +35,9 @@ const CHAT_NODE_MAX_WIDTH = 2000;
 const CHAT_NODE_MAX_HEIGHT = 1600;
 const DEFAULT_CHAT_MODEL = 'google/gemini-2.5-flash-preview-09-2025';
 
-const resolveModelConfig = (rawModel?: string) => {
+const resolveModelConfig = (rawModel?: string): { canonicalModel: string; provider: 'gemini' | 'openrouter' } => {
   const canonicalModel = normalizeLegacyModel(rawModel || DEFAULT_CHAT_MODEL);
-  const provider = canonicalModel.includes('/') ? 'openrouter' : 'gemini';
+  const provider: 'gemini' | 'openrouter' = canonicalModel.includes('/') ? 'openrouter' : 'gemini';
   return { canonicalModel, provider };
 };
 
@@ -51,6 +52,37 @@ const parseDimension = (value: number | string | undefined): number | undefined 
   }
 
   return undefined;
+};
+
+const resolveEventElement = (event: Event): Element | null => {
+  if (event.target instanceof Element) {
+    return event.target;
+  }
+
+  if (typeof event.composedPath === 'function') {
+    const path = event.composedPath();
+    for (const entry of path) {
+      if (entry instanceof Element) {
+        return entry;
+      }
+    }
+  }
+
+  if (typeof window !== 'undefined' && typeof document !== 'undefined' && 'clientX' in event && 'clientY' in event) {
+    const { clientX, clientY } = event as { clientX: number; clientY: number };
+    if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+      const pointTarget = document.elementFromPoint(clientX, clientY);
+      if (pointTarget instanceof Element) {
+        return pointTarget;
+      }
+    }
+  }
+
+  if (typeof document !== 'undefined' && document.activeElement instanceof Element) {
+    return document.activeElement;
+  }
+
+  return null;
 };
 
 // Code block component with syntax highlighting and copy button - Memoized for performance
@@ -213,7 +245,7 @@ const MessageBubble = memo(({
         </div>
 
         {/* Message bubble - WhatsApp style */}
-        <div className="relative">
+        <div>
           <div
             className={`px-3 py-1.5 text-[13px] leading-[1.6] select-text cursor-text transition-colors break-words ${
               message.role === 'user'
@@ -227,25 +259,25 @@ const MessageBubble = memo(({
             </div>
           </div>
 
-          {/* Copy button - floating style */}
-          <Button
-            variant="secondary"
-            size="sm"
-            className={`absolute -bottom-2 ${message.role === 'user' ? 'left-2' : 'right-2'} h-6 px-2 text-[10px] gap-1 border-gray-200 bg-white hover:bg-[#095D40]/8 shadow-sm transition-opacity opacity-0 group-hover/message:opacity-100 ${
-              copiedMessageId === message.id ? 'text-[#095D40]' : ''
-            }`}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCopyMessage(message.id, message.content);
-            }}
-          >
-            {copiedMessageId === message.id ? (
-              <Check className="h-3 w-3" />
-            ) : (
-              <Copy className="h-3 w-3" />
-            )}
-            {copiedMessageId === message.id ? 'Copied' : 'Copy'}
-          </Button>
+          {/* Copy button - minimal style, only for AI responses */}
+          {message.role === 'assistant' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopyMessage(message.id, message.content);
+              }}
+              className={`flex items-center gap-1 mt-1 text-[10px] text-gray-400 hover:text-[#095D40] transition-colors cursor-pointer ${
+                copiedMessageId === message.id ? 'text-[#095D40]' : ''
+              }`}
+            >
+              {copiedMessageId === message.id ? (
+                <Check className="h-3 w-3" />
+              ) : (
+                <Copy className="h-3 w-3 scale-x-[-1]" />
+              )}
+              <span>{copiedMessageId === message.id ? 'Copied' : 'Copy'}</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -269,12 +301,17 @@ export const ChatNode = memo(({
   const initialModelConfig = resolveModelConfig(data.model);
   const [selectedModel, setSelectedModel] = useState<string>(initialModelConfig.canonicalModel);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const rootContainerRef = useRef<HTMLDivElement>(null);
+  const inlineChatContainerRef = useRef<HTMLDivElement>(null);
+  const modalChatContainerRef = useRef<HTMLDivElement>(null);
   const nodeScrollContainerRef = useRef<HTMLDivElement>(null);
   const dialogScrollContainerRef = useRef<HTMLDivElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const updateNode = useWorkflowStore((state) => state.updateNode);
   const workflow = useWorkflowStore((state) => state.workflow);
   const isActive = useWorkflowStore((state) => state.activeNodeId === id);
+  const setCanvasPinchDisabled = useWorkflowStore((state) => state.setCanvasPinchDisabled);
   const storedStyle = useWorkflowStore((state) => {
     const node = state.workflow?.nodes.find((n) => n.id === id);
     return node?.style;
@@ -360,6 +397,28 @@ export const ChatNode = memo(({
 
   type NativeEventWithStop = Event & { stopImmediatePropagation?: () => void };
 
+  const isElementWithinChat = useCallback((element: Element | null): boolean => {
+    if (!element) {
+      return false;
+    }
+
+    const containers: Element[] = [];
+
+    if (rootContainerRef.current) {
+      containers.push(rootContainerRef.current);
+    }
+
+    if (inlineChatContainerRef.current) {
+      containers.push(inlineChatContainerRef.current);
+    }
+
+    if (modalChatContainerRef.current) {
+      containers.push(modalChatContainerRef.current);
+    }
+
+    return containers.some((container) => container.contains(element));
+  }, []);
+
   const stopReactFlowPropagation = useCallback((event: SyntheticEvent) => {
     const target = event.target as HTMLElement | null;
     if (!target) {
@@ -378,33 +437,111 @@ export const ChatNode = memo(({
     (event.nativeEvent as NativeEventWithStop).stopImmediatePropagation?.();
   }, []);
 
+  const guardWheelEvent = useCallback(
+    (nativeEvent: WheelEvent): 'ignored' | 'scroll' | 'pinch-scroll' | 'pinch-block' => {
+      const targetElement = resolveEventElement(nativeEvent);
+      if (!isElementWithinChat(targetElement)) {
+        return 'ignored';
+      }
+
+      const scrollableAncestor = targetElement?.closest<HTMLElement>('.flowy-scrollable') ?? null;
+
+      const isPinchGesture = nativeEvent.ctrlKey
+        || nativeEvent.metaKey
+        || Math.abs(nativeEvent.deltaZ ?? 0) > 0;
+
+      // Guard against browser zoom on pinch gestures that start anywhere inside the chat node.
+      if (isPinchGesture) {
+        nativeEvent.preventDefault();
+        return scrollableAncestor ? 'pinch-scroll' : 'pinch-block';
+      }
+
+      return scrollableAncestor ? 'scroll' : 'ignored';
+    },
+    [isElementWithinChat],
+  );
+
   const handleWheelEvent = useCallback(
     (event: ReactWheelEvent) => {
-      if (!isActive) {
+      const result = guardWheelEvent(event.nativeEvent);
+      if (result === 'ignored') {
         return;
       }
 
-      const nativeEvent = event.nativeEvent as NativeEventWithStop;
-      const isPinchGesture = event.ctrlKey || event.metaKey;
-
-      if (isPinchGesture) {
-        event.preventDefault();
-        event.stopPropagation();
+      if (result === 'pinch-scroll' || result === 'pinch-block') {
+        const nativeEvent = event.nativeEvent as NativeEventWithStop;
         nativeEvent.stopImmediatePropagation?.();
+        event.stopPropagation();
+        event.preventDefault();
         return;
       }
 
-      const target = event.target as HTMLElement | null;
-      const scrollable = target?.closest<HTMLElement>('.flowy-scrollable');
-      if (!scrollable) {
-        return;
+      if (result === 'scroll') {
+        const nativeEvent = event.nativeEvent as NativeEventWithStop;
+        nativeEvent.stopImmediatePropagation?.();
+        event.stopPropagation();
       }
-
-      event.stopPropagation();
-      nativeEvent.stopImmediatePropagation?.();
     },
-    [isActive],
+    [guardWheelEvent],
   );
+
+  const shouldAttachGlobalGuards = isActive || isMaximized || isHovered;
+
+  useEffect(() => {
+    if (!shouldAttachGlobalGuards) {
+      return;
+    }
+
+    const listenerOptions: AddEventListenerOptions = { passive: false };
+
+    const handleGlobalWheel = (event: WheelEvent) => {
+      const result = guardWheelEvent(event);
+      if (result === 'ignored' || result === 'scroll') {
+        return;
+      }
+
+      const nativeEvent = event as NativeEventWithStop;
+      nativeEvent.stopImmediatePropagation?.();
+      event.stopPropagation();
+      event.preventDefault();
+    };
+
+    const handleGesture = (event: Event) => {
+      const targetElement = resolveEventElement(event);
+      if (!isElementWithinChat(targetElement)) {
+        return;
+      }
+
+      event.preventDefault();
+      (event as NativeEventWithStop).stopImmediatePropagation?.();
+      event.stopPropagation();
+    };
+
+    window.addEventListener('wheel', handleGlobalWheel, listenerOptions);
+
+    const gestureEvents = ['gesturestart', 'gesturechange', 'gestureend'] as const;
+    gestureEvents.forEach((eventName) => {
+      window.addEventListener(eventName, handleGesture as EventListener, listenerOptions);
+    });
+
+    return () => {
+      window.removeEventListener('wheel', handleGlobalWheel, listenerOptions);
+      gestureEvents.forEach((eventName) => {
+        window.removeEventListener(eventName, handleGesture as EventListener, listenerOptions);
+      });
+    };
+  }, [guardWheelEvent, isElementWithinChat, shouldAttachGlobalGuards]);
+
+  useEffect(() => () => setCanvasPinchDisabled(false), [setCanvasPinchDisabled]);
+
+  useEffect(() => {
+    if (!isMaximized) {
+      return;
+    }
+
+    setCanvasPinchDisabled(true);
+    return () => setCanvasPinchDisabled(false);
+  }, [isMaximized, setCanvasPinchDisabled]);
 
   useEffect(() => {
     const state = useWorkflowStore.getState();
@@ -955,222 +1092,257 @@ export const ChatNode = memo(({
   const renderChatLayout = (isModal = false) => {
     const scrollRef = isModal ? dialogScrollContainerRef : nodeScrollContainerRef;
     const virtualizer = isModal ? dialogVirtualizer : nodeVirtualizer;
+    const containerRef = isModal ? modalChatContainerRef : inlineChatContainerRef;
+    const sessionCount = data.sessions?.length ?? 0;
+    const { canonicalModel } = resolveModelConfig(data.model);
+    const modelLabel = canonicalModel.split('/').pop() ?? canonicalModel;
+
+    const headerActions = (
+      <button
+        type="button"
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
+        onMouseDown={(event) => {
+          stopReactFlowPropagation(event);
+        }}
+        onClick={(event) => {
+          stopReactFlowPropagation(event);
+          if (isModal) {
+            setIsMaximized(false);
+          } else {
+            setIsMaximized(true);
+          }
+        }}
+        className="inline-flex size-8 items-center justify-center rounded-full bg-white/40 text-[#0A6C4A] transition hover:bg-white/55"
+        aria-label={isModal ? 'Close chat' : 'Maximize chat'}
+        title={isModal ? 'Close chat' : 'Maximize chat'}
+      >
+        {isModal ? (
+          <X className="h-4 w-4" />
+        ) : (
+          <Maximize2 className="h-4 w-4" />
+        )}
+      </button>
+    );
+
+    const headerBadges = (
+      <div className="flex items-center gap-2">
+        <NodeHeaderBadge tone="muted">
+          {sessionCount} session{sessionCount === 1 ? '' : 's'}
+        </NodeHeaderBadge>
+        <NodeHeaderBadge tone="accent">
+          <span className="text-[9px] uppercase tracking-wide">LLM</span>
+          <span className="max-w-[140px] truncate" title={canonicalModel}>
+            {modelLabel}
+          </span>
+        </NodeHeaderBadge>
+      </div>
+    );
 
     return (
       <div
-        className={`flex h-full w-full border-2 rounded-2xl overflow-hidden bg-[#F9FAFB] ${
+        ref={containerRef}
+        className={`flex h-full w-full flex-col overflow-hidden rounded-2xl bg-white ${
           isModal
-            ? 'border-[#095D40] shadow-2xl'
-            : `shadow-sm transition-all ${isActive ? 'border-[#095D40]' : 'border-gray-200'}`
+            ? 'border border-[#0A6C4A] shadow-2xl'
+            : `border ${
+                isActive ? 'border-[#0A6C4A]/70 shadow-lg' : 'border-[#D1E8E0] shadow-md'
+              } transition-all`
         }`}
         onWheel={handleWheelEvent}
         onWheelCapture={handleWheelEvent}
       >
-        {/* Left Sidebar */}
-        <div className="w-[240px] min-w-[240px] flex-shrink-0 border-r border-gray-200/60 flex flex-col bg-[#F8FAF9]">
-          <div className="px-3 py-3 border-b border-gray-200/60 space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#095D40]">
-            Connected ({data.linkedNodes?.length || 0})
-          </p>
-          <p className="text-[11px] text-gray-600">
-            {data.linkedNodes && data.linkedNodes.length > 0
-              ? `${data.linkedNodes.length} linked ${data.linkedNodes.length === 1 ? 'node' : 'nodes'}`
-              : 'No linked nodes yet'}
-          </p>
-        </div>
+        <NodeHeader
+          title="AI Chat"
+          subtitle={currentSession?.title || 'New Conversation'}
+          icon={<MessageSquare />}
+          themeKey="chat"
+          trailing={headerBadges}
+          actions={headerActions}
+          isDraggable={!isModal}
+        />
 
-        <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-gray-200/60">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#095D40]">
-            Chats
-          </p>
-          <Button
-            size="sm"
-            className="h-7 px-2 text-[11px] gap-1"
-            onClick={(e) => {
-              stopReactFlowPropagation(e);
-              createNewChat();
-            }}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New
-          </Button>
-        </div>
-
-        <ScrollArea
-          className="flex-1"
-          viewportClassName="flowy-scrollable"
-          onWheel={handleWheelEvent}
-          onWheelCapture={handleWheelEvent}
-        >
-          <div className="px-3 py-2 space-y-2">
-            {data.sessions && data.sessions.length > 0 ? (
-              data.sessions.map((session) => {
-                const isActiveSession = session.id === currentSession?.id;
-                return (
-                  <div
-                    key={session.id}
-                    className={`flex items-center gap-2 rounded-md border px-3 py-2 text-[11px] transition-colors min-w-0 ${
-                      isActiveSession
-                        ? 'border-[#095D40]/30 bg-[#095D40]/5'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/60'
-                    }`}
-                  >
-                    <Button
-                      variant="ghost"
-                      className="h-6 px-0 flex-1 justify-start text-left text-current hover:bg-transparent min-w-0 overflow-hidden"
-                      onClick={(e) => {
-                        stopReactFlowPropagation(e);
-                        switchSession(session.id);
-                      }}
-                    >
-                      <span className="truncate block w-full" title={session.title}>
-                        {session.title}
-                      </span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-transparent"
-                      onClick={(e) => deleteSession(session.id, e)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      <span className="sr-only">Delete chat</span>
-                    </Button>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-[11px] text-muted-foreground px-1 py-4 text-center">
-                No chats yet
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Sidebar */}
+          <div className="flex h-full w-[260px] min-w-[260px] flex-col gap-4 border-r border-[#D7E8E1] bg-[#F2F7F5] px-4 py-4">
+            <div className="rounded-2xl border border-white/60 bg-white px-3 py-3 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0A6C4A]">
+                Connected ({data.linkedNodes?.length || 0})
               </p>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
+              <p className="mt-1 text-[11px] text-[#527565]">
+                {data.linkedNodes && data.linkedNodes.length > 0
+                  ? `${data.linkedNodes.length} linked ${data.linkedNodes.length === 1 ? 'node' : 'nodes'}`
+                  : 'No linked nodes yet'}
+              </p>
+            </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-white min-w-0 overflow-hidden">
-        {/* Chat Header */}
-        <div
-          className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-gray-200/60 bg-[#FAFBFA] flowy-drag-handle cursor-grab active:cursor-grabbing select-none"
-          data-flowy-drag-handle
-        >
-          <div className="flex items-center gap-2.5 flex-1 min-w-0 overflow-hidden">
-            <MessageSquare className="h-4.5 w-4.5 text-[#095D40] flex-shrink-0" />
-            <h3
-              className="text-[13px] font-semibold text-[#095D40] leading-[1.4] whitespace-normal break-words"
-              title={currentSession?.title ?? undefined}
-            >
-              {currentSession?.title || 'Chat'}
-            </h3>
-          </div>
-          {!isModal ? (
-            <button
+            <Button
+              size="sm"
+              className="nodrag nowheel w-full justify-center gap-2 rounded-full border border-transparent bg-gradient-to-r from-[#0C7A53] to-[#19B17A] px-4 py-2 text-[12px] font-semibold text-white shadow-sm transition-all duration-200 hover:from-[#0C7A53]/90 hover:to-[#19B17A]/90"
               onClick={(e) => {
                 stopReactFlowPropagation(e);
-                setIsMaximized(true);
+                createNewChat();
               }}
-              onMouseDown={(e) => stopReactFlowPropagation(e)}
-              className="p-1.5 hover:bg-[#095D40]/8 rounded-lg transition-colors"
-              title="Maximize chat"
             >
-              <Maximize2 className="h-4 w-4 text-gray-600 hover:text-[#095D40]" />
-            </button>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsMaximized(false);
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="p-1.5 hover:bg-[#095D40]/8 rounded-lg transition-colors"
-              title="Close chat"
-            >
-              <X className="h-4 w-4 text-gray-600 hover:text-[#095D40]" />
-            </button>
-          )}
-        </div>
+              <Plus className="h-3.5 w-3.5" />
+              New Conversation
+            </Button>
 
-        {/* Messages Area - Virtualized */}
-        <div
-          ref={scrollRef}
-          onScroll={handleScroll}
-          onWheel={handleWheelEvent}
-          onWheelCapture={handleWheelEvent}
-          data-lenis-prevent
-          className="flowy-scrollable flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 bg-gradient-to-b from-[#FAFBFA]/50 to-white"
-          style={{ overscrollBehavior: 'contain', userSelect: 'text', touchAction: 'pan-y' }}
-        >
-          {renderMessageList(virtualizer, !isModal)}
-        </div>
-
-        {/* Input Area */}
-        <div className="px-4 py-3 border-t border-gray-200/60 bg-[#FAFBFA]">
-          <div className="flex items-center gap-2 mb-2">
-            {/* Model Selector with Provider Branding */}
-            <div
-              onClick={(e) => stopReactFlowPropagation(e)}
-              onMouseDown={(e) => stopReactFlowPropagation(e)}
-              onPointerDown={(e) => stopReactFlowPropagation(e)}
-            >
-              <ModelSelectionDialog
-                currentModel={selectedModel}
-                onSelectModel={handleModelChange}
-              />
+            <div className="min-h-0 flex-1">
+              <h4 className="px-1 text-[11px] font-semibold uppercase tracking-wide text-[#0A6C4A]/70">
+                Previous Conversations
+              </h4>
+              <ScrollArea
+                className="mt-2 h-full"
+                viewportClassName="flowy-scrollable"
+                onWheel={handleWheelEvent}
+                onWheelCapture={handleWheelEvent}
+              >
+                <div className="space-y-2 pb-6">
+                  {data.sessions && data.sessions.length > 0 ? (
+                    data.sessions.map((session) => {
+                      const isActiveSession = session.id === currentSession?.id;
+                      return (
+                        <div
+                          key={session.id}
+                          className={`group relative flex w-full min-w-0 cursor-pointer items-center gap-x-2.5 overflow-hidden rounded-full px-4 py-1 text-[12px] font-semibold transition-all ${
+                            isActiveSession
+                              ? 'bg-transparent text-[#0A6C4A] border border-[#0A6C4A]/30'
+                              : 'bg-transparent text-[#0A6C4A]/75 border border-transparent hover:bg-[#0A6C4A]/8 hover:text-[#0A6C4A]'
+                          }`}
+                        >
+                          <Button
+                            variant="ghost"
+                            className="h-auto min-w-0 flex-1 shrink justify-start overflow-hidden px-0 py-0 text-left text-current hover:bg-transparent"
+                            onClick={(e) => {
+                              stopReactFlowPropagation(e);
+                              switchSession(session.id);
+                            }}
+                          >
+                            <span
+                              className="block overflow-hidden text-ellipsis whitespace-nowrap"
+                              title={session.title}
+                            >
+                              {session.title}
+                            </span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 flex-shrink-0 text-[#0A6C4A]/60 opacity-0 transition-opacity hover:bg-transparent hover:text-destructive group-hover:opacity-100"
+                            onClick={(e) => deleteSession(session.id, e)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span className="sr-only">Delete chat</span>
+                          </Button>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="px-2 py-6 text-center text-[11px] text-[#527565]">
+                      No conversations yet
+                    </p>
+                  )}
+                </div>
+              </ScrollArea>
             </div>
           </div>
 
-          <div
-            onMouseDown={(e) => stopReactFlowPropagation(e)}
-            className="border border-gray-200 rounded-lg bg-white hover:bg-gray-50/30 transition-colors px-2 py-1.5 mb-2"
-          >
-            <VoiceInputBar
-              value={input}
-              onChange={setInput}
-              onSend={handleSend}
-              placeholder="Ask Remic anything"
-              disabled={isLoading}
-              voiceMode="replace"
-              showAddButton={false}
-              showRecordingHint={false}
-            />
-          </div>
+          {/* Main Chat Area */}
+          <div className="flex min-w-0 flex-1 flex-col bg-white">
+            {/* Messages Area - Virtualized */}
+            <div
+              ref={scrollRef}
+              onScroll={handleScroll}
+              onWheel={handleWheelEvent}
+              onWheelCapture={handleWheelEvent}
+              data-lenis-prevent
+              className="flowy-scrollable flex-1 overflow-y-auto overflow-x-hidden bg-[#F7FBF9] px-6 py-6"
+              style={{ overscrollBehavior: 'contain', userSelect: 'text', touchAction: 'pan-y' }}
+            >
+              <div className="mx-auto w-full max-w-[720px]">
+                {renderMessageList(virtualizer, !isModal)}
+              </div>
+            </div>
 
-          {/* Quick Action Buttons */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                stopReactFlowPropagation(e);
-                if (isLoading) return;
-                sendMessage('Summarize the key points from the context provided above in a clear and concise format.');
-              }}
-              disabled={isLoading}
-              className="px-3 py-1.5 text-[11px] font-medium rounded-lg bg-[#095D40]/10 text-[#095D40] hover:bg-[#095D40]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Summarize
-            </button>
-            <button
-              onClick={(e) => {
-                stopReactFlowPropagation(e);
-                if (isLoading) return;
-                sendMessage('Extract and highlight the key insights, important takeaways, and actionable points from the context above.');
-              }}
-              disabled={isLoading}
-              className="px-3 py-1.5 text-[11px] font-medium rounded-lg bg-[#095D40]/10 text-[#095D40] hover:bg-[#095D40]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Get Key Insights
-            </button>
+            {/* Input Area */}
+            <div className="border-t border-[#E2ECE7] bg-white px-6 py-4">
+              <div className="mx-auto w-full max-w-[720px] space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div
+                    onClick={(e) => stopReactFlowPropagation(e)}
+                    onMouseDown={(e) => stopReactFlowPropagation(e)}
+                    onPointerDown={(e) => stopReactFlowPropagation(e)}
+                  >
+                    <ModelSelectionDialog
+                      currentModel={selectedModel}
+                      onSelectModel={handleModelChange}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  onMouseDown={(e) => stopReactFlowPropagation(e)}
+                  className="rounded-xl border border-[#D7E8E1] bg-[#F7FBF9] px-3 py-2 shadow-sm transition-colors focus-within:border-[#0A6C4A]/50 focus-within:shadow"
+                >
+                  <VoiceInputBar
+                    value={input}
+                    onChange={setInput}
+                    onSend={handleSend}
+                    placeholder="Ask Remic anything"
+                    disabled={isLoading}
+                    voiceMode="replace"
+                    showAddButton={false}
+                    showRecordingHint={false}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      stopReactFlowPropagation(e);
+                      if (isLoading) return;
+                      sendMessage('Summarize the key points from the context provided above in a clear and concise format.');
+                    }}
+                    disabled={isLoading}
+                    className="rounded-full border border-[#0A6C4A]/20 bg-[#0A6C4A]/8 px-3 py-1.5 text-[11px] font-semibold text-[#0A6C4A] transition-colors hover:bg-[#0A6C4A]/16 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Summarize
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      stopReactFlowPropagation(e);
+                      if (isLoading) return;
+                      sendMessage('Extract and highlight the key insights, important takeaways, and actionable points from the context above.');
+                    }}
+                    disabled={isLoading}
+                    className="rounded-full border border-[#0A6C4A]/20 bg-[#0A6C4A]/8 px-3 py-1.5 text-[11px] font-semibold text-[#0A6C4A] transition-colors hover:bg-[#0A6C4A]/16 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Get Key Insights
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
     );
   };
 
   return (
     <div
+      ref={rootContainerRef}
       className="group relative"
       style={{ width: effectiveWidth, height: effectiveHeight }}
+      onPointerEnter={() => {
+        setIsHovered(true);
+        setCanvasPinchDisabled(true);
+      }}
+      onPointerLeave={() => {
+        setIsHovered(false);
+        setCanvasPinchDisabled(false);
+      }}
     >
       <NodeResizer
         nodeId={id}
