@@ -1,0 +1,22 @@
+/* Hide assistant-ui session/thread count badges */
+[data-session-count],
+[data-thread-count],
+.aui-thread-count,
+.aui-session-count,
+[class*="SessionCount"],
+[class*="ThreadCount"],
+[class*="session-badge"],
+[class*="thread-badge"] {
+  display: none !important;
+}
+
+/* Hide any badges in the thread header area */
+.aui-thread-root header [class*="badge"],
+.aui-thread-root [role="banner"] [class*="badge"] {
+  display: none !important;
+}
+
+/* If it's an absolutely positioned badge */
+.aui-thread-root > div:first-child > div:first-child [class*="badge"] {
+  display: none !important;
+}

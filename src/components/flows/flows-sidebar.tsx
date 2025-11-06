@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutGrid, Sparkles } from 'lucide-react';
+import { LayoutGrid, Sparkles, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function FlowsSidebar() {
@@ -10,16 +10,25 @@ export function FlowsSidebar() {
 
   const navItems = [
     {
+      id: 'workflows',
       title: 'Your Workflows',
       href: '/flows',
       icon: LayoutGrid,
       active: pathname === '/flows',
     },
     {
+      id: 'templates',
       title: 'Templates',
       href: '/templates',
       icon: Sparkles,
       active: pathname === '/templates',
+    },
+    {
+      id: 'assistant',
+      title: 'AI Assistant',
+      href: '/flows/assistant',
+      icon: MessageSquare,
+      active: pathname === '/flows/assistant',
     },
   ];
 
@@ -28,9 +37,10 @@ export function FlowsSidebar() {
       <nav className="p-4 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
+
           return (
             <Link
-              key={item.href}
+              key={item.id}
               href={item.href}
               className={cn(
                 'flex items-center gap-3 px-4 py-3 rounded-lg text-[14px] font-medium transition-all duration-150',

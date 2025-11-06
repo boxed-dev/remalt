@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.11.37",
+    "@assistant-ui/react-ai-sdk": "^1.1.9",
+    "@assistant-ui/react-markdown": "^0.11.4",
     "@blocknote/core": "^0.41.1",
     "@blocknote/mantine": "^0.41.1",
     "@blocknote/react": "^0.41.1",
@@ -84,6 +87,7 @@
     "jose": "^6.1.0",
     "katex": "^0.16.9",
     "lucide-react": "^0.544.0",
+    "motion": "^12.23.24",
     "nanoid": "^5.1.6",
     "next": "15.5.4",
     "next-themes": "^0.4.6",

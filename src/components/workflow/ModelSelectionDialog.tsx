@@ -31,6 +31,7 @@ interface ModelSelectionDialogProps {
   onOpenChange?: (open: boolean) => void;
   currentModel: string;
   onSelectModel: (modelId: string) => void;
+  trigger?: React.ReactNode; // Custom trigger button
 }
 
 interface ModelItemProps {
@@ -113,10 +114,17 @@ const TierSection: React.FC<TierSectionProps> = ({ title, models, currentModel, 
 };
 
 export const ModelSelectionDialog: React.FC<ModelSelectionDialogProps> = ({
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
   currentModel,
   onSelectModel,
+  trigger,
 }) => {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  // Use controlled state if provided, otherwise use internal state
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
 
   const handleSelect = (modelId: string) => {
     onSelectModel(modelId);
@@ -130,23 +138,28 @@ export const ModelSelectionDialog: React.FC<ModelSelectionDialogProps> = ({
   const provider = getProviderInfo(providerId);
   const ProviderIcon = provider ? PROVIDER_ICONS[provider.iconName] : null;
 
+  // Default trigger button if no custom trigger provided
+  const defaultTrigger = (
+    <button
+      className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
+    >
+      {ProviderIcon && (
+        <ProviderIcon
+          className="w-3.5 h-3.5 flex-shrink-0"
+          style={{ color: provider?.colors.primary }}
+        />
+      )}
+      <span className="text-xs font-normal text-gray-900">
+        {getModelDisplayName(currentModel)}
+      </span>
+      <ChevronDown className="w-3 h-3 text-gray-400" />
+    </button>
+  );
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
-        >
-          {ProviderIcon && (
-            <ProviderIcon
-              className="w-3.5 h-3.5 flex-shrink-0"
-              style={{ color: provider?.colors.primary }}
-            />
-          )}
-          <span className="text-xs font-normal text-gray-900">
-            {getModelDisplayName(currentModel)}
-          </span>
-          <ChevronDown className="w-3 h-3 text-gray-400" />
-        </button>
+        {trigger || defaultTrigger}
       </PopoverTrigger>
       <PopoverContent
         className="w-52 p-1"
