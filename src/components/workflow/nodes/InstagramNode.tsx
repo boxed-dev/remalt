@@ -591,33 +591,27 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
                 )}
               </div>
 
-              {/* Transcript Section */}
+              {/* Copy Transcript Button */}
               {data.transcript && (
-                <div className="pt-2 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-gray-700">Transcript</span>
-                    <button
-                      onClick={handleCopyTranscript}
-                      className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-[#E4405F] transition-colors cursor-pointer"
-                      onMouseDown={stopPropagation}
-                      onTouchStart={stopPropagation}
-                    >
-                      {copiedTranscript ? (
-                        <>
-                          <Check className="h-3 w-3" />
-                          <span>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3" />
-                          <span>Copy</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <div className="text-[11px] text-gray-600 bg-gray-50 rounded-lg p-2 max-h-24 overflow-y-auto line-clamp-3">
-                    {data.transcript}
-                  </div>
+                <div className="flex gap-1.5 pt-2">
+                  <button
+                    onClick={handleCopyTranscript}
+                    className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
+                    onMouseDown={stopPropagation}
+                    onTouchStart={stopPropagation}
+                  >
+                    {copiedTranscript ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-[#10B981]" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5 text-[#94A3B8]" />
+                        <span>Copy transcript</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
 
