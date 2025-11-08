@@ -12,7 +12,6 @@ import {
   Globe,
   ChatCircle,
   Folder,
-  Article,
 } from '@phosphor-icons/react';
 import type { NodeType } from '@/types/workflow';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
@@ -43,7 +42,7 @@ const NODES: NodeItem[] = [
   { id: 'text', icon: <TextT size={24} weight="regular" />, label: 'Text / Note', category: 'content', shortcut: 'T' },
 
   // AI
-  { id: 'linkedin-creator', icon: <Article size={24} weight="duotone" />, label: 'LinkedIn Post Creator', category: 'ai', shortcut: 'N' },
+  { id: 'linkedin-creator', icon: <LinkedinLogo size={24} weight="duotone" />, label: 'LinkedIn Post Creator', category: 'ai', shortcut: 'N' },
   { id: 'chat', icon: <ChatCircle size={24} weight="duotone" />, label: 'Chat / Assistant', category: 'ai', shortcut: 'C' },
   // Structure
   { id: 'group', icon: <Folder size={24} weight="duotone" />, label: 'Group', category: 'structure', shortcut: 'G' },
