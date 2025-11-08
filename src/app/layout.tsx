@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
-import * as Sentry from '@sentry/nextjs';
 import './globals.css';
 import { GlobalHeader } from '@/components/layout/global-header';
 import { Toaster } from 'sonner';
@@ -24,10 +23,8 @@ function RootLayout({
         suppressHydrationWarning
       >
         <GlobalHeader />
-        <main className="pt-14">
-          <Sentry.ErrorBoundary fallback={<p>Something went wrong. Please refresh.</p>}>
-            {children}
-          </Sentry.ErrorBoundary>
+        <main>
+          {children}
         </main>
         <Toaster position="bottom-right" richColors expand={true} />
         <TallyWidget />

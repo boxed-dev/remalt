@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Instagram, Loader2, CheckCircle2, ExternalLink, Heart, Eye, MessageCircle, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { Instagram, Loader2, CheckCircle2, ExternalLink, Heart, Eye, MessageCircle, ChevronLeft, ChevronRight, AlertCircle, Copy, Check } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { SyntheticEvent } from 'react';
 import { BaseNode } from './BaseNode';
@@ -43,6 +43,7 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
   const [isEditing, setIsEditing] = useState(false);
   const [url, setUrl] = useState(data.url || '');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [copiedTranscript, setCopiedTranscript] = useState(false);
   const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
   const isActive = activeNodeId === id;
 
@@ -299,6 +300,19 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
     },
     [handleUrlSubmit, data.url]
   );
+
+  const handleCopyTranscript = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!data.transcript) return;
+
+    try {
+      await navigator.clipboard.writeText(data.transcript);
+      setCopiedTranscript(true);
+      setTimeout(() => setCopiedTranscript(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy transcript:', error);
+    }
+  }, [data.transcript]);
 
   // Auto-fetch on mount if URL exists but no data
   useEffect(() => {
@@ -576,6 +590,37 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
                   </div>
                 )}
               </div>
+
+              {/* Transcript Section */}
+              {data.transcript && (
+                <div className="pt-2 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-gray-700">Transcript</span>
+                    <button
+                      onClick={handleCopyTranscript}
+                      className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-[#E4405F] transition-colors cursor-pointer"
+                      onMouseDown={stopPropagation}
+                      onTouchStart={stopPropagation}
+                    >
+                      {copiedTranscript ? (
+                        <>
+                          <Check className="h-3 w-3" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="text-[11px] text-gray-600 bg-gray-50 rounded-lg p-2 max-h-24 overflow-y-auto line-clamp-3">
+                    {data.transcript}
+                  </div>
+                </div>
+              )}
+
               {renderStatus()}
             </div>
           )}

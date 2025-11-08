@@ -105,7 +105,7 @@ export const PROVIDERS: Record<string, ModelProvider> = {
 export const MODELS: ModelInfo[] = [
   // ============ Smart (Higher Credits) - Anthropic ============
   {
-    id: 'anthropic/claude-4.5-sonnet',
+    id: 'anthropic/claude-sonnet-4.5',
     name: 'Claude 4.5 Sonnet',
     displayName: 'Claude 4.5 Sonnet',
     provider: 'anthropic',
@@ -118,7 +118,7 @@ export const MODELS: ModelInfo[] = [
     recommended: true,
   },
   {
-    id: 'anthropic/claude-4-sonnet',
+    id: 'anthropic/claude-sonnet-4',
     name: 'Claude 4 Sonnet',
     displayName: 'Claude 4 Sonnet',
     provider: 'anthropic',
@@ -130,7 +130,7 @@ export const MODELS: ModelInfo[] = [
     description: 'Balanced performance for general tasks',
   },
   {
-    id: 'anthropic/claude-4.1-opus',
+    id: 'anthropic/claude-opus-4.1',
     name: 'Claude 4.1 Opus',
     displayName: 'Claude 4.1 Opus',
     provider: 'anthropic',
@@ -267,9 +267,12 @@ export const LEGACY_MODEL_MAP: Record<string, string> = {
   'openai/gpt-5-image': 'openai/gpt-5',
   'openai/gpt-5-image-mini': 'openai/gpt-5-mini',
 
-  // Old Anthropic model names
-  'anthropic/claude-3.5-sonnet': 'anthropic/claude-4.5-sonnet',
-  'anthropic/claude-3-opus': 'anthropic/claude-4.1-opus',
+  // Old Anthropic model names (incorrect format)
+  'anthropic/claude-4.5-sonnet': 'anthropic/claude-sonnet-4.5',
+  'anthropic/claude-4-sonnet': 'anthropic/claude-sonnet-4',
+  'anthropic/claude-4.1-opus': 'anthropic/claude-opus-4.1',
+  'anthropic/claude-3.5-sonnet': 'anthropic/claude-sonnet-4.5',
+  'anthropic/claude-3-opus': 'anthropic/claude-opus-4.1',
 
   // Old xAI model names (incorrect format without hyphen)
   'xai/grok-4': 'x-ai/grok-3',

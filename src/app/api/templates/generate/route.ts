@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
-import { recordAIMetadata, withAISpan } from '@/lib/sentry/ai';
 
 type TemplateType = 'youtube-script' | 'ad-copy' | 'captions' | 'blog-post' | 'custom';
 
@@ -152,42 +151,24 @@ async function postHandler(req: NextRequest) {
       existingTemplateCount: context?.templates?.length ?? 0,
     } satisfies Record<string, number | string>;
 
-    recordAIMetadata({
-      userId: user.id,
-      operation: 'template.generate',
-      ...metadataCounts,
-      customPromptLength: customPrompt?.length ?? 0,
-    });
-
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: 'GEMINI_API_KEY is not configured' }, { status: 500 });
     }
 
-    return await withAISpan(
-      {
-        name: `ai.template.${templateType}`,
-        op: 'ai.pipeline',
-        metadata: metadataCounts,
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-flash-latest',
+      generationConfig: {
+        temperature: 0.75,
+        maxOutputTokens: 2048,
       },
-      async (span) => {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-          model: 'gemini-flash-latest',
-          generationConfig: {
-            temperature: 0.75,
-            maxOutputTokens: 2048,
-          },
-        });
+    });
 
-        const templateInstruction = TEMPLATE_PROMPTS[templateType] || TEMPLATE_PROMPTS.custom;
-        const contextSection = buildContextSection(context);
+    const templateInstruction = TEMPLATE_PROMPTS[templateType] || TEMPLATE_PROMPTS.custom;
+    const contextSection = buildContextSection(context);
 
-        span.setData('context_characters', contextSection.length);
-        span.setData('context_counts', metadataCounts);
-        span.setData('custom_prompt_length', customPrompt?.length ?? 0);
-
-        const basePrompt = `You are an expert content strategist. Use the context provided to craft the requested asset.
+    const basePrompt = `You are an expert content strategist. Use the context provided to craft the requested asset.
 
 Instructions:
 - ${templateInstruction}
@@ -203,19 +184,13 @@ Context:${contextSection || '\n(No additional context provided)'}
 
 Deliver the final output ready for immediate use.`;
 
-        span.setData('prompt_characters', basePrompt.length);
+    const result = await model.generateContent(basePrompt);
+    const responseText = result.response.text();
 
-        const result = await model.generateContent(basePrompt);
-        const responseText = result.response.text();
-
-        span.setData('output_characters', responseText.length);
-
-        return NextResponse.json({
-          content: responseText,
-          status: 'success',
-        });
-      }
-    );
+    return NextResponse.json({
+      content: responseText,
+      status: 'success',
+    });
   } catch (error: unknown) {
     console.error('Template generation error:', error);
     const message = error instanceof Error ? error.message : 'Failed to generate content';

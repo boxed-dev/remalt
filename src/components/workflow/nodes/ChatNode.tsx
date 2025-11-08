@@ -19,7 +19,8 @@ import { NodeResizer, type NodeProps } from '@xyflow/react';
 import type { OnResize, OnResizeEnd } from '@xyflow/system';
 import { VoiceInputBar } from '../VoiceInputBar';
 import { ModelSelectionDialog } from '../ModelSelectionDialog';
-import { normalizeLegacyModel } from '@/lib/models/model-registry';
+import { KortexChatInput } from '../KortexChatInput';
+import { normalizeLegacyModel, MODELS } from '@/lib/models/model-registry';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -1266,62 +1267,24 @@ export const ChatNode = memo(({
               </div>
             </div>
 
-            {/* Input Area */}
-            <div className="border-t border-[#E2ECE7] bg-white px-6 py-4">
-              <div className="mx-auto w-full max-w-[720px] space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div
-                    onClick={(e) => stopReactFlowPropagation(e)}
-                    onMouseDown={(e) => stopReactFlowPropagation(e)}
-                    onPointerDown={(e) => stopReactFlowPropagation(e)}
-                  >
-                    <ModelSelectionDialog
-                      currentModel={selectedModel}
-                      onSelectModel={handleModelChange}
-                    />
-                  </div>
-                </div>
-
-                <div
-                  onMouseDown={(e) => stopReactFlowPropagation(e)}
-                  className="rounded-xl border border-[#D7E8E1] bg-[#F7FBF9] px-3 py-2 shadow-sm transition-colors focus-within:border-[#0A6C4A]/50 focus-within:shadow"
-                >
-                  <VoiceInputBar
-                    value={input}
-                    onChange={setInput}
-                    onSend={handleSend}
-                    placeholder="Ask Remic anything"
-                    disabled={isLoading}
-                    voiceMode="replace"
-                    showAddButton={false}
-                    showRecordingHint={false}
-                  />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={(e) => {
-                      stopReactFlowPropagation(e);
-                      if (isLoading) return;
-                      sendMessage('Summarize the key points from the context provided above in a clear and concise format.');
-                    }}
-                    disabled={isLoading}
-                    className="rounded-full border border-[#0A6C4A]/20 bg-[#0A6C4A]/8 px-3 py-1.5 text-[11px] font-semibold text-[#0A6C4A] transition-colors hover:bg-[#0A6C4A]/16 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Summarize
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      stopReactFlowPropagation(e);
-                      if (isLoading) return;
-                      sendMessage('Extract and highlight the key insights, important takeaways, and actionable points from the context above.');
-                    }}
-                    disabled={isLoading}
-                    className="rounded-full border border-[#0A6C4A]/20 bg-[#0A6C4A]/8 px-3 py-1.5 text-[11px] font-semibold text-[#0A6C4A] transition-colors hover:bg-[#0A6C4A]/16 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Get Key Insights
-                  </button>
-                </div>
+            {/* Input Area - Kortex Style */}
+            <div className="bg-white px-6 py-4">
+              <div
+                onMouseDown={(e) => stopReactFlowPropagation(e)}
+                onClick={(e) => stopReactFlowPropagation(e)}
+                onPointerDown={(e) => stopReactFlowPropagation(e)}
+              >
+                <KortexChatInput
+                  value={input}
+                  onChange={setInput}
+                  onSend={handleSend}
+                  disabled={isLoading}
+                  placeholder="Ask AI anything, @ to mention"
+                  currentModel={selectedModel}
+                  onModelChange={handleModelChange}
+                  availableModels={MODELS}
+                  theme="light"
+                />
               </div>
             </div>
           </div>

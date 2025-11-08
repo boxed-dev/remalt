@@ -31,7 +31,6 @@ supabase functions serve      # Run edge functions locally
 # Run maintenance scripts
 node scripts/cleanup-empty-workflows.ts    # Remove empty workflows
 node scripts/inspect-workflows.ts          # Debug workflow data
-node scripts/verify-sentry.mjs             # Verify Sentry setup
 ```
 
 **Note**: YouTube transcription uses Supadata API - no Python API needed
@@ -129,12 +128,6 @@ URLBOX_API_KEY=                     # Screenshot provider (Priority 3)
 URLBOX_SECRET=                      # Urlbox API signing secret
 SCREENSHOTAPI_API_KEY=              # Screenshot provider (Priority 4)
 
-# Monitoring & Error Tracking (Optional)
-SENTRY_DSN=                         # Sentry error tracking
-SENTRY_ENVIRONMENT=                 # Defaults to NODE_ENV
-SENTRY_TRACES_SAMPLE_RATE=          # Default: 0.2 (20%)
-SENTRY_API_TRACES_SAMPLE_RATE=      # Default: 1.0 (100%)
-SENTRY_PROFILES_SAMPLE_RATE=        # Default: 0.2 (20%)
 ```
 
 ## Key Architectural Patterns
@@ -394,8 +387,6 @@ When implementing or modifying nodes:
 - Mobile-first responsive design approach
 
 ### Error Handling & Security
-- **Sentry Monitoring**: All API routes and pages wrapped with Sentry for automatic error tracking
-- **Data Filtering**: Sensitive data (auth tokens, API keys, AI prompts) automatically stripped before sending to Sentry
 - **Supabase RLS**: Row-Level Security policies enforce data access control at the database level
 - **Auth Middleware**: All non-public routes protected via [middleware.ts](src/middleware.ts)
 - **Type Safety**: Strict TypeScript mode prevents many runtime errors
@@ -586,26 +577,8 @@ The platform supports fetching content from Google Workspace documents:
 - **Integration**: Used by Webpage nodes when Google Workspace URLs are detected
 - **Test Script**: `node test-google-workspace.mjs <google-docs-url>`
 
-## Monitoring & Error Tracking
-
-### Sentry Integration
-The application uses Sentry for error tracking and performance monitoring:
-- **Configuration**: [sentry.server.config.ts](sentry.server.config.ts), [sentry.client.config.ts](sentry.client.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts)
-- **Instrumentation**: Automatic via [instrumentation.ts](instrumentation.ts) - loads appropriate config based on runtime
-- **Middleware Wrapping**: Auth middleware wrapped with `Sentry.wrapMiddlewareWithSentry()` in [middleware.ts](src/middleware.ts)
-- **Tunnel Route**: `/monitoring` - bypasses ad-blockers for client-side error reporting
-- **Smart Sampling**: 100% for API routes, 20% for pages (configurable via env)
-- **Security Filters**: Automatically strips auth headers, cookies, passwords, API keys, and AI prompts/outputs before sending
-- **Environment Variables**:
-  - `SENTRY_DSN` - Required for Sentry to be enabled
-  - `SENTRY_ENVIRONMENT` - Defaults to NODE_ENV
-  - `SENTRY_TRACES_SAMPLE_RATE` - Default: 0.2 (20%)
-  - `SENTRY_API_TRACES_SAMPLE_RATE` - Default: 1.0 (100%)
-  - `SENTRY_PROFILES_SAMPLE_RATE` - Default: 0.2 (20%)
-
-### Next.js Configuration
+## Next.js Configuration
 Key configuration in [next.config.ts](next.config.ts):
-- **Sentry Plugin**: Wrapped with `withSentryConfig()` for automatic source map upload
 - **Image Domains**: YouTube thumbnails (`img.youtube.com`, `i.ytimg.com`), Microlink, Supabase Storage CDN
 - **Transpiled Packages**: `@deepgram/sdk` for WebSocket support
 - **Webpack Config**: Excludes Node.js-only modules (`ws`, `utf-8-validate`, `bufferutil`) from browser bundle
@@ -635,17 +608,12 @@ The `scripts/` directory contains utilities for database management:
   - `cleanup-empty-workflows.ts` - Remove empty workflows
   - `fix-missing-profiles.mjs` - Create missing user profiles
   - `inspect-workflows.ts` - Debug workflow data
-- **Sentry**:
-  - `add-sentry-route-wrappers.mjs` - Wrap API routes with Sentry
-  - `fix-sentry-imports.mjs` - Fix Sentry import statements
-  - `verify-sentry.mjs` - Verify Sentry configuration
 
 ## Testing & Quality
 - No test framework currently configured
 - ESLint for code quality
 - TypeScript strict mode enabled
 - Build-time type checking (set to ignore in production builds via next.config.ts)
-- Sentry for production error tracking and performance monitoring
 
 ### Manual Testing Scripts
 The repository includes test scripts for API endpoints:

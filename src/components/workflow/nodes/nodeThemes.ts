@@ -104,8 +104,8 @@ export const NODE_HEADER_THEMES: Record<NodeThemeKey | 'default', NodeHeaderThem
   pdf: createTheme('#da532c'),            // Dark Orange - rich, warm
   voice: createTheme('#00aba9'),          // Metro Teal - bright, saturated
   image: createTheme('#e3a21a'),          // Metro Orange/Amber - warm, golden
-  youtube: createTheme('#b91d47', { iconColor: '#b91d47' }),  // Dark Red - bold, YouTube-esque
-  instagram: createTheme('#7e3878'),      // Metro Purple - rich, Instagram-like
+  youtube: createTheme('#FF0000', { iconColor: '#FF0000' }),  // YouTube Red - official brand color
+  instagram: createTheme('#E4405F'),      // Instagram Brand Color - official pink/magenta
   linkedin: createTheme('#2b5797'),       // Dark Blue - professional LinkedIn tone
   mindmap: createTheme('#603cba'),        // Dark Purple - creative, deep
   template: createTheme('#ff0097'),       // Metro Magenta - bold, eye-catching

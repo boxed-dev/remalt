@@ -1,9 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
-import type { Span } from '@sentry/types';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
-import { recordAIMetadata, summarizeTextLengths } from '@/lib/sentry/ai';
 import { createOpenRouterClient, isOpenRouterConfigured } from '@/lib/api/openrouter-client';
 import { normalizeLegacyModel } from '@/lib/models/model-registry';
 
@@ -513,23 +510,6 @@ async function postHandler(req: NextRequest) {
     return unauthorizedResponse('You must be signed in to use the chat feature');
   }
 
-  let operationSpan: Span | undefined;
-  let spanFinalized = false;
-
-  const finalizeSpan = (status: 'ok' | 'internal_error', data?: Record<string, unknown>) => {
-    if (!operationSpan || spanFinalized) {
-      return;
-    }
-    if (data) {
-      for (const [key, value] of Object.entries(data)) {
-        operationSpan.setAttribute(key, value);
-      }
-    }
-    operationSpan.setStatus(status);
-    operationSpan.end();
-    spanFinalized = true;
-  };
-
   try {
     const {
       messages,
@@ -571,12 +551,6 @@ async function postHandler(req: NextRequest) {
       templateCount: templates?.length ?? 0,
     } satisfies Record<string, number>;
 
-    recordAIMetadata({
-      userId: user.id,
-      ...metadataCounts,
-      messagePayloadBytes: Buffer.byteLength(JSON.stringify(messages ?? [])),
-    });
-
     // Validate API keys based on provider
     if (provider === 'openrouter') {
       console.log('[Chat API] Using OpenRouter provider');
@@ -602,17 +576,6 @@ async function postHandler(req: NextRequest) {
       }
       console.log('[Chat API] Gemini API key validated');
     }
-
-    operationSpan = Sentry.startInactiveSpan({
-      name: 'ai.chat.generate',
-      op: 'ai.chat',
-      attributes: {
-        model,
-        provider,
-        userId: user.id,
-        ...metadataCounts,
-      },
-    });
 
     // Initialize AI client based on provider
     let geminiModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
@@ -659,12 +622,6 @@ async function postHandler(req: NextRequest) {
 
 
     // Get the latest user message
-    operationSpan?.setAttribute('context_characters', systemContext.length);
-
-    summarizeTextLengths('ai_context', [
-      { id: 'system', length: systemContext.length },
-    ]);
-
     const latestMessage = messages[messages.length - 1];
 
     // Detect user intent for mode-specific prompt augmentation
@@ -1254,9 +1211,6 @@ END OF SYSTEM INSTRUCTIONS
 User: ${latestMessage.content}`;
     }
 
-    operationSpan?.setAttribute('prompt_characters', prompt.length);
-    operationSpan?.setAttribute('context_counts', JSON.stringify(metadataCounts));
-    operationSpan?.setAttribute('message_payload_bytes', Buffer.byteLength(JSON.stringify(messages ?? [])));
 
     console.log('\n=== Chat Request ===');
     console.log('User ID:', user.id);
@@ -1274,7 +1228,6 @@ User: ${latestMessage.content}`;
     console.log('===================\n');
 
     // Use streaming for faster perceived performance
-    operationSpan?.setAttribute('response_mode', 'sse');
 
     // Create a readable stream with provider-specific handling
     const encoder = new TextEncoder();
@@ -1339,19 +1292,10 @@ User: ${latestMessage.content}`;
           controller.enqueue(encoder.encode(`data: ${finalData}\n\n`));
 
           controller.close();
-
-          finalizeSpan('ok', {
-            output_characters: fullText.length,
-            chunk_count: chunkCount,
-          });
         } catch (error: unknown) {
           const errorData = JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' });
           controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
           controller.close();
-
-          finalizeSpan('internal_error', {
-            stream_error: error instanceof Error ? error.message : String(error),
-          });
         }
       },
     });
@@ -1365,10 +1309,6 @@ User: ${latestMessage.content}`;
     });
 
   } catch (error: unknown) {
-    finalizeSpan('internal_error', {
-      phase: 'request',
-      error: error instanceof Error ? error.message : String(error),
-    });
     console.error('Chat API Error:', error);
     return new Response(
       JSON.stringify({

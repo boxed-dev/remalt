@@ -1,7 +1,6 @@
 import OpenAI from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
-import { recordAIMetadata, withAISpan } from '@/lib/sentry/ai';
 import { generateNodeTitle } from '@/lib/ai/title-generator';
 
 async function postHandler(req: NextRequest) {
@@ -111,62 +110,28 @@ Format your response as JSON:
   "theme": "visual theme description"
 }`;
 
-    recordAIMetadata({
-      userId: user.id,
-      operation: 'image.analyze',
-      sourceType,
-      downloadOccurred,
-      promptLength: prompt.length,
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageContent,
+                detail: 'high'
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.3,
     });
 
-    const { responseText } = await withAISpan(
-      {
-        name: 'ai.image.analyze',
-        op: 'ai.vision',
-        metadata: {
-          sourceType,
-          downloadOccurred,
-          hasInlineData: Boolean(imageData),
-        },
-      },
-      async (span) => {
-        span.setData('prompt_characters', prompt.length);
-
-        const response = await openai.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: prompt },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: imageContent,
-                    detail: 'high'
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: 1000,
-          temperature: 0.3,
-        });
-
-        const text = response.choices[0]?.message?.content || '';
-        span.setData('response_characters', text.length);
-
-        if (response.usage) {
-          span.setData('token_usage', {
-            prompt_tokens: response.usage.prompt_tokens,
-            completion_tokens: response.usage.completion_tokens,
-            total_tokens: response.usage.total_tokens,
-          });
-        }
-
-        return { responseText: text };
-      }
-    );
+    const responseText = response.choices[0]?.message?.content || '';
 
     console.log('[OpenAI] Analysis complete:', responseText.length, 'chars');
 

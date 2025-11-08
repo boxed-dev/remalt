@@ -7,7 +7,6 @@ import { WorkflowCanvas } from "@/components/workflow/WorkflowCanvas";
 import { DifyWorkflowHeader } from "@/components/workflow/DifyWorkflowHeader";
 import { DifyWorkflowSidebar } from "@/components/workflow/DifyWorkflowSidebar";
 import { NotesPanel } from "@/components/workflow/NotesPanel";
-import { AssistantPanel } from "@/components/workflow/AssistantPanel";
 import { UploadMediaDialog } from "@/components/workflow/UploadMediaDialog";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
 import { useNotesStore } from "@/lib/stores/notes-store";
@@ -34,9 +33,6 @@ export default function WorkflowEditorPage() {
 
   // Use notes store for panel state
   const { isOpen: isNotesPanelOpen, setOpen: setIsNotesPanelOpen } = useNotesStore();
-
-  // AI Assistant panel state
-  const [isAssistantPanelOpen, setIsAssistantPanelOpen] = useState(false);
   
   // Refs to prevent re-render loops and duplicate workflow creation
   const workflowCreatedRef = useRef(false);
@@ -360,35 +356,15 @@ export default function WorkflowEditorPage() {
         <DifyWorkflowSidebar />
 
 
-        {/* AI Assistant Panel Toggle Button - Top right */}
-        {!isAssistantPanelOpen && user && (
-          <button
-            onClick={() => setIsAssistantPanelOpen(true)}
-            className="fixed top-20 right-6 z-30 p-3 bg-white rounded-xl shadow-lg hover:shadow-xl border border-gray-200 hover:border-purple-300 transition-all group"
-            title="Open AI Assistant"
-          >
-            <Sparkles className="h-5 w-5 text-purple-600 group-hover:text-purple-700 transition-colors" />
-          </button>
-        )}
-
-        {/* Notes Panel Toggle Button - Below assistant button */}
+        {/* Notes Panel Toggle Button */}
         {!isNotesPanelOpen && user && (
           <button
             onClick={() => setIsNotesPanelOpen(true)}
-            className="fixed top-36 right-6 z-30 p-3 bg-white rounded-xl shadow-lg hover:shadow-xl border border-gray-200 hover:border-gray-300 transition-all group"
+            className="fixed top-20 right-6 z-30 p-3 bg-white rounded-xl shadow-lg hover:shadow-xl border border-gray-200 hover:border-gray-300 transition-all group"
             title="Open notes"
           >
             <FileText className="h-5 w-5 text-gray-700 group-hover:text-blue-600 transition-colors" />
           </button>
-        )}
-
-        {/* AI Assistant Panel */}
-        {user && (
-          <AssistantPanel
-            workflowId={workflowId}
-            isOpen={isAssistantPanelOpen}
-            onClose={() => setIsAssistantPanelOpen(false)}
-          />
         )}
 
         {/* Notes Panel */}
