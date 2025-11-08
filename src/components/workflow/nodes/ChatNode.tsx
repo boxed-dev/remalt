@@ -832,6 +832,13 @@ export const ChatNode = memo(({
     }
   };
 
+  // Handle web search toggle
+  const handleWebSearchChange = (enabled: boolean) => {
+    updateNodeData(id, {
+      webSearchEnabled: enabled,
+    } as Partial<ChatNodeData>);
+  };
+
   // Helper function to send a message directly with custom content
   const sendMessage = async (messageContent: string) => {
     if (!messageContent.trim() || isLoading || !currentSession) return;
@@ -919,6 +926,7 @@ export const ChatNode = memo(({
           linkedInPosts: context.linkedInPosts,
           mindMaps: context.mindMaps,
           templates: context.templates,
+          webSearchEnabled: data.webSearchEnabled || false,
         }),
       });
 
@@ -1284,6 +1292,8 @@ export const ChatNode = memo(({
                   onModelChange={handleModelChange}
                   availableModels={MODELS}
                   theme="light"
+                  webSearchEnabled={data.webSearchEnabled || false}
+                  onWebSearchChange={handleWebSearchChange}
                 />
               </div>
             </div>

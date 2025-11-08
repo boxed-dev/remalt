@@ -1,5 +1,5 @@
 import type { NodeType } from '@/types/workflow';
-import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Lightbulb, FileCode, Globe, MessageSquare, Link, Type, StickyNote } from 'lucide-react';
+import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Lightbulb, FileCode, Globe, MessageSquare, Link, Type, StickyNote, PenSquare } from 'lucide-react';
 import { Folder } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -75,6 +75,16 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     icon: Linkedin,
     defaultWidth: 420,
     defaultHeight: 320,
+  },
+  'linkedin-creator': {
+    type: 'linkedin-creator',
+    label: 'LinkedIn Post Creator',
+    description: 'AI-powered LinkedIn post generator with smart topic suggestions',
+    category: 'ai',
+    color: '#0A66C2',
+    icon: Linkedin,
+    defaultWidth: 900,
+    defaultHeight: 620,
   },
   image: {
     type: 'image',

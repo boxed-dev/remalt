@@ -51,7 +51,6 @@ const advancedShortcuts: ShortcutItem[] = [
   { label: "Clear selection", keys: "Esc", searchTerms: "clear escape deselect" },
   { label: "Ungroup nodes", keys: "Cmd/Ctrl+Shift+G", searchTerms: "ungroup" },
   { label: "Quick add menu", keys: "/", searchTerms: "quick add menu" },
-  { label: "Keyboard shortcuts", keys: "?", searchTerms: "shortcuts help" },
   { label: "Pan canvas (hold)", keys: "Space", searchTerms: "pan move canvas space" },
   { label: "Pointer mode", keys: "V", searchTerms: "pointer select" },
   { label: "Hand mode", keys: "H", searchTerms: "hand pan" },
@@ -70,16 +69,6 @@ export function KeyboardShortcutsModal({ open, onOpenChange }: KeyboardShortcuts
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      // Toggle with ? key
-      if (e.key === "?" && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault()
-        onOpenChange(!open)
-      }
-      // Also support Cmd/Ctrl + K
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        onOpenChange(!open)
-      }
       // Close with Escape
       if (e.key === "Escape" && open) {
         e.preventDefault()

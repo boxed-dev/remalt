@@ -11,7 +11,33 @@ async function postHandler(req: NextRequest) {
   }
 
   try {
-    const { imageUrl, imageData } = await req.json();
+    // Check if this is FormData (file upload) or JSON (URL/base64)
+    const contentType = req.headers.get('content-type') || '';
+    let imageUrl: string | undefined;
+    let imageData: string | undefined;
+
+    if (contentType.includes('multipart/form-data')) {
+      // Handle file upload via FormData
+      const formData = await req.formData();
+      const file = formData.get('image') as File | null;
+
+      if (!file) {
+        return NextResponse.json(
+          { error: 'No image file provided' },
+          { status: 400 }
+        );
+      }
+
+      // Convert file to base64
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      imageData = buffer.toString('base64');
+    } else {
+      // Handle JSON payload
+      const body = await req.json();
+      imageUrl = body.imageUrl;
+      imageData = body.imageData;
+    }
 
     if (!imageUrl && !imageData) {
       return NextResponse.json(

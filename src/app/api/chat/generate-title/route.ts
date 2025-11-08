@@ -25,7 +25,7 @@ async function postHandler(request: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `Generate a concise, descriptive title (3-5 words maximum) for a chat conversation based on this first user message. The title should capture the main topic or intent. Respond with ONLY the title, nothing else.
 

@@ -40,6 +40,7 @@ export type NodeType =
   | 'youtube'
   | 'instagram'
   | 'linkedin'
+  | 'linkedin-creator'
   | 'mindmap'
   | 'template'
   | 'webpage'
@@ -270,6 +271,69 @@ export interface LinkedInNodeData extends BaseNodeData {
   analysisError?: string;
 }
 
+// LinkedIn Post Creator Node
+export interface LinkedInCreatorNodeData extends BaseNodeData {
+  // Tab selection
+  selectedTab?: 'your-topic' | 'suggested-topic';
+
+  // Topic input
+  manualTopic?: string;
+  selectedSuggestedTopic?: string;
+  suggestedTopics?: Array<{
+    id: string;
+    topic: string;
+    source: string; // 'ai' | 'connected-node'
+    context?: string;
+  }>;
+
+  // File uploads (for topic extraction)
+  uploadedFiles?: Array<{
+    id: string;
+    type: 'image' | 'audio' | 'document';
+    url: string;
+    storagePath?: string;
+    storageUrl?: string;
+    fileName?: string;
+    extractedTopic?: string;
+    extractionStatus?: 'idle' | 'extracting' | 'success' | 'error';
+    extractionError?: string;
+  }>;
+
+  // Voice tone
+  voiceTone?: 'professional' | 'casual' | 'inspirational' | 'thought-leadership' | 'humorous' | 'educational' | 'storytelling';
+
+  // Style configuration
+  styleSettings?: {
+    format?: 'storytelling' | 'listicle' | 'question-based' | 'personal-story' | 'case-study' | 'how-to';
+    length?: 'short' | 'medium' | 'long'; // 300-600, 600-1200, 1200-3000
+    targetLength?: number; // Exact character target
+    useEmojis?: boolean;
+    hashtagCount?: number; // 0-5
+    lineBreakStyle?: 'minimal' | 'moderate' | 'generous';
+    includeCTA?: boolean;
+    ctaType?: 'comment' | 'share' | 'link' | 'dm' | 'custom';
+    customCTA?: string;
+  };
+
+  // Generated content
+  generatedPost?: string;
+  generatedPostPlainText?: string;
+  generationStatus?: 'idle' | 'generating' | 'success' | 'error';
+  generationError?: string;
+  generatedAt?: string;
+
+  // Post metadata
+  characterCount?: number;
+
+  // Attached media (for the post itself)
+  attachedMedia?: Array<{
+    id: string;
+    type: 'image' | 'document';
+    url: string;
+    fileName?: string;
+  }>;
+}
+
 // Mind Map / Idea Node
 export interface MindMapNodeData extends BaseNodeData {
   concept: string;
@@ -338,6 +402,9 @@ export interface ChatNodeData extends BaseNodeData {
   // New multi-chat session support
   sessions?: ChatSession[];
   currentSessionId?: string;
+
+  // Web search integration
+  webSearchEnabled?: boolean; // Enable Tavily web search for this chat
 }
 
 export interface ChatSession {
@@ -359,6 +426,8 @@ export interface ChatMessage {
     tokensUsed?: number;
     latency?: number;
     contextNodes?: string[];
+    webSearchUsed?: boolean; // Whether web search was used for this message
+    searchQuery?: string; // The search query used
   };
 }
 
@@ -391,6 +460,7 @@ export type NodeData =
   | YouTubeNodeData
   | InstagramNodeData
   | LinkedInNodeData
+  | LinkedInCreatorNodeData
   | ImageNodeData
   | MindMapNodeData
   | TemplateNodeData

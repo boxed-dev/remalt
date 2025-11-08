@@ -128,7 +128,7 @@ export function DifyCanvasToolbar() {
             <button
               onClick={() => setShowShortcuts(true)}
               className="p-2 rounded hover:bg-gray-100 transition-colors text-gray-700"
-              title="Keyboard shortcuts (?)"
+              title="Keyboard shortcuts"
             >
               <Keyboard className="h-4 w-4" />
             </button>

@@ -5,6 +5,7 @@ import { VoiceNode } from './VoiceNode';
 import { YouTubeNode } from './YouTubeNode';
 import { InstagramNode } from './InstagramNode';
 import { LinkedInNode } from './LinkedInNode';
+import { LinkedInCreatorNode } from './LinkedInCreatorNode';
 import { ImageNode } from './ImageNode';
 import { MindMapNode } from './MindMapNode';
 import { TemplateNode } from './TemplateNode';
@@ -21,6 +22,7 @@ export const nodeTypes: NodeTypes = {
   youtube: YouTubeNode,
   instagram: InstagramNode,
   linkedin: LinkedInNode,
+  'linkedin-creator': LinkedInCreatorNode,
   image: ImageNode,
   mindmap: MindMapNode,
   template: TemplateNode,
@@ -38,6 +40,7 @@ export {
   YouTubeNode,
   InstagramNode,
   LinkedInNode,
+  LinkedInCreatorNode,
   ImageNode,
   MindMapNode,
   TemplateNode,

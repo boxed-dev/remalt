@@ -24,7 +24,41 @@ async function postHandler(req: NextRequest) {
   }
 
   try {
-    const { pdfData, pdfUrl, storagePath, storageUrl, forceReparse, useContextCache } = await req.json();
+    // Check if this is FormData (file upload) or JSON (URL-based)
+    const contentType = req.headers.get('content-type') || '';
+    let pdfData: string | undefined;
+    let pdfUrl: string | undefined;
+    let storagePath: string | undefined;
+    let storageUrl: string | undefined;
+    let forceReparse = false;
+    let useContextCache = false;
+
+    if (contentType.includes('multipart/form-data')) {
+      // Handle file upload via FormData
+      const formData = await req.formData();
+      const file = formData.get('pdf') as File | null;
+
+      if (!file) {
+        return NextResponse.json(
+          { error: 'No PDF file provided' },
+          { status: 400 }
+        );
+      }
+
+      // Convert file to base64
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      pdfData = buffer.toString('base64');
+    } else {
+      // Handle JSON payload
+      const body = await req.json();
+      pdfData = body.pdfData;
+      pdfUrl = body.pdfUrl;
+      storagePath = body.storagePath;
+      storageUrl = body.storageUrl;
+      forceReparse = body.forceReparse || false;
+      useContextCache = body.useContextCache || false;
+    }
 
     // Validate input
     if (!pdfData && !pdfUrl && !storagePath && !storageUrl) {

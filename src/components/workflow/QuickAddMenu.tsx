@@ -20,6 +20,7 @@ const NODE_TYPES: NodeType[] = [
   'mindmap',
   'sticky',
   'template',
+  'linkedin-creator',
   'chat',
   'connector',
   'group',

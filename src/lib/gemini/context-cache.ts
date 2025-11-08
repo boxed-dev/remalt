@@ -39,7 +39,7 @@ export async function createPdfContextCache(
 
   // Create cached content
   const cache = await genAI.cacheManager.create({
-    model: 'models/gemini-flash-latest',
+    model: 'models/gemini-2.5-flash',
     displayName: options.displayName || 'PDF Document Cache',
     systemInstruction: systemPrompt,
     contents: [

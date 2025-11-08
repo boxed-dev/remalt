@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { uploadWithRetry, uploadMultipleFromUrls } from '@/lib/supabase/storage-service';
 import { createClient } from '@/lib/supabase/server';
+import { processInstagramVideo, processInstagramImage } from '@/lib/instagram-processor';
 
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN;
 const APIFY_ACTOR_ENDPOINT = 'https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items';
@@ -314,6 +315,36 @@ async function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: st
     optimizedThumbnail = storageUrl;
   }
 
+  // Process media content with Gemini
+  let transcript: string | undefined;
+  let summary: string | undefined;
+  let fullAnalysis: string | undefined;
+  let ocrText: string | undefined;
+  let processingStatus: 'success' | 'failed' = 'success';
+
+  console.log('[Instagram API] 🤖 Processing media with Gemini...');
+
+  try {
+    if (isVideo && videoUrl) {
+      const videoUrlToProcess = storageUrl || videoUrl;
+      const result = await processInstagramVideo(videoUrlToProcess, item.shortCode || 'unknown');
+      transcript = result.transcript;
+      summary = result.summary;
+      fullAnalysis = result.fullAnalysis;
+      console.log('[Instagram API] ✅ Video processed successfully');
+    } else if (thumbnail) {
+      const imageUrlToProcess = optimizedThumbnail || thumbnail;
+      const result = await processInstagramImage(imageUrlToProcess, item.shortCode || 'unknown', item.caption);
+      ocrText = result.ocrText;
+      summary = result.summary;
+      fullAnalysis = result.fullAnalysis;
+      console.log('[Instagram API] ✅ Image processed successfully');
+    }
+  } catch (error) {
+    console.error('[Instagram API] ⚠️  Gemini processing failed:', error);
+    processingStatus = 'failed';
+  }
+
   return {
     success: true as const,
     url: requestedUrl,
@@ -341,6 +372,14 @@ async function mapApifyItemToResponse(item: ApifyInstagramItem, requestedUrl: st
     originalVideoUrl: videoUrl,
     originalThumbnail: thumbnail,
     originalImages: allImages,
+
+    // AI Processing results
+    transcript,
+    summary,
+    fullAnalysis,
+    ocrText,
+    processingStatus,
+    status: 'success' as const,
 
     // Post metadata
     caption: item.caption,

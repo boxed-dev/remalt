@@ -3,6 +3,8 @@ import { NextRequest } from 'next/server';
 import { requireAuth, unauthorizedResponse } from '@/lib/api/auth-middleware';
 import { createOpenRouterClient, isOpenRouterConfigured } from '@/lib/api/openrouter-client';
 import { normalizeLegacyModel } from '@/lib/models/model-registry';
+import { enforceTokenBudget } from '@/lib/context/budget-enforcer';
+import { contextMetrics } from '@/lib/monitoring/context-metrics';
 
 /**
  * Escape XML special characters to prevent parsing errors
@@ -31,7 +33,8 @@ function buildXMLContext(
   instagramReels: any[] = [],
   linkedInPosts: any[] = [],
   mindMaps: any[] = [],
-  templates: any[] = []
+  templates: any[] = [],
+  searchResults: any = null
 ): string {
   // Calculate summary statistics
   const totalSources =
@@ -134,6 +137,32 @@ function buildXMLContext(
   }
 
   xml += '  </content_summary>\n\n';
+
+  // Web Search Results
+  if (searchResults && searchResults.results && searchResults.results.length > 0) {
+    xml += '  <web_search_results>\n';
+    xml += `    <query>${escapeXML(searchResults.query)}</query>\n`;
+    xml += `    <result_count>${searchResults.results.length}</result_count>\n`;
+
+    if (searchResults.answer) {
+      xml += '    <ai_generated_answer>\n';
+      xml += escapeXML(searchResults.answer);
+      xml += '\n    </ai_generated_answer>\n';
+    }
+
+    xml += '    <sources>\n';
+    searchResults.results.forEach((result: any, index: number) => {
+      xml += `      <source id="${index + 1}" relevance_score="${result.score || 0}">\n`;
+      xml += `        <title>${escapeXML(result.title || 'Untitled')}</title>\n`;
+      xml += `        <url>${escapeXML(result.url || '')}</url>\n`;
+      xml += '        <content>\n';
+      xml += escapeXML(result.content || '');
+      xml += '\n        </content>\n';
+      xml += '      </source>\n';
+    });
+    xml += '    </sources>\n';
+    xml += '  </web_search_results>\n\n';
+  }
 
   // YouTube Videos
   if (youtubeTranscripts.length > 0) {
@@ -524,7 +553,8 @@ async function postHandler(req: NextRequest) {
       instagramReels,
       linkedInPosts,
       mindMaps,
-      templates
+      templates,
+      webSearchEnabled
     } = await req.json();
 
     // Normalize and determine model/provider
@@ -606,8 +636,8 @@ async function postHandler(req: NextRequest) {
       console.log('[Chat API] Gemini client created successfully');
     }
 
-    // Build XML-structured context from linked nodes
-    const systemContext = buildXMLContext(
+    // Enforce token budget to prevent context overflow
+    const { filtered, stats } = enforceTokenBudget({
       textContext,
       youtubeTranscripts,
       voiceTranscripts,
@@ -617,7 +647,92 @@ async function postHandler(req: NextRequest) {
       instagramReels,
       linkedInPosts,
       mindMaps,
-      templates
+      templates,
+    });
+
+    // Record metrics for monitoring
+    const startTime = Date.now();
+    contextMetrics.record({
+      timestamp: new Date().toISOString(),
+      userId: user.id,
+      originalNodeCount: stats.originalCount,
+      includedNodeCount: stats.filteredCount,
+      droppedNodeCount: stats.droppedItems,
+      truncatedNodeCount: stats.truncatedItems,
+      estimatedTokens: stats.estimatedTokens,
+      budgetUtilization: (stats.estimatedTokens / stats.budget) * 100,
+      modelUsed: model,
+    });
+
+    // Log budget stats for monitoring
+    console.log('[Chat API] Context Budget Stats:', {
+      originalItems: stats.originalCount,
+      includedItems: stats.filteredCount,
+      droppedItems: stats.droppedItems,
+      truncatedItems: stats.truncatedItems,
+      estimatedTokens: stats.estimatedTokens,
+      budget: stats.budget,
+      utilization: ((stats.estimatedTokens / stats.budget) * 100).toFixed(1) + '%',
+    });
+
+    // Log warning if content was dropped (this should be RARE with 200K budget)
+    if (stats.droppedItems > 0) {
+      console.warn(`[Chat API] ⚠️  Dropped ${stats.droppedItems} low-priority items due to budget (200K tokens)`);
+      console.warn(`[Chat API] 💡 Consider upgrading to RAG for unlimited context (Phase 2)`);
+    }
+
+    // Log info if content was truncated
+    if (stats.truncatedItems > 0) {
+      console.log(`[Chat API] ✂️  Truncated ${stats.truncatedItems} large items to fit budget`);
+    }
+
+    // Perform web search if enabled
+    let searchResults = null;
+    if (webSearchEnabled && messages.length > 0) {
+      const latestUserMessage = messages[messages.length - 1];
+      if (latestUserMessage && latestUserMessage.role === 'user' && latestUserMessage.content) {
+        try {
+          console.log('[Chat API] Web search enabled, performing search...');
+          const searchResponse = await fetch(`${req.nextUrl.origin}/api/search`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Cookie': req.headers.get('cookie') || '',
+            },
+            body: JSON.stringify({
+              query: latestUserMessage.content,
+              search_depth: 'basic',
+              max_results: 5,
+              include_answer: true,
+            }),
+          });
+
+          if (searchResponse.ok) {
+            searchResults = await searchResponse.json();
+            console.log(`[Chat API] Search completed: ${searchResults.results?.length || 0} results`);
+          } else {
+            console.error('[Chat API] Search failed:', await searchResponse.text());
+          }
+        } catch (searchError) {
+          console.error('[Chat API] Search error:', searchError);
+          // Continue without search results
+        }
+      }
+    }
+
+    // Build XML-structured context from filtered nodes
+    const systemContext = buildXMLContext(
+      filtered.textContext,
+      filtered.youtubeTranscripts,
+      filtered.voiceTranscripts,
+      filtered.pdfDocuments,
+      filtered.images,
+      filtered.webpages,
+      filtered.instagramReels,
+      filtered.linkedInPosts,
+      filtered.mindMaps,
+      filtered.templates,
+      searchResults // Pass search results to XML builder
     );
 
 

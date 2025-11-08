@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useEffect, useCallback, useRef } from 'react';
+import { memo, useState, useEffect, useCallback, useRef, type SyntheticEvent } from 'react';
 import { Type } from 'lucide-react';
 import { NodeResizer } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
@@ -34,6 +34,12 @@ export const TextNode = memo(({
   const [wordCount, setWordCount] = useState(data.wordCount || 0);
   const [isResizing, setIsResizing] = useState(false);
   const editorContainerRef = useRef<HTMLDivElement>(null);
+
+  const stopReactFlowPropagation = useCallback((event: SyntheticEvent) => {
+    event.stopPropagation();
+    const nativeEvent = event.nativeEvent as Event & { stopImmediatePropagation?: () => void };
+    nativeEvent?.stopImmediatePropagation?.();
+  }, []);
 
   useEffect(() => {
     setWordCount(data.wordCount || 0);
@@ -144,25 +150,13 @@ export const TextNode = memo(({
           <div
             ref={editorContainerRef}
             className="nodrag nopan mx-5 mb-5 flex-1 min-h-0 cursor-text overflow-hidden rounded-xl border border-[#E5E7EB] bg-white"
-            onMouseDown={(e) => {
-              // Stop all propagation to prevent ReactFlow from interfering
-              e.stopPropagation();
-              const nativeEvent = e.nativeEvent as any;
-              if (nativeEvent.stopImmediatePropagation) {
-                nativeEvent.stopImmediatePropagation();
-              }
-            }}
-            onPointerDown={(e) => {
-              // Also stop pointer events
-              e.stopPropagation();
-              const nativeEvent = e.nativeEvent as any;
-              if (nativeEvent.stopImmediatePropagation) {
-                nativeEvent.stopImmediatePropagation();
-              }
-            }}
+            onMouseDown={stopReactFlowPropagation}
+            onPointerDown={stopReactFlowPropagation}
+            onTouchStart={stopReactFlowPropagation}
+            onTouchMove={stopReactFlowPropagation}
             onClick={(e) => {
               // Stop propagation and focus the editor
-              e.stopPropagation();
+              stopReactFlowPropagation(e);
               // Find the editor element and focus it
               const editorElement = e.currentTarget.querySelector('[contenteditable="true"]') as HTMLElement;
               if (editorElement) {
@@ -172,9 +166,16 @@ export const TextNode = memo(({
             style={{
               // Prevent content from shifting during resize
               contain: 'layout style paint',
+              userSelect: 'text',
             }}
           >
-            <div className="nodrag nopan h-full overflow-auto">
+            <div
+              className="nodrag nopan nowheel h-full overflow-auto"
+              onWheel={stopReactFlowPropagation}
+              onTouchStart={stopReactFlowPropagation}
+              onTouchMove={stopReactFlowPropagation}
+              style={{ overscrollBehavior: 'contain' }}
+            >
               <NovelEditor
                 content={data.content}
                 onChange={handleContentChange}

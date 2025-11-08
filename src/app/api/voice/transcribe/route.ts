@@ -11,7 +11,33 @@ async function postHandler(req: NextRequest) {
   }
 
   try {
-    const { audioData, audioUrl } = await req.json();
+    // Check if this is FormData (file upload) or JSON (URL/base64)
+    const contentType = req.headers.get('content-type') || '';
+    let audioData: string | undefined;
+    let audioUrl: string | undefined;
+
+    if (contentType.includes('multipart/form-data')) {
+      // Handle file upload via FormData
+      const formData = await req.formData();
+      const file = formData.get('audio') as File | null;
+
+      if (!file) {
+        return NextResponse.json(
+          { error: 'No audio file provided' },
+          { status: 400 }
+        );
+      }
+
+      // Convert file to base64
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      audioData = buffer.toString('base64');
+    } else {
+      // Handle JSON payload
+      const body = await req.json();
+      audioData = body.audioData;
+      audioUrl = body.audioUrl;
+    }
 
     if (!audioData && !audioUrl) {
       return NextResponse.json(

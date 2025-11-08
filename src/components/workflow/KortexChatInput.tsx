@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Globe, Mic, ChevronDown, ArrowUp, Sparkles } from 'lucide-react';
+import { Plus, Globe, Mic, ChevronDown, ArrowUp, Sparkles, Youtube, Instagram, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { OpenAI, Gemini, Anthropic, DeepSeek, XAI } from '@lobehub/icons';
 import {
@@ -10,6 +10,18 @@ import {
   getModelDisplayName,
   type ModelInfo,
 } from '@/lib/models/model-registry';
+import { useSimpleVoiceRecording } from '@/hooks/use-simple-voice-recording';
+import { VoiceWaveVisualizer } from './VoiceWaveVisualizer';
+
+const detectYouTubeUrl = (text: string) => {
+  const match = text.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
+};
+
+const detectInstagramUrl = (text: string) => {
+  const match = text.match(/instagram\.com\/(?:p|reel|tv)\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
+};
 
 const PROVIDER_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   OpenAI: OpenAI,
@@ -23,31 +35,44 @@ interface KortexChatInputProps {
   value: string;
   onChange: (value: string) => void;
   onSend: () => void;
-  onVoiceRecord?: () => void;
   disabled?: boolean;
   placeholder?: string;
   currentModel: string;
   onModelChange: (modelId: string) => void;
   availableModels: ModelInfo[];
   theme?: 'light' | 'dark';
+  webSearchEnabled?: boolean;
+  onWebSearchChange?: (enabled: boolean) => void;
 }
 
 export const KortexChatInput: React.FC<KortexChatInputProps> = ({
   value,
   onChange,
   onSend,
-  onVoiceRecord,
   disabled = false,
   placeholder = 'Ask AI anything, @ to mention',
   currentModel,
   onModelChange,
   availableModels,
   theme = 'light',
+  webSearchEnabled = false,
+  onWebSearchChange,
 }) => {
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Voice recording
+  const {
+    isRecording,
+    mediaStream,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+    error: recordingError,
+  } = useSimpleVoiceRecording();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -87,6 +112,64 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
   const characterCount = value.length;
   const characterLabel = characterCount === 1 ? 'character' : 'characters';
 
+  const youtubeId = detectYouTubeUrl(value);
+  const instagramId = detectInstagramUrl(value);
+  const hasDetectedLinks = youtubeId || instagramId;
+
+  // Handle voice recording start
+  const handleStartVoiceRecording = async () => {
+    try {
+      await startRecording();
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+    }
+  };
+
+  // Handle voice recording finalize (tick button)
+  const handleFinalizeRecording = async () => {
+    try {
+      setIsTranscribing(true);
+      const { audioBlob } = await stopRecording();
+
+      // Convert blob to base64
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64Audio = btoa(binary);
+
+      // Call transcription API
+      const response = await fetch('/api/voice/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioData: base64Audio }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Transcription failed');
+      }
+
+      const result = await response.json();
+      const transcript = result.transcript || '';
+
+      // Append transcript to input
+      const newValue = value ? `${value} ${transcript}`.trim() : transcript.trim();
+      onChange(newValue);
+
+    } catch (error) {
+      console.error('Failed to transcribe:', error);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  // Handle voice recording cancel (cross button)
+  const handleCancelRecording = () => {
+    cancelRecording();
+  };
+
   return (
     <div className="w-full px-3 pb-6">
       <div className="w-full md:max-w-[800px] mx-auto">
@@ -115,7 +198,24 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
           </div>
 
           {/* Textarea */}
-          <div className="p-2 w-full">
+          <div className="p-2 w-full relative">
+            {/* Show wave visualizer when recording */}
+            {isRecording && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/98 backdrop-blur-sm rounded-xl z-10 overflow-hidden">
+                <VoiceWaveVisualizer mediaStream={mediaStream} isRecording={isRecording} />
+              </div>
+            )}
+
+            {/* Show transcribing state */}
+            {isTranscribing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/95 backdrop-blur-sm rounded-xl z-10">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="w-4 h-4 border-2 border-[#0C7A53] border-t-transparent rounded-full animate-spin"></div>
+                  <span>Transcribing...</span>
+                </div>
+              </div>
+            )}
+
             <textarea
               ref={textareaRef}
               value={value}
@@ -123,7 +223,7 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
               onKeyDown={handleKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              disabled={disabled}
+              disabled={disabled || isRecording || isTranscribing}
               placeholder={placeholder}
               className={cn(
                 'bg-transparent w-full resize-none overflow-hidden px-2 py-1',
@@ -135,6 +235,24 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
               rows={1}
               style={{ minHeight: '24px', maxHeight: '200px' }}
             />
+
+            {/* Detected Links Indicator */}
+            {hasDetectedLinks && (
+              <div className="flex flex-wrap gap-1.5 px-2 pb-1">
+                {youtubeId && (
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-red-50 border border-red-200 text-red-700">
+                    <Youtube className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium">YouTube detected</span>
+                  </div>
+                )}
+                {instagramId && (
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-pink-50 border border-pink-200 text-pink-700">
+                    <Instagram className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium">Instagram detected</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Bottom bar */}
@@ -216,15 +334,21 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
                 )}
               </div>
 
-              {/* Web button */}
+              {/* Web search toggle button */}
               <button
                 className={cn(
-                  'rounded-xl h-[26px] w-[26px] flex items-center justify-center border transition-colors',
-                  isDark
+                  'rounded-xl h-[26px] w-[26px] flex items-center justify-center border transition-all',
+                  webSearchEnabled
+                    ? 'bg-[#0C7A53]/10 border-[#0C7A53] text-[#0C7A53]'
+                    : isDark
                     ? 'bg-[#1a1a1a] border-gray-800 text-gray-500 hover:bg-[#222]'
                     : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
                 )}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onWebSearchChange?.(!webSearchEnabled);
+                }}
+                title={webSearchEnabled ? 'Web search enabled' : 'Enable web search'}
               >
                 <Globe className="h-4 w-4" />
               </button>
@@ -232,18 +356,44 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
 
             {/* Right side - Voice and Send buttons */}
             <div className="flex flex-row items-center gap-1">
-              <button
-                onClick={onVoiceRecord}
-                className={cn(
-                  'h-[26px] w-[26px] flex items-center justify-center rounded-lg transition-colors',
-                  isDark
-                    ? 'text-gray-600 hover:text-gray-400 hover:bg-[#222]'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                )}
-                disabled={disabled}
-              >
-                <Mic className="w-4 h-4" strokeWidth={1.5} />
-              </button>
+              {/* Voice recording controls */}
+              {isRecording ? (
+                <>
+                  {/* Cancel button (X) */}
+                  <button
+                    onClick={handleCancelRecording}
+                    className="h-[26px] w-[26px] flex items-center justify-center rounded-lg transition-colors bg-red-50 border border-red-200 text-red-600 hover:bg-red-100"
+                    title="Cancel recording"
+                  >
+                    <X className="w-4 h-4" strokeWidth={2} />
+                  </button>
+
+                  {/* Finalize button (Check) */}
+                  <button
+                    onClick={handleFinalizeRecording}
+                    className="h-[26px] w-[26px] flex items-center justify-center rounded-lg transition-colors bg-green-50 border border-green-200 text-green-600 hover:bg-green-100"
+                    title="Finalize recording"
+                  >
+                    <Check className="w-4 h-4" strokeWidth={2} />
+                  </button>
+                </>
+              ) : (
+                /* Mic button - start recording */
+                <button
+                  onClick={handleStartVoiceRecording}
+                  disabled={disabled || isTranscribing}
+                  className={cn(
+                    'h-[26px] w-[26px] flex items-center justify-center rounded-lg transition-colors',
+                    disabled || isTranscribing
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : isDark
+                      ? 'text-gray-600 hover:text-gray-400 hover:bg-[#222]'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  )}
+                >
+                  <Mic className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+              )}
 
               {/* Send button - Kortex style with Remalt brand colors */}
               <button

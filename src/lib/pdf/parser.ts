@@ -295,7 +295,7 @@ Important:
   } else {
     // Use File API without context caching
     const genAI = new GoogleGenerativeAI(apiKey);
-    model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   }
 
   console.log('[PDF Parser] Calling Gemini for parsing...');

@@ -36,7 +36,7 @@ export async function processInstagramImage(imageUrl: string, postCode: string, 
     const geminiStart = Date.now();
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-flash-latest',
+      model: 'gemini-2.5-flash',
     });
 
     // Convert image buffer to base64 for Gemini
@@ -167,7 +167,7 @@ export async function processInstagramVideo(videoUrl: string, reelCode: string) 
     const geminiStart = Date.now();
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-flash-latest',
+      model: 'gemini-2.5-flash',
     });
 
     // Convert video buffer to base64 for Gemini

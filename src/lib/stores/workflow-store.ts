@@ -212,6 +212,27 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
         fetchStatus: "idle",
         analysisStatus: "idle",
       } as NodeData;
+    case "linkedin-creator":
+      return {
+        ...baseData,
+        selectedTab: "your-topic",
+        manualTopic: "",
+        voiceTone: "professional",
+        styleSettings: {
+          format: "storytelling",
+          length: "medium",
+          targetLength: 900,
+          useEmojis: false,
+          hashtagCount: 3,
+          lineBreakStyle: "moderate",
+          includeCTA: true,
+          ctaType: "comment",
+        },
+        generationStatus: "idle",
+        uploadedFiles: [],
+        suggestedTopics: [],
+        attachedMedia: [],
+      } as NodeData;
     case "mindmap":
       return {
         ...baseData,

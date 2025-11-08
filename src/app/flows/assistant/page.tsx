@@ -140,43 +140,109 @@ export default function AssistantPage() {
   const sendMessage = async () => {
     if (!input.trim() || isLoading || !currentSessionId) return;
 
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: input.trim(),
-      timestamp: new Date().toISOString(),
-    };
-
-    setSessions(prev =>
-      prev.map(s =>
-        s.id === currentSessionId
-          ? {
-              ...s,
-              messages: [...s.messages, userMessage],
-              title: s.messages.length === 0 ? input.trim().slice(0, 40) + (input.length > 40 ? '...' : '') : s.title
-            }
-          : s
-      )
-    );
-
+    const currentInput = input.trim();
     setInput('');
     setIsLoading(true);
 
-    const assistantMessageId = crypto.randomUUID();
-    const assistantMessage: Message = {
-      id: assistantMessageId,
-      role: 'assistant',
-      content: '',
-      timestamp: new Date().toISOString(),
-    };
+    // Detect links first
+    const youtubeMatch = currentInput.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    const instagramMatch = currentInput.match(/instagram\.com\/(?:p|reel|tv)\/([a-zA-Z0-9_-]+)/);
 
-    setSessions(prev =>
-      prev.map(s =>
-        s.id === currentSessionId ? { ...s, messages: [...s.messages, assistantMessage] } : s
-      )
-    );
+    // Show processing message
+    const processingMessageId = crypto.randomUUID();
+    if (youtubeMatch || instagramMatch) {
+      const processingMessage: Message = {
+        id: processingMessageId,
+        role: 'assistant',
+        content: `Processing ${youtubeMatch ? 'YouTube video' : ''}${youtubeMatch && instagramMatch ? ' and ' : ''}${instagramMatch ? 'Instagram reel' : ''}...`,
+        timestamp: new Date().toISOString(),
+      };
+
+      setSessions(prev =>
+        prev.map(s =>
+          s.id === currentSessionId
+            ? { ...s, messages: [...s.messages, processingMessage] }
+            : s
+        )
+      );
+    }
+
+    // Declare assistantMessageId outside try/catch for error handling
+    let assistantMessageId = crypto.randomUUID();
 
     try {
+      // Fetch content FIRST before creating user message
+      const youtubeTranscripts: any[] = [];
+      const instagramReels: any[] = [];
+
+      if (youtubeMatch) {
+        const ytUrl = youtubeMatch[0].startsWith('http') ? youtubeMatch[0] : `https://${youtubeMatch[0]}`;
+        const ytRes = await fetch('/api/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: ytUrl }),
+        });
+        if (ytRes.ok) {
+          const ytData = await ytRes.json();
+          youtubeTranscripts.push({
+            videoId: youtubeMatch[1],
+            transcript: ytData.transcript,
+            status: 'success',
+            url: ytUrl,
+            title: ytData.title || 'YouTube Video',
+            method: ytData.method || 'supadata',
+          });
+        }
+      }
+
+      if (instagramMatch) {
+        const igUrl = instagramMatch[0].startsWith('http') ? instagramMatch[0] : `https://${instagramMatch[0]}`;
+        const igRes = await fetch('/api/instagram/reel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: igUrl }),
+        });
+        if (igRes.ok) {
+          const igData = await igRes.json();
+          instagramReels.push(igData);
+        }
+      }
+
+      // Remove processing message and add user message
+      const userMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: currentInput,
+        timestamp: new Date().toISOString(),
+      };
+
+      setSessions(prev =>
+        prev.map(s =>
+          s.id === currentSessionId
+            ? {
+                ...s,
+                messages: [
+                  ...s.messages.filter(m => m.id !== processingMessageId),
+                  userMessage
+                ],
+                title: s.messages.length === 0 ? currentInput.slice(0, 40) + (currentInput.length > 40 ? '...' : '') : s.title
+              }
+            : s
+        )
+      );
+      const assistantMessage: Message = {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toISOString(),
+      };
+
+      setSessions(prev =>
+        prev.map(s =>
+          s.id === currentSessionId ? { ...s, messages: [...s.messages, assistantMessage] } : s
+        )
+      );
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -186,12 +252,12 @@ export default function AssistantPage() {
           model: selectedModel,
           provider: selectedModel.includes('/') ? 'openrouter' : 'gemini',
           textContext: [],
-          youtubeTranscripts: [],
+          youtubeTranscripts,
           voiceTranscripts: [],
           pdfDocuments: [],
           images: [],
           webpages: [],
-          instagramReels: [],
+          instagramReels,
           linkedInPosts: [],
           mindMaps: [],
           templates: [],

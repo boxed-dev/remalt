@@ -6,6 +6,7 @@ import type {
   YouTubeNodeData,
   InstagramNodeData,
   LinkedInNodeData,
+  LinkedInCreatorNodeData,
   PDFNodeData,
   ImageNodeData,
   WebpageNodeData,
@@ -444,6 +445,23 @@ export function buildChatContext(
             fullAnalysis: linkedInData.fullAnalysis,
             postType: linkedInData.postType,
             aiInstructions: safeGetInstructions(linkedInData),
+            metadata: buildNodeMetadata(node, workflow),
+          });
+        }
+        break;
+      }
+
+      case 'linkedin-creator': {
+        const creatorData = node.data as LinkedInCreatorNodeData;
+        // Include generated posts as reference content
+        if (creatorData.generatedPost && creatorData.generationStatus === 'success') {
+          context.linkedInPosts.push({
+            url: '',
+            content: creatorData.generatedPostPlainText || creatorData.generatedPost,
+            status: 'success',
+            summary: `Generated LinkedIn post (${creatorData.characterCount || 0} chars)`,
+            postType: 'Generated',
+            aiInstructions: safeGetInstructions(creatorData),
             metadata: buildNodeMetadata(node, workflow),
           });
         }

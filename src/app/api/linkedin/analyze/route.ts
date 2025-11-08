@@ -22,7 +22,7 @@ async function postHandler(request: Request) {
 
     console.log(`[LinkedIn Analyzer] Analyzing post...`);
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     let prompt = '';
     const parts: any[] = [];
