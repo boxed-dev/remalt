@@ -33,13 +33,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <main>
-        <Hero />
-        <Features />
-        <WorkflowPreview />
-        <Testimonials />
-        <FinalCTA />
-      </main>
+      <Hero />
+      <Features />
+      <WorkflowPreview />
+      <Testimonials />
+      <FinalCTA />
       <Footer />
     </div>
   );

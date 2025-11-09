@@ -23,7 +23,7 @@ function RootLayout({
         suppressHydrationWarning
       >
         <GlobalHeader />
-        <main>
+        <main className="pt-14">
           {children}
         </main>
         <Toaster position="bottom-right" richColors expand={true} />

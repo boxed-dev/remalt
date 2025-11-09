@@ -445,7 +445,7 @@ export default function AssistantPage() {
             {messages.length === 0 ? (
               <div className="flex flex-col items-stretch gap-8">
                 <div className="flex flex-col items-center gap-2 text-center">
-                  <span className="text-xl text-[#0C7A53] font-serif">{greeting}</span>
+                  <span className="text-3xl text-[#0C7A53] font-serif">{greeting}</span>
                   <p className="text-sm text-gray-500">Pick a track to get started or drop a request below.</p>
                 </div>
 

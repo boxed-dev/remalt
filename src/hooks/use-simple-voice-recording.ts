@@ -72,6 +72,9 @@ export function useSimpleVoiceRecording(): UseSimpleVoiceRecordingReturn {
   }, []);
 
   const stopRecording = useCallback(async (): Promise<{ audioBlob: Blob; duration: number }> => {
+    // Set recording to false IMMEDIATELY so UI updates instantly
+    setIsRecording(false);
+
     return new Promise((resolve, reject) => {
       const mediaRecorder = mediaRecorderRef.current;
 
@@ -88,7 +91,6 @@ export function useSimpleVoiceRecording(): UseSimpleVoiceRecordingReturn {
 
         // Cleanup
         cleanup();
-        setIsRecording(false);
 
         resolve({ audioBlob, duration });
       };
@@ -98,11 +100,13 @@ export function useSimpleVoiceRecording(): UseSimpleVoiceRecordingReturn {
   }, []);
 
   const cancelRecording = useCallback(() => {
+    // Set recording to false IMMEDIATELY
+    setIsRecording(false);
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
     cleanup();
-    setIsRecording(false);
     setError(null);
   }, []);
 
