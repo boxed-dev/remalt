@@ -88,6 +88,7 @@ export default function AssistantPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState('google/gemini-2.5-pro');
   const [activeTab, setActiveTab] = useState<SuggestionTab>('create');
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const currentSession = sessions.find(s => s.id === currentSessionId);
@@ -261,6 +262,7 @@ export default function AssistantPage() {
           linkedInPosts: [],
           mindMaps: [],
           templates: [],
+          webSearchEnabled,
         }),
       });
 
@@ -582,6 +584,8 @@ export default function AssistantPage() {
               onModelChange={setSelectedModel}
               availableModels={MODELS}
               theme="light"
+              webSearchEnabled={webSearchEnabled}
+              onWebSearchChange={setWebSearchEnabled}
             />
           </div>
         </div>

@@ -815,10 +815,13 @@ function WorkflowCanvasInner() {
     (changes) => {
       onNodesChange(changes);
 
+      let shouldRecordHistory = false;
+
       changes.forEach((change) => {
         if (change.type === "position" && change.position && !change.dragging) {
           // Save position to store when drag completes
           updateNodePosition(change.id, change.position);
+          shouldRecordHistory = true;
 
           // If this is a group node, also update all child positions
           // Access current nodes from store instead of closure
@@ -850,6 +853,7 @@ function WorkflowCanvasInner() {
                 height: dimensions.height,
               },
             });
+            shouldRecordHistory = true;
           }
         } else if (change.type === "remove") {
           deleteNode(change.id);
@@ -859,6 +863,10 @@ function WorkflowCanvasInner() {
           }
         }
       });
+
+      if (shouldRecordHistory) {
+        useWorkflowStore.getState().pushHistory();
+      }
     },
     [onNodesChange, updateNodePosition, deleteNode, selectNode, updateNode]
   );
@@ -1221,6 +1229,7 @@ function WorkflowCanvasInner() {
       );
 
       const store = useWorkflowStore.getState();
+      let reparented = false;
 
       if (node.type === "group") {
         const current = store.getNode(node.id);
@@ -1272,6 +1281,7 @@ function WorkflowCanvasInner() {
             const relY = absY - parentNode.position.y;
             store.updateNode(node.id, { parentId: parentNode.id, zIndex: 2 });
             store.updateNodePosition(node.id, { x: relX, y: relY });
+            reparented = true;
             setNodes((prev) =>
               prev.map((n) =>
                 n.id === node.id
@@ -1296,6 +1306,7 @@ function WorkflowCanvasInner() {
             const absY = parentNode.position.y + currentNode.position.y;
             store.updateNode(node.id, { parentId: null, zIndex: 2 });
             store.updateNodePosition(node.id, { x: absX, y: absY });
+            reparented = true;
             setNodes((prev) =>
               prev.map((n) =>
                 n.id === node.id
@@ -1320,6 +1331,9 @@ function WorkflowCanvasInner() {
             : n
         )
       );
+      if (reparented) {
+        store.pushHistory({ replaceLast: true });
+      }
       lastDragPayloadRef.current = null;
     },
     [reactFlowInstance, setNodes]
@@ -1567,6 +1581,7 @@ function WorkflowCanvasInner() {
 
     // Select the new group
     store.selectNode(groupNode.id);
+    store.pushHistory({ replaceLast: true });
   }, []);
 
   // Handler to open social media dialog at viewport center

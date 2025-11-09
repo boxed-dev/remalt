@@ -114,7 +114,7 @@ interface WorkflowStore {
   redo: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
-  pushHistory: () => void;
+  pushHistory: (options?: { replaceLast?: boolean }) => void;
 
   // Canvas Control Actions
   setControlMode: (mode: "pointer" | "hand") => void;
@@ -317,7 +317,10 @@ export const useWorkflowStore = create<WorkflowStore>()(
       set((state) => {
         state.workflow = createDefaultWorkflow(name, description);
         state.cursorPosition = null;
+        state.history = [];
+        state.historyIndex = -1;
       });
+      get().pushHistory();
     },
 
     loadWorkflow: (workflow) => {
@@ -327,14 +330,20 @@ export const useWorkflowStore = create<WorkflowStore>()(
         state.selectedEdges = [];
         state.activeNodeId = null;
         state.cursorPosition = null;
+        state.history = [];
+        state.historyIndex = -1;
       });
+      get().pushHistory();
     },
 
     setWorkflow: (workflow) => {
       set((state) => {
         state.workflow = workflow;
         state.cursorPosition = null;
+        state.history = [];
+        state.historyIndex = -1;
       });
+      get().pushHistory();
     },
 
     updateWorkflowMetadata: (updates) => {
@@ -357,6 +366,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
         state.saveError = null;
         state.lastSaved = null;
         state.cursorPosition = null;
+        state.history = [];
+        state.historyIndex = -1;
       });
     },
 
@@ -398,9 +409,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
 
     // Node Actions
     addNode: (type, position, data) => {
-      const { pushHistory } = get();
-      pushHistory();
-
       let style: NodeStyle | undefined;
       if (type === "group") {
         style = { width: 640, height: 420, backgroundColor: "#F7F7F7" };
@@ -418,12 +426,18 @@ export const useWorkflowStore = create<WorkflowStore>()(
         zIndex: type === "group" ? 1 : 2,
       };
 
+      let didAdd = false;
       set((state) => {
         if (state.workflow) {
           state.workflow.nodes.push(node);
           state.workflow.updatedAt = new Date().toISOString();
+          didAdd = true;
         }
       });
+
+      if (didAdd) {
+        get().pushHistory();
+      }
 
       return node;
     },
@@ -465,6 +479,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
     },
 
     deleteNode: (id) => {
+      let didDelete = false;
       set((state) => {
         if (state.workflow) {
           // If deleting a group, detach its children to top-level
@@ -496,14 +511,16 @@ export const useWorkflowStore = create<WorkflowStore>()(
           }
           removeNodeIdsFromGroups(state.workflow.nodes, [id]);
           state.workflow.updatedAt = new Date().toISOString();
+          didDelete = true;
         }
       });
+      if (didDelete) {
+        get().pushHistory();
+      }
     },
 
     deleteNodes: (ids) => {
-      const { pushHistory } = get();
-      pushHistory();
-
+      let didDelete = false;
       set((state) => {
         if (state.workflow) {
           // For any groups being deleted, detach their children
@@ -545,11 +562,16 @@ export const useWorkflowStore = create<WorkflowStore>()(
           }
           removeNodeIdsFromGroups(state.workflow.nodes, ids);
           state.workflow.updatedAt = new Date().toISOString();
+          didDelete = true;
         }
       });
+      if (didDelete) {
+        get().pushHistory();
+      }
     },
 
     duplicateNode: (id) => {
+      let didDuplicate = false;
       set((state) => {
         if (state.workflow) {
           const original = state.workflow.nodes.find((n) => n.id === id);
@@ -562,9 +584,13 @@ export const useWorkflowStore = create<WorkflowStore>()(
             };
             state.workflow.nodes.push(duplicate);
             state.workflow.updatedAt = new Date().toISOString();
+            didDuplicate = true;
           }
         }
       });
+      if (didDuplicate) {
+        get().pushHistory();
+      }
     },
 
     // Edge Actions
@@ -578,12 +604,17 @@ export const useWorkflowStore = create<WorkflowStore>()(
         type: "smoothstep",
       };
 
+      let didAdd = false;
       set((state) => {
         if (state.workflow) {
           state.workflow.edges.push(edge);
           state.workflow.updatedAt = new Date().toISOString();
+          didAdd = true;
         }
       });
+      if (didAdd) {
+        get().pushHistory();
+      }
     },
 
     updateEdge: (id, updates) => {
@@ -599,6 +630,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
     },
 
     deleteEdge: (id) => {
+      let didDelete = false;
       set((state) => {
         if (state.workflow) {
           state.workflow.edges = state.workflow.edges.filter(
@@ -606,11 +638,16 @@ export const useWorkflowStore = create<WorkflowStore>()(
           );
           state.selectedEdges = state.selectedEdges.filter((eId) => eId !== id);
           state.workflow.updatedAt = new Date().toISOString();
+          didDelete = true;
         }
       });
+      if (didDelete) {
+        get().pushHistory();
+      }
     },
 
     deleteEdges: (ids) => {
+      let didDelete = false;
       set((state) => {
         if (state.workflow) {
           state.workflow.edges = state.workflow.edges.filter(
@@ -620,8 +657,12 @@ export const useWorkflowStore = create<WorkflowStore>()(
             (eId) => !ids.includes(eId)
           );
           state.workflow.updatedAt = new Date().toISOString();
+          didDelete = true;
         }
       });
+      if (didDelete) {
+        get().pushHistory();
+      }
     },
 
     // Selection Actions
@@ -680,6 +721,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
     },
 
     pasteNodes: (position) => {
+      let didPaste = false;
       set((state) => {
         if (state.workflow && state.clipboard.length > 0) {
           const idMap = new Map<string, string>();
@@ -752,8 +794,12 @@ export const useWorkflowStore = create<WorkflowStore>()(
 
           state.workflow.nodes.push(...newNodes);
           state.workflow.updatedAt = new Date().toISOString();
+          didPaste = true;
         }
       });
+      if (didPaste) {
+        get().pushHistory();
+      }
     },
 
     // Viewport Actions
@@ -823,31 +869,31 @@ export const useWorkflowStore = create<WorkflowStore>()(
     },
 
     // History Actions
-    pushHistory: () => {
-      const { workflow, history, historyIndex } = get();
+    pushHistory: (options = {}) => {
+      const { workflow } = get();
       if (!workflow) return;
 
       set((state) => {
-        // Clone current workflow
         const snapshot = deepClone(workflow);
 
-        // Remove future history if we're not at the end
-        if (historyIndex < history.length - 1) {
-          state.history = state.history.slice(0, historyIndex + 1);
+        if (state.historyIndex < state.history.length - 1) {
+          state.history = state.history.slice(0, state.historyIndex + 1);
         }
 
-        // Add snapshot to history
-        state.history.push(snapshot);
-
-        // FIXED: Reduce history limit from 50 to 10 items to prevent memory leaks
-        // Each history item is a full workflow clone which can be multiple MBs for large workflows
-        const MAX_HISTORY_ITEMS = 10;
-
-        if (state.history.length > MAX_HISTORY_ITEMS) {
-          state.history.shift();
+        if (options.replaceLast && state.history.length > 0) {
+          state.history[state.history.length - 1] = snapshot;
         } else {
-          state.historyIndex = state.history.length - 1;
+          state.history.push(snapshot);
+
+          const MAX_HISTORY_ITEMS = 10;
+          if (state.history.length > MAX_HISTORY_ITEMS) {
+            state.history = state.history.slice(
+              state.history.length - MAX_HISTORY_ITEMS
+            );
+          }
         }
+
+        state.historyIndex = state.history.length - 1;
       });
     },
 

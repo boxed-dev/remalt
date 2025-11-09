@@ -164,7 +164,7 @@ export function CustomEdge({
           d={edgePath}
           fill="none"
           stroke={shouldHighlight ? '#095D40' : '#D4AF7F'}
-          strokeWidth={calculateStrokeWidth(shouldHighlight ? 2 : 1.25)}
+          strokeWidth={calculateStrokeWidth(2)}
           strokeDasharray={calculateDashArray()}
           strokeLinecap="round"
           opacity={shouldHighlight ? 0.85 : 0.4}
@@ -178,7 +178,7 @@ export function CustomEdge({
           d={edgePath}
           fill="none"
           stroke={shouldHighlight ? '#095D40' : `url(#${animationId})`}
-          strokeWidth={calculateStrokeWidth(shouldHighlight ? 2 : 1.25)}
+          strokeWidth={calculateStrokeWidth(2)}
           strokeDasharray={calculateDashArray()}
           strokeLinecap="round"
           strokeDashoffset={0}

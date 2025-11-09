@@ -1,5 +1,13 @@
 import { useEffect } from 'react';
 
+const EDITABLE_SAFE_SHORTCUTS = new Set([
+  'mod+a',
+  'mod+c',
+  'mod+x',
+  'mod+v',
+  'mod+shift+v',
+]);
+
 function isEditableElement(target: EventTarget | null): boolean {
   if (!target || !(target instanceof HTMLElement)) {
     return false;
@@ -35,7 +43,12 @@ export function useKeyboardShortcuts(shortcuts: Record<string, () => void>) {
         // For single-key shortcuts (node additions), only work when not in editable element
         const isModifierShortcut = combo.includes('mod+') || combo.includes('shift+') || combo.includes('alt+');
 
-        if (inEditableElement && !isModifierShortcut && combo !== 'mod+s' && combo !== 'mod+k') {
+        if (
+          inEditableElement &&
+          (!isModifierShortcut || EDITABLE_SAFE_SHORTCUTS.has(combo)) &&
+          combo !== 'mod+s' &&
+          combo !== 'mod+k'
+        ) {
           return;
         }
 
