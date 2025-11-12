@@ -37,6 +37,7 @@ export type NodeType =
   | 'pdf'
   | 'voice'
   | 'image'
+  | 'image-generation'
   | 'youtube'
   | 'instagram'
   | 'linkedin'
@@ -444,6 +445,17 @@ export interface GroupNodeData extends BaseNodeData {
   title?: string;
 }
 
+// Image Generation Node (Nano Banana / Gemini 2.5 Flash Image)
+export interface ImageGenerationNodeData extends BaseNodeData {
+  prompt?: string; // User's text prompt for image generation
+  generatedImageUrl?: string; // Base64 or URL of generated image
+  generatedImageBase64?: string; // Base64 data for generated image
+  aspectRatio?: '1:1' | '2:3' | '3:2' | '3:4' | '4:3' | '4:5' | '5:4' | '9:16' | '16:9' | '21:9'; // Image aspect ratio
+  generationStatus?: 'idle' | 'generating' | 'success' | 'error';
+  generationError?: string;
+  generatedAt?: string; // ISO timestamp when image was generated
+}
+
 // Sticky Note Node
 export interface StickyNoteData extends BaseNodeData {
   content: string; // JSON stringified editor content (TipTap format)
@@ -462,6 +474,7 @@ export type NodeData =
   | LinkedInNodeData
   | LinkedInCreatorNodeData
   | ImageNodeData
+  | ImageGenerationNodeData
   | MindMapNodeData
   | TemplateNodeData
   | WebpageNodeData

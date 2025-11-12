@@ -9,6 +9,7 @@ import type {
   LinkedInCreatorNodeData,
   PDFNodeData,
   ImageNodeData,
+  ImageGenerationNodeData,
   WebpageNodeData,
   MindMapNodeData,
   TemplateNodeData,
@@ -141,6 +142,14 @@ export interface ChatContext {
     aiInstructions?: string;
     metadata?: ContextMetadata;
   }>;
+  generatedImages: Array<{
+    prompt?: string;
+    imageUrl?: string;
+    aspectRatio?: string;
+    status: 'idle' | 'generating' | 'success' | 'error';
+    aiInstructions?: string;
+    metadata?: ContextMetadata;
+  }>;
 }
 
 /**
@@ -234,6 +243,7 @@ export function buildChatContext(
     linkedInPosts: [],
     mindMaps: [],
     templates: [],
+    generatedImages: [],
   };
 
   if (!workflow) return context;
@@ -383,6 +393,19 @@ export function buildChatContext(
           tags: imageData.analysisData?.tags,
           status: imageData.analysisStatus || 'idle',
           aiInstructions: safeGetInstructions(imageData),
+          metadata: buildNodeMetadata(node, workflow),
+        });
+        break;
+      }
+
+      case 'image-generation': {
+        const imageGenData = node.data as ImageGenerationNodeData;
+        context.generatedImages.push({
+          prompt: imageGenData.prompt,
+          imageUrl: imageGenData.generatedImageUrl,
+          aspectRatio: imageGenData.aspectRatio,
+          status: imageGenData.generationStatus || 'idle',
+          aiInstructions: safeGetInstructions(imageGenData),
           metadata: buildNodeMetadata(node, workflow),
         });
         break;

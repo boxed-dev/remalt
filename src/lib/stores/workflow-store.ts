@@ -195,6 +195,13 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
         ...baseData,
         analysisStatus: "idle",
       } as NodeData;
+    case "image-generation":
+      return {
+        ...baseData,
+        prompt: "",
+        aspectRatio: "16:9",
+        generationStatus: "idle",
+      } as NodeData;
     case "youtube":
       return {
         ...baseData,

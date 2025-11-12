@@ -7,6 +7,7 @@ import { InstagramNode } from './InstagramNode';
 import { LinkedInNode } from './LinkedInNode';
 import { LinkedInCreatorNode } from './LinkedInCreatorNode';
 import { ImageNode } from './ImageNode';
+import { ImageGenerationNode } from './ImageGenerationNode';
 import { MindMapNode } from './MindMapNode';
 import { TemplateNode } from './TemplateNode';
 import { WebpageNode } from './WebpageNode';
@@ -24,6 +25,7 @@ export const nodeTypes: NodeTypes = {
   linkedin: LinkedInNode,
   'linkedin-creator': LinkedInCreatorNode,
   image: ImageNode,
+  'image-generation': ImageGenerationNode,
   mindmap: MindMapNode,
   template: TemplateNode,
   webpage: WebpageNode,
@@ -42,6 +44,7 @@ export {
   LinkedInNode,
   LinkedInCreatorNode,
   ImageNode,
+  ImageGenerationNode,
   MindMapNode,
   TemplateNode,
   WebpageNode,

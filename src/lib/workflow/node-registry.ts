@@ -1,5 +1,5 @@
 import type { NodeType } from '@/types/workflow';
-import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Lightbulb, FileCode, Globe, MessageSquare, Link, Type, StickyNote, PenSquare } from 'lucide-react';
+import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Lightbulb, FileCode, Globe, MessageSquare, Link, Type, StickyNote, PenSquare, Sparkles } from 'lucide-react';
 import { Folder } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -95,6 +95,16 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     icon: ImageIcon,
     defaultWidth: 480,
     defaultHeight: 420,
+  },
+  'image-generation': {
+    type: 'image-generation',
+    label: 'AI Image Generator',
+    description: 'Generate images from text using Nano Banana (Gemini 2.5 Flash Image)',
+    category: 'ai',
+    color: '#8B5CF6',
+    icon: Sparkles,
+    defaultWidth: 480,
+    defaultHeight: 520,
   },
   mindmap: {
     type: 'mindmap',
