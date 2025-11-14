@@ -2,6 +2,10 @@ import { memo } from 'react';
 import { Sparkles, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { BaseNode } from './BaseNode';
+import { NodeHeader } from './NodeHeader';
+import { ExecutionButton } from './ExecutionButton';
+import { ExecutionStatusBadge } from './ExecutionStatusBadge';
+import { NodeExecutionOutput } from './NodeExecutionOutput';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { buildChatContext } from '@/lib/workflow/context-builder';
 import type { NodeProps } from '@xyflow/react';
@@ -99,12 +103,36 @@ export const TemplateNode = memo(({ id, data, parentId, selected }: NodeProps<Te
 
   return (
     <div className="relative">
-      <BaseNode id={id} parentId={parentId}>
+      <BaseNode
+        id={id}
+        parentId={parentId}
+        showSourceHandle={true}
+        showTargetHandle={true}
+        header={
+          <NodeHeader
+            title="Template"
+            subtitle={templateLabel}
+            icon={<Sparkles />}
+            themeKey="template"
+            trailing={
+              <ExecutionStatusBadge
+                status={data.executionStatus}
+                executionTime={data.executionTime}
+                showTime={true}
+              />
+            }
+            actions={
+              <ExecutionButton
+                nodeId={id}
+                nodeType="template"
+                executionStatus={data.executionStatus}
+                variant="icon"
+              />
+            }
+          />
+        }
+      >
         <div className="space-y-3 w-[280px]">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-[#10B981]" />
-          <span className="text-[13px] font-medium text-[#1A1D21]">Template</span>
-        </div>
 
         {isSelecting ? (
           <div className="space-y-1">
@@ -183,6 +211,16 @@ export const TemplateNode = memo(({ id, data, parentId, selected }: NodeProps<Te
           </div>
         )}
         </div>
+
+        {/* Execution Output */}
+        <NodeExecutionOutput
+          output={data.output}
+          error={data.executionError}
+          lastExecutedAt={data.lastExecutedAt}
+          executionTime={data.executionTime}
+          defaultExpanded={data.executionStatus === 'error'}
+          compact={true}
+        />
       </BaseNode>
 
       {/* Floating AI Instructions - visible once the node is active/selected */}

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { enableMapSet } from "immer";
 import type {
   Workflow,
   WorkflowNode,
@@ -10,6 +11,15 @@ import type {
   Viewport,
   NodeStyle,
 } from "@/types/workflow";
+import { NodeExecutor } from "@/lib/execution/node-executor";
+import {
+  topologicalSort,
+  getExecutionOrderFromNode,
+  markDownstreamStale,
+} from "@/lib/execution/dependency-resolver";
+
+// Enable Immer support for Map and Set
+enableMapSet();
 
 function deepClone<T>(value: T): T {
   if (typeof globalThis.structuredClone === "function") {
@@ -140,6 +150,17 @@ interface WorkflowStore {
   setConnecting: (is: boolean) => void;
   setConnectHoveredTarget: (id: string | null) => void;
   setConnectPreviewTarget: (id: string | null) => void;
+
+  // Execution State
+  isExecuting: boolean;
+  executingNodes: Set<string>; // Node IDs currently executing
+  executionError: string | null;
+
+  // Execution Actions
+  executeNode: (nodeId: string, options?: { forceExecution?: boolean }) => Promise<void>;
+  executeWorkflow: (options?: { fromNodeId?: string }) => Promise<void>;
+  cancelExecution: () => void;
+  clearExecutionState: () => void;
 }
 
 const createDefaultWorkflow = (
@@ -293,6 +314,20 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
         textColor: "#1F2937",
         fontSize: "medium",
       } as NodeData;
+    case "prompt":
+      return {
+        ...baseData,
+        prompt: "",
+        model: "google/gemini-2.5-flash",
+        provider: "gemini",
+        temperature: 0.7,
+        processingStatus: "idle",
+      } as NodeData;
+    case "start":
+      return {
+        ...baseData,
+        lastExecutionStatus: "idle",
+      } as NodeData;
     default:
       return { type } as NodeData;
   }
@@ -318,6 +353,11 @@ export const useWorkflowStore = create<WorkflowStore>()(
     isConnecting: false,
     connectHoveredTargetId: null,
     connectPreviewTargetId: null,
+
+    // Execution State
+    isExecuting: false,
+    executingNodes: new Set<string>(),
+    executionError: null,
 
     // Workflow Actions
     createWorkflow: (name, description) => {
@@ -1064,11 +1104,247 @@ export const useWorkflowStore = create<WorkflowStore>()(
         state.connectPreviewTargetId = id;
       });
     },
+
+    // Execution Actions
+    executeNode: async (nodeId, options = {}) => {
+      const { workflow } = get();
+      if (!workflow) {
+        console.error('No workflow loaded');
+        return;
+      }
+
+      const node = workflow.nodes.find((n) => n.id === nodeId);
+      if (!node) {
+        console.error(`Node ${nodeId} not found`);
+        return;
+      }
+
+      // Mark node as running
+      set((state) => {
+        if (!state.workflow) return;
+
+        const node = state.workflow.nodes.find((n) => n.id === nodeId);
+        if (node) {
+          node.data.executionStatus = 'running';
+          node.data.executionError = undefined;
+          state.executingNodes.add(nodeId);
+          state.isExecuting = true;
+          state.executionError = null;
+        }
+      });
+
+      try {
+        // Execute the node
+        const executor = new NodeExecutor();
+        const result = await executor.executeNode(nodeId, workflow, {
+          forceExecution: options.forceExecution,
+        });
+
+        // Update node with result
+        set((state) => {
+          if (!state.workflow) return;
+
+          const node = state.workflow.nodes.find((n) => n.id === nodeId);
+          if (node) {
+            if (result.success) {
+              node.data.executionStatus = result.status;
+              node.data.output = result.output;
+              node.data.executionTime = result.executionTime;
+              node.data.lastExecutedAt = result.timestamp;
+              node.data.outputStale = false;
+
+              // Extract processedOutput for prompt nodes for easier UI access
+              if (node.type === 'prompt' && result.output && typeof result.output === 'object' && 'processedOutput' in result.output) {
+                (node.data as { processedOutput?: string }).processedOutput = (result.output as { processedOutput: string }).processedOutput;
+              }
+
+              // Mark downstream nodes as stale
+              if (state.workflow) {
+                markDownstreamStale(nodeId, state.workflow);
+              }
+            } else {
+              node.data.executionStatus = 'error';
+              node.data.executionError = result.error;
+            }
+
+            state.executingNodes.delete(nodeId);
+            if (state.executingNodes.size === 0) {
+              state.isExecuting = false;
+            }
+
+            state.workflow.updatedAt = new Date().toISOString();
+          }
+        });
+      } catch (error) {
+        // Handle execution error
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        set((state) => {
+          if (!state.workflow) return;
+
+          const node = state.workflow.nodes.find((n) => n.id === nodeId);
+          if (node) {
+            node.data.executionStatus = 'error';
+            node.data.executionError = {
+              message: errorMessage,
+              details: error,
+              stack: error instanceof Error ? error.stack : undefined,
+            };
+
+            state.executingNodes.delete(nodeId);
+            if (state.executingNodes.size === 0) {
+              state.isExecuting = false;
+            }
+
+            state.executionError = errorMessage;
+            state.workflow.updatedAt = new Date().toISOString();
+          }
+        });
+
+        console.error(`Node execution failed (${nodeId}):`, error);
+      }
+    },
+
+    executeWorkflow: async (options = {}) => {
+      const { workflow } = get();
+      if (!workflow) {
+        console.error('No workflow loaded');
+        return;
+      }
+
+      set((state) => {
+        state.isExecuting = true;
+        state.executionError = null;
+      });
+
+      try {
+        // Get execution order
+        let executionOrder: string[];
+
+        if (options.fromNodeId) {
+          // Execute from specific node (partial execution)
+          executionOrder = getExecutionOrderFromNode(options.fromNodeId, workflow);
+          console.log('🚀 Executing from node:', options.fromNodeId);
+          console.log('🎯 Downstream nodes:', executionOrder);
+        } else {
+          // Execute entire workflow
+          executionOrder = topologicalSort(workflow);
+          console.log('🚀 Executing entire workflow');
+          console.log('🎯 Execution order:', executionOrder);
+        }
+
+        if (executionOrder.length === 0) {
+          console.warn('⚠️ No nodes to execute - workflow is empty or Start node has no connections');
+          set((state) => {
+            state.isExecuting = false;
+          });
+          return;
+        }
+
+        console.log(`📊 Executing ${executionOrder.length} nodes sequentially...`);
+
+        // Execute nodes sequentially
+        for (let i = 0; i < executionOrder.length; i++) {
+          const nodeId = executionOrder[i];
+          const { workflow: currentWorkflow } = get();
+          if (!currentWorkflow) break;
+
+          const node = currentWorkflow.nodes.find((n) => n.id === nodeId);
+          if (!node) {
+            console.warn(`⚠️ Node ${nodeId} not found, skipping`);
+            continue;
+          }
+
+          console.log(`▶️ [${i + 1}/${executionOrder.length}] Executing ${node.type} node (${nodeId})`);
+
+          // Skip disabled nodes
+          if (node.data.disabled) {
+            console.log(`⏭️ Skipping disabled node: ${nodeId}`);
+            set((state) => {
+              if (!state.workflow) return;
+              const n = state.workflow.nodes.find((n) => n.id === nodeId);
+              if (n) {
+                n.data.executionStatus = 'bypassed';
+              }
+            });
+            continue;
+          }
+
+          // Execute node
+          await get().executeNode(nodeId, { forceExecution: true });
+
+          // Check if execution was cancelled or errored
+          const { isExecuting, executionError } = get();
+          if (!isExecuting) {
+            console.log('🛑 Execution cancelled by user');
+            break;
+          }
+          if (executionError) {
+            console.error(`❌ Execution failed at node ${nodeId}:`, executionError);
+            break;
+          }
+
+          console.log(`✅ Node ${nodeId} completed successfully`);
+        }
+
+        set((state) => {
+          state.isExecuting = false;
+        });
+
+        console.log('🎉 Workflow execution completed successfully');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Workflow execution failed';
+
+        set((state) => {
+          state.isExecuting = false;
+          state.executionError = errorMessage;
+        });
+
+        console.error('❌ Workflow execution error:', error);
+      }
+    },
+
+    cancelExecution: () => {
+      set((state) => {
+        state.isExecuting = false;
+        state.executingNodes.clear();
+        state.executionError = 'Execution cancelled by user';
+
+        // Mark all running nodes as idle
+        if (state.workflow) {
+          state.workflow.nodes.forEach((node) => {
+            if (node.data.executionStatus === 'running') {
+              node.data.executionStatus = 'idle';
+            }
+          });
+        }
+      });
+
+      console.log('Execution cancelled');
+    },
+
+    clearExecutionState: () => {
+      set((state) => {
+        state.isExecuting = false;
+        state.executingNodes.clear();
+        state.executionError = null;
+
+        // Clear execution status from all nodes
+        if (state.workflow) {
+          state.workflow.nodes.forEach((node) => {
+            node.data.executionStatus = 'idle';
+            node.data.executionError = undefined;
+          });
+        }
+      });
+    },
   }))
 );
 
 // Helper - currently a no-op since grouping handled via parentId; kept for compatibility
 function removeNodeIdsFromGroups(_nodes: WorkflowNode[], _ids: string[]) {
+  void _nodes;
+  void _ids;
   // Intentionally left blank. If groups track explicit child lists in future,
   // this function can update them accordingly.
 }

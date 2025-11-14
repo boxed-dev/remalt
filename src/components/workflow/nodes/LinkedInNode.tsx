@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Linkedin, Loader2, CheckCircle2, ExternalLink, ThumbsUp, MessageCircle, Repeat2, AlertCircle } from 'lucide-react';
+import { Linkedin, Loader2, CheckCircle2, ExternalLink, ThumbsUp, MessageCircle, Repeat2, AlertCircle, Copy, Check } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { SyntheticEvent } from 'react';
 import { BaseNode } from './BaseNode';
@@ -39,6 +39,7 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
   const [url, setUrl] = useState(data.url || '');
   const [isContentExpanded, setIsContentExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [copiedContent, setCopiedContent] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const processedUrlRef = useRef<string | null>(null);
@@ -87,6 +88,19 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
 
   const stopPropagation = (event: React.MouseEvent | React.TouchEvent) => {
     event.stopPropagation();
+  };
+
+  const copyContent = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    stopPropagation(event);
+    if (!data.content) return;
+
+    try {
+      await navigator.clipboard.writeText(data.content);
+      setCopiedContent(true);
+      setTimeout(() => setCopiedContent(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy content:', error);
+    }
   };
 
   useEffect(() => {
@@ -197,6 +211,8 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
       <BaseNode
         id={id}
         parentId={parentId}
+        showSourceHandle={true}
+        showTargetHandle={true}
         header={
           <NodeHeader
             title="LinkedIn Post"
@@ -284,6 +300,23 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
                       {isContentExpanded ? 'Show less' : 'Show more'}
                     </button>
                   )}
+                  {/* Copy Button */}
+                  <button
+                    onClick={copyContent}
+                    className="mt-2 inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer text-[11px]"
+                  >
+                    {copiedContent ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-emerald-600" />
+                        <span className="text-emerald-600">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" />
+                        Copy content
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
 

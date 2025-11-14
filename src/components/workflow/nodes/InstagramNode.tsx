@@ -303,16 +303,19 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
 
   const handleCopyTranscript = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!data.transcript) return;
+
+    // Copy any available text content (priority: fullAnalysis > summary > transcript > caption > ocrText)
+    const textToCopy = data.fullAnalysis || data.summary || data.transcript || data.caption || data.ocrText;
+    if (!textToCopy) return;
 
     try {
-      await navigator.clipboard.writeText(data.transcript);
+      await navigator.clipboard.writeText(textToCopy);
       setCopiedTranscript(true);
       setTimeout(() => setCopiedTranscript(false), 2000);
     } catch (error) {
-      console.error('Failed to copy transcript:', error);
+      console.error('Failed to copy content:', error);
     }
-  }, [data.transcript]);
+  }, [data.fullAnalysis, data.summary, data.transcript, data.caption, data.ocrText]);
 
   // Auto-fetch on mount if URL exists but no data
   useEffect(() => {
@@ -358,6 +361,8 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
       <BaseNode
         id={id}
         parentId={parentId}
+        showSourceHandle={true}
+        showTargetHandle={true}
         header={
           <NodeHeader
             title={data.isStory ? 'Instagram Story' : 'Instagram Post'}
@@ -591,8 +596,8 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
                 )}
               </div>
 
-              {/* Copy Transcript Button */}
-              {data.transcript && (
+              {/* Copy Content Button - Shows for any text content */}
+              {(data.fullAnalysis || data.summary || data.transcript || data.caption || data.ocrText) && (
                 <div className="flex gap-1.5 pt-2">
                   <button
                     onClick={handleCopyTranscript}

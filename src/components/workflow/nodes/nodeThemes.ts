@@ -131,6 +131,10 @@ export const NODE_HEADER_THEMES: Record<NodeThemeKey | 'default', NodeHeaderThem
     textColor: '#111827',
     iconColor: '#92400E',
   }),
+  prompt: createTheme('#3B82F6', {          // Blue - AI transformation
+    textColor: '#1E293B',
+    iconColor: '#1D4ED8',
+  }),
   trigger: createTheme('#603cba'),          // Dark Purple - distinctive trigger
   action: createTheme('#da532c'),           // Dark Orange - active, energetic
   condition: createTheme('#e3a21a'),        // Metro Orange - decision point

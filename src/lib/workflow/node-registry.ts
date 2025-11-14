@@ -1,5 +1,5 @@
 import type { NodeType } from '@/types/workflow';
-import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Lightbulb, FileCode, Globe, MessageSquare, Link, Type, StickyNote, PenSquare, Sparkles } from 'lucide-react';
+import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Lightbulb, FileCode, Globe, MessageSquare, Link, Type, StickyNote, PenSquare, Sparkles, Wand2, Play } from 'lucide-react';
 import { Folder } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -175,6 +175,26 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     icon: StickyNote,
     defaultWidth: 280,
     defaultHeight: 280,
+  },
+  prompt: {
+    type: 'prompt',
+    label: 'AI Prompt',
+    description: 'Transform and process data with custom AI prompts',
+    category: 'ai',
+    color: '#3B82F6',
+    icon: Wand2,
+    defaultWidth: 380,
+    defaultHeight: 400,
+  },
+  start: {
+    type: 'start',
+    label: 'Start / Trigger',
+    description: 'Trigger button to execute workflow sequentially',
+    category: 'structure',
+    color: '#10B981',
+    icon: Play,
+    defaultWidth: 320,
+    defaultHeight: 240,
   },
 };
 

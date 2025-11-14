@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Mic, Loader2, CheckCircle2, ChevronDown, ChevronUp, Download, Square, Upload } from 'lucide-react';
+import { Mic, Loader2, CheckCircle2, ChevronDown, ChevronUp, Download, Copy, Check, Square, Upload } from 'lucide-react';
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
@@ -18,6 +18,7 @@ export const VoiceNode = memo(({ id, data, parentId, selected }: NodeProps<Voice
   const [isRecordingThisNode, setIsRecordingThisNode] = useState(false);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [interimTranscript, setInterimTranscript] = useState('');
+  const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [finalTranscripts, setFinalTranscripts] = useState<string[]>([]);
   const [duration, setDuration] = useState(0);
   const [recordingError, setRecordingError] = useState<string | null>(null);
@@ -216,6 +217,19 @@ export const VoiceNode = memo(({ id, data, parentId, selected }: NodeProps<Voice
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const copyTranscript = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    stopPropagation(event);
+    if (!data.transcript) return;
+
+    try {
+      await navigator.clipboard.writeText(data.transcript);
+      setCopiedTranscript(true);
+      setTimeout(() => setCopiedTranscript(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy transcript:', error);
+    }
   };
 
   const downloadTranscript = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -559,13 +573,31 @@ export const VoiceNode = memo(({ id, data, parentId, selected }: NodeProps<Voice
             {(hasTranscript || hasAudio) && (
               <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
                 {hasTranscript && (
-                  <button
-                    onClick={downloadTranscript}
-                    className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21]"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Export transcript
-                  </button>
+                  <>
+                    <button
+                      onClick={copyTranscript}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21]"
+                    >
+                      {copiedTranscript ? (
+                        <>
+                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          <span className="text-emerald-600">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          Copy
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={downloadTranscript}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1 text-[#374151] hover:border-[#1A1D21]"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Export
+                    </button>
+                  </>
                 )}
                 {hasAudio && (
                   <button

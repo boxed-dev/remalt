@@ -143,6 +143,8 @@ export const ImageGenerationNode = memo(({ id, data, parentId, selected }: NodeP
       <BaseNode
         id={id}
         parentId={parentId}
+        showSourceHandle={true}
+        showTargetHandle={true}
         header={
           <NodeHeader
             title={data.customLabel || 'AI Image Generator'}

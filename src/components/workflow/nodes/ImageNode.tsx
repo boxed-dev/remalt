@@ -4,6 +4,8 @@ import { memo, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Image as ImageIcon, Loader2, Eye, CheckCircle2, AlertCircle, Upload, X } from 'lucide-react';
 import { BaseNode } from './BaseNode';
 import { NodeHeader, NodeHeaderBadge } from './NodeHeader';
+import { ExecutionButton } from './ExecutionButton';
+import { NodeExecutionOutput } from './NodeExecutionOutput';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { UploadMediaDialog } from '../UploadMediaDialog';
 import type { NodeProps } from '@xyflow/react';
@@ -262,6 +264,8 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
       <BaseNode
         id={id}
         parentId={parentId}
+        showSourceHandle={true}
+        showTargetHandle={true}
         header={
           <NodeHeader
             title={data.customLabel || 'Image'}
@@ -269,6 +273,14 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
             icon={<ImageIcon />}
             themeKey="image"
             trailing={statusBadge}
+            actions={
+              <ExecutionButton
+                nodeId={id}
+                nodeType="image"
+                executionStatus={data.executionStatus}
+                variant="icon"
+              />
+            }
           />
         }
         headerClassName="overflow-hidden"
@@ -365,6 +377,16 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
           </button>
         )}
         </div>
+
+        {/* Execution Output */}
+        <NodeExecutionOutput
+          output={data.output}
+          error={data.executionError}
+          lastExecutedAt={data.lastExecutedAt}
+          executionTime={data.executionTime}
+          defaultExpanded={data.executionStatus === 'error'}
+          compact={true}
+        />
       </BaseNode>
 
       {/* Floating AI Instructions - visible once the node is active/selected */}

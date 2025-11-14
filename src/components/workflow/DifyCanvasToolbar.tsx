@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import {
-  Hand,
-  MousePointer2,
   Undo2,
   Redo2,
   ZoomIn,
@@ -11,6 +9,8 @@ import {
   Maximize2,
   Keyboard,
   StickyNote,
+  Play,
+  XCircle,
 } from "lucide-react";
 import { useReactFlow } from "@xyflow/react";
 import { useWorkflowStore } from "@/lib/stores/workflow-store";
@@ -25,42 +25,28 @@ export function DifyCanvasToolbar() {
   const redo = useWorkflowStore((state) => state.redo);
   const canUndo = useWorkflowStore((state) => state.canUndo());
   const canRedo = useWorkflowStore((state) => state.canRedo());
-  const controlMode = useWorkflowStore((state) => state.controlMode);
-  const setControlMode = useWorkflowStore((state) => state.setControlMode);
   const isStickyActive = useStickyNotesStore((state) => state.isActive);
   const toggleStickyMode = useStickyNotesStore((state) => state.toggleStickyMode);
+
+  // Execution state
+  const executeWorkflow = useWorkflowStore((state) => state.executeWorkflow);
+  const cancelExecution = useWorkflowStore((state) => state.cancelExecution);
+  const isExecuting = useWorkflowStore((state) => state.isExecuting);
+  const workflow = useWorkflowStore((state) => state.workflow);
+
+  const handleExecuteWorkflow = async () => {
+    if (!workflow || isExecuting) return;
+    await executeWorkflow();
+  };
+
+  const handleCancelExecution = () => {
+    cancelExecution();
+  };
 
   return (
     <>
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 flex items-center divide-x divide-gray-200">
-          {/* Hand/Pointer tools - Hidden but keeping functionality for keyboard shortcuts */}
-          <div className="hidden">
-            <button
-              onClick={() => setControlMode("pointer")}
-              className={cn(
-                "p-2 rounded transition-colors",
-                controlMode === "pointer"
-                  ? "bg-[#095D40] text-white"
-                  : "text-gray-700 hover:bg-gray-100"
-              )}
-              title="Pointer tool (V)"
-            >
-              <MousePointer2 className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setControlMode("hand")}
-              className={cn(
-                "p-2 rounded transition-colors",
-                controlMode === "hand"
-                  ? "bg-[#095D40] text-white"
-                  : "text-gray-700 hover:bg-gray-100"
-              )}
-              title="Hand tool (H)"
-            >
-              <Hand className="h-4 w-4" />
-            </button>
-          </div>
 
           {/* Undo/Redo */}
           <div className="flex items-center px-1 py-1">
@@ -132,6 +118,30 @@ export function DifyCanvasToolbar() {
             >
               <Keyboard className="h-4 w-4" />
             </button>
+          </div>
+
+          {/* Run Workflow Button - BIG AND OBVIOUS */}
+          <div className="flex items-center px-1 py-1">
+            {isExecuting ? (
+              <button
+                onClick={handleCancelExecution}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-[12px] transition-all border border-red-200"
+                title="Cancel execution"
+              >
+                <XCircle className="h-4 w-4" />
+                <span>Cancel</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleExecuteWorkflow}
+                disabled={!workflow}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#095D40] hover:bg-[#064030] text-white font-semibold text-[12px] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Run entire workflow"
+              >
+                <Play className="h-4 w-4 fill-white" />
+                <span>Run</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

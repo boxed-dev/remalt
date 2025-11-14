@@ -41,7 +41,7 @@ export const MindMapNode = memo(({ id, data, parentId, selected }: NodeProps<Min
 
   return (
     <div className="relative">
-      <BaseNode id={id} parentId={parentId}>
+      <BaseNode id={id} parentId={parentId} showSourceHandle={true} showTargetHandle={true}>
         <div className="space-y-2 w-[280px]">
         <div className="flex items-center gap-2">
           <Lightbulb className="h-4 w-4 text-[#EC4899]" />

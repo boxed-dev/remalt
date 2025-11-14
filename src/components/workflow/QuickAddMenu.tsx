@@ -14,12 +14,13 @@ interface QuickAddMenuProps {
 }
 
 const NODE_TYPES: NodeType[] = [
+  'start',
   'pdf',
   'voice',
   'image',
   'mindmap',
   'sticky',
-  'template',
+  'prompt',
   'linkedin-creator',
   'chat',
   'connector',

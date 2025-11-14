@@ -6,6 +6,8 @@ import {
   AlertCircle,
   AlertTriangle,
   Download,
+  Copy,
+  Check,
   ExternalLink,
   Users,
   ChevronDown,
@@ -69,6 +71,7 @@ export const YouTubeNode = memo(
     const [isEditing, setIsEditing] = useState(false);
     const [url, setUrl] = useState(data.url || "");
     const [expandedVideos, setExpandedVideos] = useState(false);
+    const [copiedTranscript, setCopiedTranscript] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
@@ -398,6 +401,19 @@ export const YouTubeNode = memo(
       } else if (e.key === "Escape") {
         setUrl(data.url || "");
         setIsEditing(false);
+      }
+    };
+
+    const copyTranscript = async (event: React.MouseEvent<HTMLButtonElement>) => {
+      stopPropagation(event);
+      if (!data.transcript) return;
+
+      try {
+        await navigator.clipboard.writeText(data.transcript);
+        setCopiedTranscript(true);
+        setTimeout(() => setCopiedTranscript(false), 2000);
+      } catch (error) {
+        console.error('Failed to copy transcript:', error);
       }
     };
 
@@ -814,13 +830,31 @@ export const YouTubeNode = memo(
                 </button>
               )}
               {hasTranscript && (
-                <button
-                  onClick={downloadTranscript}
-                  className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
-                >
-                  <Download className="h-3.5 w-3.5 text-[#94A3B8]" />
-                  Export transcript
-                </button>
+                <>
+                  <button
+                    onClick={copyTranscript}
+                    className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
+                  >
+                    {copiedTranscript ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-emerald-600" />
+                        <span className="text-emerald-600">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5 text-[#94A3B8]" />
+                        Copy
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={downloadTranscript}
+                    className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[#1F2937] border border-[#E5E7EB] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A] hover:border-[#D1D5DB] cursor-pointer"
+                  >
+                    <Download className="h-3.5 w-3.5 text-[#94A3B8]" />
+                    Export
+                  </button>
+                </>
               )}
             </div>
           </div>

@@ -622,8 +622,8 @@ async function postHandler(req: NextRequest) {
 
       // Map google/ models to Gemini format
       const geminiModelName = model.startsWith('google/')
-        ? model.replace('google/', '').replace('2.5', '2-5').replace('2.0', '2-0')
-        : 'gemini-2-5-flash';
+        ? model.replace('google/', '')
+        : 'gemini-2.5-flash';
 
       console.log('[Chat API] Using Gemini model:', geminiModelName);
       geminiModel = genAI.getGenerativeModel({

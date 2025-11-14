@@ -48,7 +48,9 @@ export type NodeType =
   | 'chat'
   | 'connector'
   | 'group'
-  | 'sticky';
+  | 'sticky'
+  | 'prompt'
+  | 'start';
 
 export interface WorkflowNode {
   id: string;
@@ -93,6 +95,18 @@ export interface BaseNodeData {
   disabled?: boolean;
   validationErrors?: string[];
   aiInstructions?: string; // AI processing guidelines for this node
+
+  // Execution state (for sequential workflow execution)
+  executionStatus?: 'idle' | 'running' | 'success' | 'error' | 'bypassed';
+  executionTime?: number; // Execution duration in milliseconds
+  lastExecutedAt?: string; // ISO timestamp of last execution
+  executionError?: {
+    message: string;
+    details?: unknown;
+    stack?: string;
+  };
+  output?: unknown; // Cached output from last successful execution
+  outputStale?: boolean; // True if connected node outputs have changed since last execution
 }
 
 // PDF/Document Node
@@ -464,6 +478,23 @@ export interface StickyNoteData extends BaseNodeData {
   fontSize?: 'small' | 'medium' | 'large';
 }
 
+// Prompt / AI Transform Node
+export interface PromptNodeData extends BaseNodeData {
+  prompt?: string;
+  model?: string;
+  provider?: 'gemini' | 'openrouter';
+  temperature?: number;
+  processedOutput?: string;
+  processingStatus?: 'idle' | 'processing' | 'success' | 'error';
+  processingError?: string;
+}
+
+// Start / Trigger Node
+export interface StartNodeData extends BaseNodeData {
+  lastExecutionStatus?: 'idle' | 'running' | 'success' | 'error';
+  lastExecutionTime?: number;
+}
+
 // Union type for all node data
 export type NodeData =
   | TextNodeData
@@ -481,7 +512,9 @@ export type NodeData =
   | ChatNodeData
   | ConnectorNodeData
   | GroupNodeData
-  | StickyNoteData;
+  | StickyNoteData
+  | PromptNodeData
+  | StartNodeData;
 
 // ============================================
 // EDGES (Connections)
@@ -536,12 +569,23 @@ export type ExecutionStatus =
 
 export interface NodeResult {
   nodeId: string;
-  status: 'pending' | 'running' | 'success' | 'error';
-  output: unknown;
-  error?: string;
+  nodeType: string;
+  status: 'pending' | 'running' | 'success' | 'error' | 'bypassed';
+  output?: unknown;
+  error?: {
+    message: string;
+    details?: unknown;
+    stack?: string;
+  };
   startTime: string;
   endTime?: string;
-  duration?: number;
+  duration?: number; // milliseconds
+  inputData?: unknown; // Input data received from connected nodes
+  metadata?: {
+    tokensUsed?: number;
+    apiCalls?: number;
+    cacheHit?: boolean;
+  };
 }
 
 export interface ExecutionError {

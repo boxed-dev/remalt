@@ -8,8 +8,11 @@ import {
   ZoomOut,
   Maximize2,
   Network,
-  StickyNote
+  StickyNote,
+  Play,
+  XCircle
 } from 'lucide-react';
+import { useState, useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { useStickyNotesStore } from '@/lib/stores/sticky-notes-store';
@@ -27,6 +30,34 @@ export function WorkflowToolbar({ onAutoLayout }: WorkflowToolbarProps) {
   const canRedo = useWorkflowStore((state) => state.canRedo());
   const isStickyActive = useStickyNotesStore((state) => state.isActive);
   const toggleStickyMode = useStickyNotesStore((state) => state.toggleStickyMode);
+
+  // Execution state
+  const executeWorkflow = useWorkflowStore((state) => state.executeWorkflow);
+  const cancelExecution = useWorkflowStore((state) => state.cancelExecution);
+  const isExecuting = useWorkflowStore((state) => state.isExecuting);
+  const executionError = useWorkflowStore((state) => state.executionError);
+  const workflow = useWorkflowStore((state) => state.workflow);
+
+  const [showExecutionError, setShowExecutionError] = useState(false);
+
+  const handleExecuteWorkflow = useCallback(async () => {
+    if (!workflow || isExecuting) return;
+
+    setShowExecutionError(false);
+    await executeWorkflow();
+
+    // Show error if execution failed
+    const error = useWorkflowStore.getState().executionError;
+    if (error) {
+      setShowExecutionError(true);
+      setTimeout(() => setShowExecutionError(false), 5000);
+    }
+  }, [workflow, isExecuting, executeWorkflow]);
+
+  const handleCancelExecution = useCallback(() => {
+    cancelExecution();
+    setShowExecutionError(false);
+  }, [cancelExecution]);
 
   const handleZoomIn = () => {
     zoomIn({ duration: 200 });
@@ -113,6 +144,47 @@ export function WorkflowToolbar({ onAutoLayout }: WorkflowToolbarProps) {
         >
           <Maximize2 className="h-4 w-4" />
         </Button>
+
+        <div className="w-px h-5 bg-[#D4AF7F]/20" />
+
+        {/* Run Workflow Button - PROMINENT */}
+        {isExecuting ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-4 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-[12px] transition-all shadow-sm"
+            onClick={handleCancelExecution}
+            title="Cancel execution"
+          >
+            <XCircle className="h-4 w-4 mr-1.5" />
+            Cancel
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-4 rounded-lg bg-[#095D40] hover:bg-[#064030] text-white font-semibold text-[12px] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleExecuteWorkflow}
+            disabled={!workflow || isExecuting}
+            title="Run entire workflow"
+          >
+            <Play className="h-4 w-4 mr-1.5 fill-white" />
+            Run Workflow
+          </Button>
+        )}
+
+        {/* Error Toast */}
+        {showExecutionError && executionError && (
+          <div className="absolute bottom-full mb-2 right-0 bg-red-50 border border-red-200 rounded-lg px-3 py-2 shadow-lg min-w-[200px] max-w-[300px]">
+            <div className="flex items-start gap-2">
+              <XCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-[11px] font-medium text-red-700">Execution Failed</p>
+                <p className="text-[10px] text-red-600 mt-0.5">{executionError}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="w-px h-5 bg-[#D4AF7F]/20" />
 
