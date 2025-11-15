@@ -16,6 +16,7 @@ export function VoiceWaveVisualizer({ mediaStream, isRecording }: VoiceWaveVisua
   const animationFrameRef = useRef<number | undefined>(undefined);
   const analyserRef = useRef<AnalyserNode | undefined>(undefined);
   const dataArrayRef = useRef<Uint8Array | undefined>(undefined);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | undefined>(undefined);
 
   useEffect(() => {
     if (!mediaStream || !isRecording) {
@@ -35,6 +36,9 @@ export function VoiceWaveVisualizer({ mediaStream, isRecording }: VoiceWaveVisua
     analyser.smoothingTimeConstant = 0.8; // Smooth transitions
 
     source.connect(analyser);
+
+    // Store source reference for proper cleanup
+    sourceRef.current = source;
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
@@ -102,9 +106,18 @@ export function VoiceWaveVisualizer({ mediaStream, isRecording }: VoiceWaveVisua
     draw();
 
     return () => {
+      // Disconnect source node FIRST to release MediaStream reference
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+        sourceRef.current = undefined;
+      }
+
+      // Cancel animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+
+      // Close AudioContext
       audioContext.close();
     };
   }, [mediaStream, isRecording]);

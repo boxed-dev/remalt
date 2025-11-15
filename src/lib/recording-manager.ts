@@ -2,6 +2,8 @@
 
 import { createClient, LiveTranscriptionEvents } from '@deepgram/sdk';
 
+const FALLBACK_TRANSCRIBE_TIMEOUT_MS = 15000;
+
 export type RecordingState = 'idle' | 'requesting-permission' | 'recording' | 'processing' | 'error';
 
 export interface RecordingSession {
@@ -527,22 +529,35 @@ class RecordingManager {
     }
     const base64Audio = btoa(binary);
 
-    const response = await fetch('/api/voice/transcribe', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        audioData: base64Audio,
-      }),
-    });
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), FALLBACK_TRANSCRIBE_TIMEOUT_MS);
 
-    if (!response.ok) {
-      throw new Error('Transcription API failed');
+    try {
+      const response = await fetch('/api/voice/transcribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          audioData: base64Audio,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error('Transcription API failed');
+      }
+
+      const result = await response.json();
+      return result.transcript || '';
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Transcription request timed out');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const result = await response.json();
-    return result.transcript || '';
   }
 
   /**

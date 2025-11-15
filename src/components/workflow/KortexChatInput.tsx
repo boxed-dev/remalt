@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Globe, Mic, ChevronDown, ArrowUp, Sparkles, Youtube, Instagram, Check, X } from 'lucide-react';
+import { Globe, Mic, ChevronDown, ArrowUp, Sparkles, Youtube, Instagram, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 import { OpenAI, Gemini, Anthropic, DeepSeek, XAI } from '@lobehub/icons';
 import {
   getProviderInfo,
@@ -12,6 +13,8 @@ import {
 } from '@/lib/models/model-registry';
 import { useSimpleVoiceRecording } from '@/hooks/use-simple-voice-recording';
 import { VoiceWaveVisualizer } from './VoiceWaveVisualizer';
+import { stopCanvasPointerEvent, stopCanvasWheelEvent } from '@/lib/workflow/interaction-guards';
+import { getTextInputProps } from '@/lib/workflow/text-input-helpers';
 
 const detectYouTubeUrl = (text: string) => {
   const match = text.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -78,7 +81,7 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = '0px';
+      textarea.style.height = 'auto';
       const scrollHeight = textarea.scrollHeight;
       textarea.style.height = Math.min(scrollHeight, 200) + 'px';
     }
@@ -115,6 +118,8 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
   const youtubeId = detectYouTubeUrl(value);
   const instagramId = detectInstagramUrl(value);
   const hasDetectedLinks = youtubeId || instagramId;
+
+  const textareaProps = getTextInputProps();
 
   // Handle voice recording start
   const handleStartVoiceRecording = async () => {
@@ -181,22 +186,6 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
             isFocused && 'ring-2 ring-blue-500/20'
           )}
         >
-          {/* Add context button row */}
-          <div className="w-full p-2 border-b border-gray-100">
-            <button
-              className={cn(
-                'group select-none w-auto flex items-center gap-1.5 px-2 py-1 rounded-xl border cursor-pointer transition-colors',
-                isDark
-                  ? 'hover:bg-[#222] border-gray-800 text-gray-500 hover:text-gray-400'
-                  : 'hover:bg-gray-50 border-transparent text-gray-500 hover:text-gray-700'
-              )}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Plus className="w-3 h-3" />
-              <span className="text-xs">Add context</span>
-            </button>
-          </div>
-
           {/* Textarea */}
           <div className="p-2 w-full relative">
             {/* Show wave visualizer when recording */}
@@ -216,7 +205,7 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
               </div>
             )}
 
-            <textarea
+            <Textarea
               ref={textareaRef}
               value={value}
               onChange={(e) => onChange(e.target.value)}
@@ -226,14 +215,13 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
               disabled={disabled || isRecording || isTranscribing}
               placeholder={placeholder}
               className={cn(
-                'bg-transparent w-full resize-none overflow-hidden px-2 py-1',
-                'text-sm font-inter font-normal focus:outline-none',
-                isDark
-                  ? 'text-gray-300 placeholder:text-gray-600'
-                  : 'text-gray-900 placeholder:text-gray-400'
+                'min-h-[40px] max-h-[200px] resize-none border-0 shadow-none focus-visible:ring-0 px-3 py-2',
+                'text-sm font-normal',
+                isDark ? 'bg-transparent text-gray-300 placeholder:text-gray-600' : 'bg-transparent text-gray-900 placeholder:text-gray-400'
               )}
               rows={1}
-              style={{ minHeight: '24px', maxHeight: '200px' }}
+              style={{ resize: 'none' }}
+              {...textareaProps}
             />
 
             {/* Detected Links Indicator */}
@@ -260,9 +248,14 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
             {/* Left side - model selector and web button */}
             <div className="flex flex-row items-center gap-1.5">
               {/* Model selector dropdown */}
-              <div className="relative" ref={dropdownRef}>
+              <div className="relative" ref={dropdownRef} data-flowy-interactive="true">
                 <button
-                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                  onClick={(event) => {
+                    stopCanvasPointerEvent(event);
+                    setIsModelDropdownOpen(!isModelDropdownOpen);
+                  }}
+                  onMouseDown={stopCanvasPointerEvent}
+                  onPointerDown={stopCanvasPointerEvent}
                   className={cn(
                     'flex select-none h-[26px] items-center shadow-sm gap-1.5 px-3 py-1.5 rounded-xl border focus:outline-none transition-colors',
                     isDark
@@ -287,6 +280,12 @@ export const KortexChatInput: React.FC<KortexChatInputProps> = ({
                       'absolute bottom-full mb-2 left-0 w-64 rounded-xl shadow-xl border p-1.5 z-50 max-h-[320px] overflow-y-auto',
                       isDark ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-200'
                     )}
+                    data-flowy-interactive="true"
+                    onMouseDown={stopCanvasPointerEvent}
+                    onPointerDown={stopCanvasPointerEvent}
+                    onClick={stopCanvasPointerEvent}
+                    onWheel={stopCanvasWheelEvent}
+                    onWheelCapture={stopCanvasWheelEvent}
                   >
                     {availableModels.map(model => {
                       const modelProviderId = getProviderForModel(model.id);

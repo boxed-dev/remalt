@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Command, Instagram, Linkedin, Youtube, Camera } from 'lucide-react';
 import type { NodeType } from '@/types/workflow';
 import { getNodeMetadata } from '@/lib/workflow/node-registry';
+import { stopCanvasPointerEvent, stopCanvasWheelEvent } from '@/lib/workflow/interaction-guards';
 
 interface QuickAddMenuProps {
   isOpen: boolean;
@@ -113,14 +114,18 @@ export function QuickAddMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-[100] w-80 rounded-lg border border-[#D4AF7F]/30 bg-white shadow-xl"
+      data-flowy-interactive="true"
+      onPointerDownCapture={stopCanvasPointerEvent}
+      onMouseDownCapture={stopCanvasPointerEvent}
+      onWheelCapture={stopCanvasWheelEvent}
+      className="fixed z-[100] w-80 rounded-xl border border-[#D4AF7F]/30 bg-white shadow-xl"
       style={{
         left: position.x,
         top: position.y,
       }}
     >
       <div className="p-3 border-b border-[#D4AF7F]/20">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-[#FAFBFC] border border-[#E8ECEF]">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#FAFBFC] border border-[#E8ECEF]">
           <Command className="h-4 w-4 text-[#6B7280]" />
           <input
             ref={inputRef}
@@ -144,9 +149,9 @@ export function QuickAddMenu({
               onOpenSocialMediaDialog();
               onClose();
             }}
-            className="w-full flex items-start gap-3 px-3 py-2.5 rounded-md text-left transition-colors text-[#333333] hover:bg-[#D4AF7F]/5 mb-1"
+            className="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg text-left transition-colors text-[#333333] hover:bg-[#D4AF7F]/5 mb-1"
           >
-            <div className="w-8 h-8 rounded-md flex items-center justify-center bg-gradient-to-br from-pink-500 via-purple-500 to-blue-600 flex-shrink-0 mt-0.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-pink-500 via-purple-500 to-blue-600 flex-shrink-0 mt-0.5">
               <Camera className="h-4 w-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
@@ -172,7 +177,7 @@ export function QuickAddMenu({
               onClick={() => handleNodeClick(type)}
               onMouseEnter={() => setSelectedIndex(index)}
               className={`
-                w-full flex items-start gap-3 px-3 py-2.5 rounded-md text-left transition-colors
+                w-full flex items-start gap-3 px-3 py-2.5 rounded-lg text-left transition-colors
                 ${
                   index === selectedIndex
                     ? 'bg-[#D4AF7F]/10 text-[#095D40]'
@@ -181,7 +186,7 @@ export function QuickAddMenu({
               `}
             >
               <div
-                className="w-8 h-8 rounded-md flex items-center justify-center text-white flex-shrink-0 mt-0.5"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white flex-shrink-0 mt-0.5"
                 style={{ backgroundColor: metadata.color }}
               >
                 <metadata.icon className="h-4 w-4" />

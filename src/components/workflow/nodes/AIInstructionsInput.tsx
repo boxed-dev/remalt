@@ -3,6 +3,7 @@
 import { Sparkles, ChevronDown, ChevronUp, Info, Check } from 'lucide-react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
+import { getTextInputProps, getTextInputWrapperProps } from '@/lib/workflow/text-input-helpers';
 
 interface AIInstructionsInputProps {
   value?: string;
@@ -88,12 +89,13 @@ export function AIInstructionsInput({
   const charCount = localValue.length;
   const isNearLimit = charCount > maxLength * 0.9;
 
+  const wrapperProps = getTextInputWrapperProps();
+  const textareaProps = getTextInputProps();
+
   return (
     <div
       className="mt-3 pt-3 border-t border-[#F3F4F6]"
-      onMouseDown={stopPropagation}
-      onWheel={stopPropagation}
-      onTouchStart={stopPropagation}
+      {...wrapperProps}
     >
       {/* Collapsible Header */}
       <button
@@ -142,12 +144,10 @@ export function AIInstructionsInput({
             onChange={handleChange}
             placeholder={placeholder}
             maxLength={maxLength}
-            className="w-full px-3 py-2.5 text-[12px] leading-[1.5] border border-[#E8ECEF] rounded-lg bg-[#FAFBFC] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#095D40]/20 focus:border-[#095D40] resize-none transition-all placeholder:text-[#9CA3AF]"
+            className="w-full px-3 py-2.5 text-[12px] leading-[1.5] border border-[#E8ECEF] rounded-lg bg-[#FAFBFC] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#095D40]/20 focus:border-[#095D40] resize-none transition-all placeholder:text-[#9CA3AF] select-text"
             rows={3}
-            onMouseDown={stopPropagation}
-            onWheel={stopPropagation}
-            onTouchStart={stopPropagation}
-            style={{ minHeight: '72px' }}
+            {...textareaProps}
+            style={{ ...textareaProps.style, minHeight: '72px' }}
           />
 
           {/* Footer: Help text + Character counter */}

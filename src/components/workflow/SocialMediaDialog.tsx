@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { InstagramLogo, LinkedinLogo, YoutubeLogo, Globe } from '@phosphor-icons/react'
+import { stopCanvasPointerEvent, stopCanvasWheelEvent } from '@/lib/workflow/interaction-guards'
 
 interface SocialMediaDialogProps {
   open: boolean
@@ -98,7 +99,13 @@ export function SocialMediaDialog({ open, onOpenChange, onAddNode }: SocialMedia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        data-flowy-interactive="true"
+        onPointerDownCapture={stopCanvasPointerEvent}
+        onMouseDownCapture={stopCanvasPointerEvent}
+        onWheelCapture={stopCanvasWheelEvent}
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold">Add Content</DialogTitle>
         </DialogHeader>

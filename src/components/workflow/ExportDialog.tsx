@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { stopCanvasPointerEvent, stopCanvasWheelEvent } from '@/lib/workflow/interaction-guards';
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -167,7 +168,13 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent
+        className="sm:max-w-[500px]"
+        data-flowy-interactive="true"
+        onPointerDownCapture={stopCanvasPointerEvent}
+        onMouseDownCapture={stopCanvasPointerEvent}
+        onWheelCapture={stopCanvasWheelEvent}
+      >
         <DialogHeader>
           <DialogTitle className="text-[20px] font-semibold text-[#1A1D21]">
             Export Workflow

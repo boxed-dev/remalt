@@ -28,8 +28,6 @@ export const TextNode = memo(({
   style: nodeStyle,
 }: NodeProps<TextNodeData>) => {
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const isActive = activeNodeId === id;
   const updateNode = useWorkflowStore((state) => state.updateNode);
   const [wordCount, setWordCount] = useState(data.wordCount || 0);
   const [isResizing, setIsResizing] = useState(false);
@@ -47,7 +45,7 @@ export const TextNode = memo(({
 
   // Auto-focus editor when node becomes active
   useEffect(() => {
-    if (isActive && editorContainerRef.current) {
+    if (selected && editorContainerRef.current) {
       const editorElement = editorContainerRef.current.querySelector('[contenteditable="true"]') as HTMLElement;
       if (editorElement && document.activeElement !== editorElement) {
         // Small delay to ensure overlay is removed
@@ -56,7 +54,7 @@ export const TextNode = memo(({
         }, 0);
       }
     }
-  }, [isActive]);
+  }, [selected]);
 
   const handleContentChange = (content: string, plainText: string) => {
     const words = plainText.trim().split(/\s+/).filter(Boolean).length;
@@ -187,7 +185,7 @@ export const TextNode = memo(({
       </BaseNode>
 
       {/* Floating AI Instructions - visible once the node is active/selected */}
-      {(isActive || selected) && (
+      {selected && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) =>

@@ -1,12 +1,59 @@
 /* Custom React Flow Styles */
 
-/* GPU Acceleration for smooth performance */
+/* Minimal transitions - instant feedback for selection, subtle for shadows */
 .react-flow__node {
+  transition: box-shadow 100ms ease;
+}
+
+/* GPU acceleration ONLY for actively dragging nodes */
+.react-flow__node.dragging {
   will-change: transform;
   transform: translateZ(0);
   backface-visibility: hidden;
-  transition: filter 200ms ease, box-shadow 250ms ease,
-    transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.flowy-node {
+  user-select: none;
+}
+
+[data-flowy-selectable="true"] {
+  /* Opt-in selection regions (chat transcripts, outputs, etc.) */
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  cursor: text;
+}
+
+/* Ensure all input and textarea elements allow text selection */
+.flowy-node input,
+.flowy-node textarea,
+.react-flow__node input,
+.react-flow__node textarea {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+}
+
+/* Ensure contentEditable areas allow text selection */
+.flowy-node [contenteditable="true"],
+.react-flow__node [contenteditable="true"] {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+}
+
+/* Allow text selection in elements with select-text class */
+.select-text,
+.select-text * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
 }
 
 /* Disable transform transition during resize to prevent visual jumping */
@@ -14,66 +61,40 @@
   transition: filter 200ms ease, box-shadow 250ms ease !important;
 }
 
-/* FORCE remove ALL borders/outlines from React Flow node wrappers for groups */
+/* Clean group node wrapper - minimal overrides */
 .react-flow__node.react-flow__node-group,
 div[class*="react-flow__node"].react-flow__node-group {
-  border: 0 !important;
-  outline: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-  margin: 0 !important;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
 }
 
-.react-flow__edge-path {
-  transform: translateZ(0);
-}
-
-.react-flow__viewport {
-  will-change: transform;
-}
+/* Viewport transform handled by React Flow */
 
 /* Selected nodes - Styling handled in globals.css (except groups which handle their own styling) */
 .react-flow__node.selected:not(.react-flow__node-group) {
   /* Selection styling is applied to the inner div in globals.css */
 }
 
-/* Group nodes - Clean unibody design with internal styling */
-.react-flow__node-group,
-.react-flow__node-group.selected,
-.react-flow__node-group.selectable,
-.react-flow__node.react-flow__node-group {
-  /* All styling is handled in the GroupNode component */
-  /* Override XYFlow default node styles via CSS variables */
-  --xy-node-border: 0 solid transparent !important;
-  --xy-node-boxshadow-selected: none !important;
-  --xy-node-boxshadow-hover: none !important;
-  --xy-node-background-color: transparent !important;
-  --xy-node-group-background-color: transparent !important;
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  animation: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
+/* Group nodes - Use CSS variables for theming */
+.react-flow__node-group {
+  --xy-node-border: 0 solid transparent;
+  --xy-node-boxshadow-selected: none;
+  --xy-node-boxshadow-hover: none;
+  --xy-node-background-color: transparent;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
 }
 
 /* Fix visual jumping during group resize from top/left edges */
 .react-flow__node-group.resizing,
 .react-flow__node-group .react-flow__resize-control.line {
-  transition: none !important;
-}
-
-/* Smooth resize for group nodes - disable transform transition during resize */
-.react-flow__node-group {
-  transition: filter 200ms ease, box-shadow 250ms ease !important;
-}
-
-/* Also remove any potential borders/outlines from wrapper elements */
-.react-flow__node-group > *:first-child {
-  /* Ensure the inner content has no unexpected borders */
-  outline: none !important;
+  transition: none;
 }
 
 /* Selection ring animation removed - handled in globals.css */
@@ -97,25 +118,22 @@ div[class*="react-flow__node"].react-flow__node-group {
 
 /* Edge path - Default green color */
 .react-flow__edge-path {
-  stroke: #095D40 !important;
+  stroke: #095D40;
   stroke-width: 3.5;
   stroke-linecap: round;
 }
 
 /* Override ReactFlow's default edge color variables */
 .react-flow__edge {
-  --xy-edge-stroke: #095D40 !important;
-  --xy-edge-stroke-selected: #095D40 !important;
+  --xy-edge-stroke: #095D40;
+  --xy-edge-stroke-selected: #095D40;
 }
 
-/* Force all edge markers (arrows) to be green */
+/* Edge markers (arrows) - scoped properly */
 .react-flow__arrowhead,
-.react-flow__edge-path,
-.react-flow__edge marker,
-marker {
-  fill: #095D40 !important;
-  stroke: #095D40 !important;
-  color: #095D40 !important;
+.react-flow__edge marker {
+  fill: #095D40;
+  stroke: #095D40;
 }
 
 .flowy-node .flowy-node-header {
@@ -144,24 +162,27 @@ marker {
   background-color: var(--node-header-surface-active) !important;
 }
 
-/* Keep threads above group surfaces while preserving node interactivity */
+/* Keep the stacking order predictable: groups < edges < nodes < overlays */
 .react-flow__edges {
-  z-index: 5 !important;
+  z-index: 1;
 }
 
-/* Removed global pointer-events rule to allow custom edges to handle their own interactions */
+.react-flow__nodes {
+  position: relative;
+  z-index: 2;
+}
 
 .react-flow__connection {
-  z-index: 6 !important;
+  z-index: 6;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #095D40 !important;
+  stroke: #095D40;
   stroke-width: 4.5;
 }
 
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke: #095D40 !important;
+  stroke: #095D40;
   stroke-width: 4;
 }
 
@@ -213,31 +234,19 @@ marker {
   border: 1.5px solid #095D40;
 }
 
-/* Connection line - Enhanced with animation */
+/* Connection line - Static with enhanced visibility */
 .react-flow__connectionline {
   stroke: #095D40 !important;
   stroke-width: 4 !important;
   stroke-linecap: round;
   filter: drop-shadow(0 2px 4px rgba(9, 93, 64, 0.3));
-  animation: connection-pulse 1.5s ease-in-out infinite;
+  opacity: 0.9;
 }
 
 /* Connection line path */
 .react-flow__connectionline-path {
   stroke: #095D40 !important;
   fill: none !important;
-}
-
-@keyframes connection-pulse {
-  0%,
-  100% {
-    opacity: 0.8;
-    stroke-width: 4;
-  }
-  50% {
-    opacity: 1;
-    stroke-width: 4.5;
-  }
 }
 
 /* Edges when connecting - Flow animation */
@@ -266,6 +275,24 @@ marker {
   filter: drop-shadow(0 2px 6px rgba(9, 93, 64, 0.35));
 }
 
+/* Magnetic node targeting - Glow effect when connecting */
+.flowy-magnetic-node {
+  box-shadow: 0 0 0 3px rgba(9, 93, 64, 0.4),
+              0 0 20px rgba(9, 93, 64, 0.6),
+              0 0 40px rgba(9, 93, 64, 0.3) !important;
+  border-color: #095D40 !important;
+  transform: scale(1.02);
+  transition: all 150ms ease-out !important;
+}
+
+/* Preview node targeting - Subtle glow for preview zone */
+.flowy-preview-node {
+  box-shadow: 0 0 0 2px rgba(9, 93, 64, 0.2),
+              0 0 15px rgba(9, 93, 64, 0.3) !important;
+  border-color: rgba(9, 93, 64, 0.5) !important;
+  transition: all 200ms ease-out !important;
+}
+
 /* Node dragging - GPU optimized (groups handle their own styling) */
 .react-flow__node.dragging:not(.react-flow__node-group),
 .react-flow__node.dragging-node:not(.react-flow__node-group) {
@@ -277,22 +304,14 @@ marker {
   z-index: 1000;
 }
 
-/* Group node cursor - ensure grab cursor is visible */
+/* Group node cursor - scoped to container only */
 .react-flow__node-group {
-  cursor: grab !important;
+  cursor: grab;
 }
 
 .react-flow__node-group.dragging,
-.react-flow__node-group.dragging-node {
-  cursor: grabbing !important;
-}
-
-/* Override cursor on all children during drag to ensure grabbing cursor shows */
-.react-flow__node-group.dragging *,
-.react-flow__node-group.dragging-node *,
-.react-flow__node-group:active *,
-.react-flow__node-group.selected:active * {
-  cursor: grabbing !important;
+.react-flow__node-group:active {
+  cursor: grabbing;
 }
 
 /* Node hover (groups handle their own hover state) */
@@ -313,45 +332,22 @@ marker {
   }
 }
 
-/* Handle hover states - Enhanced with pulse animation */
+/* Handle hover states - Visible and responsive */
 .react-flow__handle {
-  width: 16px !important;
-  height: 16px !important;
-  border-width: 3px !important;
-  border-color: #095D40 !important; /* Brand green */
-  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 0.6;
-  transform: translateZ(0);
+  width: 16px;
+  height: 16px;
+  border-width: 3px;
+  border-color: #095D40; /* Brand green */
+  transition: all 150ms ease;
+  opacity: 1; /* Always visible for discoverability */
   cursor: crosshair;
-  background: white !important;
+  background: white;
 }
 
 .react-flow__handle:hover {
-  opacity: 1 !important;
   transform: scale(1.5);
-  border-color: #095D40 !important;
-  border-width: 3px !important;
   box-shadow: 0 0 0 4px rgba(9, 93, 64, 0.15), 0 0 12px rgba(9, 93, 64, 0.3),
-    0 4px 8px rgba(0, 0, 0, 0.1) !important;
-  animation: pulse-handle 1.5s ease-in-out infinite;
-}
-
-.react-flow__handle:hover::before {
-  opacity: 1;
-  transform: translateZ(0) scale(1.6);
-  box-shadow: 0 0 0 4px rgba(9, 93, 64, 0.15), 0 2px 8px rgba(9, 93, 64, 0.2);
-  animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse-ring {
-  0%,
-  100% {
-    box-shadow: 0 0 0 4px rgba(9, 93, 64, 0.15), 0 2px 8px rgba(9, 93, 64, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 0 10px rgba(9, 93, 64, 0.08),
-      0 4px 12px rgba(9, 93, 64, 0.15);
-  }
+    0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .react-flow__node:hover .react-flow__handle {
@@ -364,22 +360,27 @@ marker {
   pointer-events: all !important;
 }
 
-/* Valid connection target - glow effect */
+/* Magnetic handle effect when node is targeted */
+.flowy-magnetic-node .react-flow__handle {
+  transform: scale(2) !important;
+  box-shadow: 0 0 0 6px rgba(9, 93, 64, 0.3),
+              0 0 20px rgba(9, 93, 64, 0.5) !important;
+  border-color: #095D40 !important;
+  background: #095D40 !important;
+}
+
+/* Preview handle effect */
+.flowy-preview-node .react-flow__handle {
+  transform: scale(1.5) !important;
+  box-shadow: 0 0 0 4px rgba(9, 93, 64, 0.2),
+              0 0 12px rgba(9, 93, 64, 0.3) !important;
+}
+
+/* Valid connection target - static glow effect */
 .react-flow__handle.connecting {
   opacity: 1;
   transform: translateZ(0) scale(1.8);
   box-shadow: 0 0 0 6px rgba(9, 93, 64, 0.25), 0 0 20px rgba(9, 93, 64, 0.4);
-  animation: glow-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes glow-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 6px rgba(9, 93, 64, 0.25), 0 0 20px rgba(9, 93, 64, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(9, 93, 64, 0.35), 0 0 30px rgba(9, 93, 64, 0.5);
-  }
 }
 
 /* Connection snapping magnetism effect */

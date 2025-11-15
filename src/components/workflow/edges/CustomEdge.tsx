@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import { memo, useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -11,7 +11,7 @@ import {
 import { X } from 'lucide-react';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 
-export function CustomEdge({
+function CustomEdgeComponent({
   id,
   sourceX,
   sourceY,
@@ -114,11 +114,11 @@ export function CustomEdge({
         {/* Define the animated gradient in SVG defs */}
         <defs>
           <linearGradient id={animationId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#D4AF7F" stopOpacity="0.3" />
-            <stop offset="25%" stopColor="#095D40" stopOpacity="0.8" />
-            <stop offset="50%" stopColor="#D4AF7F" stopOpacity="0.3" />
-            <stop offset="75%" stopColor="#095D40" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#D4AF7F" stopOpacity="0.3" />
+            <stop offset="0%" stopColor="#9CA3AF" stopOpacity="0.3" />
+            <stop offset="25%" stopColor="#6B7280" stopOpacity="0.8" />
+            <stop offset="50%" stopColor="#9CA3AF" stopOpacity="0.3" />
+            <stop offset="75%" stopColor="#6B7280" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#9CA3AF" stopOpacity="0.3" />
             <animate
               attributeName="x1"
               values="0%;100%;200%"
@@ -148,7 +148,7 @@ export function CustomEdge({
           <path
             d={edgePath}
             fill="none"
-            stroke="#095D40"
+            stroke="#6B7280"
             strokeWidth={calculateStrokeWidth(5)}
             strokeLinecap="round"
             opacity={0.25}
@@ -159,11 +159,11 @@ export function CustomEdge({
           />
         )}
 
-        {/* Light tan dotted background layer */}
+        {/* Light grey dotted background layer */}
         <path
           d={edgePath}
           fill="none"
-          stroke={shouldHighlight ? '#095D40' : '#D4AF7F'}
+          stroke={shouldHighlight ? '#6B7280' : '#9CA3AF'}
           strokeWidth={calculateStrokeWidth(2)}
           strokeDasharray={calculateDashArray()}
           strokeLinecap="round"
@@ -173,11 +173,11 @@ export function CustomEdge({
           }}
         />
 
-        {/* Animated dark green dotted layer */}
+        {/* Animated grey dotted layer */}
         <path
           d={edgePath}
           fill="none"
-          stroke={shouldHighlight ? '#095D40' : `url(#${animationId})`}
+          stroke={shouldHighlight ? '#6B7280' : `url(#${animationId})`}
           strokeWidth={calculateStrokeWidth(2)}
           strokeDasharray={calculateDashArray()}
           strokeLinecap="round"
@@ -236,3 +236,7 @@ export function CustomEdge({
     </>
   );
 }
+
+CustomEdgeComponent.displayName = 'CustomEdge';
+
+export const CustomEdge = memo(CustomEdgeComponent);

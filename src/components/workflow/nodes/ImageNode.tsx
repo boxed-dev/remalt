@@ -17,8 +17,6 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
   const [imageLoading, setImageLoading] = useState(true);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const isActive = activeNodeId === id;
   const analysisTriggeredRef = useRef(false);
 
   const isUploading = data.analysisStatus === 'loading' || data.analysisStatus === 'analyzing';
@@ -390,7 +388,7 @@ export const ImageNode = memo(({ id, data, parentId, selected }: NodeProps<Image
       </BaseNode>
 
       {/* Floating AI Instructions - visible once the node is active/selected */}
-      {(isActive || selected) && (
+      {selected && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ImageNodeData>)}

@@ -43,8 +43,6 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
   const inputRef = useRef<HTMLInputElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const processedUrlRef = useRef<string | null>(null);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const isActive = activeNodeId === id;
 
   const hasPostData = data.fetchStatus === 'success' && !!data.content;
 
@@ -52,8 +50,8 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
     if (data.fetchStatus === 'loading') {
       return (
         <NodeHeaderBadge tone="accent">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Fetching</span>
+          <Loader2 className="h-3 w-3 animate-spin text-white" />
+          <span className="text-white">Fetching</span>
         </NodeHeaderBadge>
       );
     }
@@ -61,8 +59,8 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
     if (data.fetchStatus === 'error') {
       return (
         <NodeHeaderBadge tone="danger">
-          <AlertCircle className="h-3 w-3" />
-          <span>Failed</span>
+          <AlertCircle className="h-3 w-3 text-white" />
+          <span className="text-white">Failed</span>
         </NodeHeaderBadge>
       );
     }
@@ -70,8 +68,8 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
     if (hasPostData) {
       return (
         <NodeHeaderBadge tone="success">
-          <CheckCircle2 className="h-3 w-3" />
-          <span>Loaded</span>
+          <CheckCircle2 className="h-3 w-3 text-white" />
+          <span className="text-white">Loaded</span>
         </NodeHeaderBadge>
       );
     }
@@ -388,7 +386,7 @@ export const LinkedInNode = memo(({ id, data, parentId, selected }: NodeProps<Li
     </BaseNode>
 
     {/* Floating AI Instructions - visible once the node is active/selected */}
-    {(isActive || selected) && (
+    {selected && (
       <FloatingAIInstructions
         value={data.aiInstructions}
         onChange={(value) =>

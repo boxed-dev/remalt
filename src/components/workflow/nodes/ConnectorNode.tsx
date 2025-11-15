@@ -10,8 +10,6 @@ import { FloatingAIInstructions } from './FloatingAIInstructions';
 export const ConnectorNode = memo(({ id, data, parentId, selected }: NodeProps<ConnectorNodeData>) => {
   const [isSelecting, setIsSelecting] = useState(false);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const isActive = activeNodeId === id;
 
   const relationshipOptions: Array<ConnectorNodeData['relationshipType']> = [
     'workflow',
@@ -64,7 +62,7 @@ export const ConnectorNode = memo(({ id, data, parentId, selected }: NodeProps<C
       </BaseNode>
 
       {/* Floating AI Instructions - visible once the node is active/selected */}
-      {(isActive || selected) && (
+      {selected && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ConnectorNodeData>)}

@@ -133,12 +133,6 @@
     font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1, 'ss01' 1, 'ss02' 1, 'ss03' 1;
     letter-spacing: -0.011em;
     line-height: 1.5;
-    cursor: default !important;
-  }
-
-  /* Ensure cursor is always visible */
-  *, *::before, *::after {
-    cursor: inherit;
   }
 
   /* Premium Geist-optimized typography */
@@ -370,17 +364,12 @@
     animation: loading-dot 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  /* Enhanced chat scrollbar - ALWAYS VISIBLE */
+  /* Enhanced chat scrollbar - shows when needed */
   .chat-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.05);
-
-    /* Ensure scroll container works */
-    overflow-y: scroll !important;  /* Force scrollbar to always show */
+    overflow-y: auto;
     overflow-x: hidden;
-
-    /* Performance optimization */
-    will-change: scroll-position;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -474,24 +463,16 @@
     white-space: pre-wrap;
   }
 
-  /* Fix for sidebar and toolbar visibility after tab switching */
-  aside.fixed[style*="top: 56px"],
-  div.fixed.bottom-6.right-6 {
-    will-change: auto !important;
-    transform: translateZ(0);
-    backface-visibility: visible !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-
-  /* Selected node styling - disabled, using activation system instead */
+  /* Selected node styling - instant visual feedback with accessibility */
   .react-flow__node.selected:not(.react-flow__node-group) {
-    outline: none !important;
+    outline: 2px solid #0F766E;
+    outline-offset: 2px;
   }
 
-  /* Group nodes don't get selection styling */
+  /* Group nodes get subtle selection styling */
   .react-flow__node-group.selected > div {
-    box-shadow: none !important;
+    outline: 2px solid #0F766E;
+    outline-offset: 2px;
   }
 }
 

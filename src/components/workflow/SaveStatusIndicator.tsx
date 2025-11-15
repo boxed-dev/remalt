@@ -66,7 +66,7 @@ export function SaveStatusIndicator() {
           return {
             Icon: Cloud,
             text: "Saving...",
-            textClassName: "text-[#6B7280]",
+            textClassName: "text-white/80",
             iconClassName: "",
             tooltip: "Your workflow is being saved to the cloud",
             showPulse: true,
@@ -75,7 +75,7 @@ export function SaveStatusIndicator() {
           return {
             Icon: CloudOff,
             text: "Not saved",
-            textClassName: "text-[#EF4444]",
+            textClassName: "text-red-300",
             iconClassName: "",
             tooltip:
               saveError || "Failed to save. Your changes are stored locally.",
@@ -93,7 +93,7 @@ export function SaveStatusIndicator() {
           return {
             Icon: Cloud,
             text: `Synced ${relativeTime}`,
-            textClassName: "text-[#9CA3AF]",
+            textClassName: "text-white/70",
             iconClassName: "",
             tooltip: `Last synced: ${fullTime}`,
             showPulse: false,
@@ -121,8 +121,8 @@ export function SaveStatusIndicator() {
           <div
             className={cn(
               "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-200",
-              "hover:bg-[#F5F5F7]",
-              status === "error" && "bg-[#FEF2F2]"
+              "hover:bg-white/10",
+              status === "error" && "bg-red-900/20"
             )}
           >
             <div className="relative">
@@ -137,11 +137,11 @@ export function SaveStatusIndicator() {
                 <>
                   {/* Outer pulse ring */}
                   <span className="absolute inset-0 h-3.5 w-3.5 animate-ping opacity-20">
-                    <Icon className="h-3.5 w-3.5 text-[#007AFF]" />
+                    <Icon className="h-3.5 w-3.5 text-white" />
                   </span>
                   {/* Inner pulse */}
                   <span className="absolute inset-0 h-3.5 w-3.5 animate-pulse opacity-40">
-                    <Icon className="h-3.5 w-3.5 text-[#007AFF]" />
+                    <Icon className="h-3.5 w-3.5 text-white" />
                   </span>
                 </>
               )}
@@ -160,7 +160,7 @@ export function SaveStatusIndicator() {
               {text}
             </span>
             {status === "error" && (
-              <AlertCircle className="h-3 w-3 text-[#EF4444] ml-0.5" />
+              <AlertCircle className="h-3 w-3 text-red-300 ml-0.5" />
             )}
           </div>
         </TooltipTrigger>

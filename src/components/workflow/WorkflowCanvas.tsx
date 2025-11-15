@@ -44,7 +44,9 @@ import { SelectionFloatingToolbar } from "./SelectionFloatingToolbar";
 import { QuickAddMenu } from "./QuickAddMenu";
 import { ExportDialog } from "./ExportDialog";
 import { isStickyNoteSelected } from "./StickyNoteOverlay";
+import { isInteractiveElement } from "@/lib/workflow/interaction-guards";
 import { SocialMediaDialog } from "./SocialMediaDialog";
+import { useShallow } from "zustand/react/shallow";
 
 type UrlNodeMapping = {
   type: NodeType;
@@ -387,19 +389,6 @@ function queryGroupsContainingRect(
   });
 }
 
-function isEditableElement(element: EventTarget | null): boolean {
-  if (!element || !(element instanceof HTMLElement)) {
-    return false;
-  }
-
-  if (element.isContentEditable) {
-    return true;
-  }
-
-  const tagName = element.tagName.toLowerCase();
-  return tagName === "input" || tagName === "textarea" || tagName === "select";
-}
-
 function tryParseUrl(raw: string): URL | null {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -513,57 +502,93 @@ function WorkflowCanvasInner() {
   } | null>(null);
   const reactFlowInstance = useReactFlow();
   const { screenToFlowPosition, getViewport, setViewport } = reactFlowInstance;
-  const setCursorPosition = useWorkflowStore((state) => state.setCursorPosition);
   const connectSourceRef = useRef<string | null>(null);
   const connectedViaNativeRef = useRef(false);
   const connectableIndexRef = useRef<ConnectableIndex>(EMPTY_CONNECTABLE_INDEX);
   const groupIndexRef = useRef<GroupIndex>(EMPTY_GROUP_INDEX);
+  const pendingCursorPositionRef = useRef<{ x: number; y: number } | null>(
+    null
+  );
+  const cursorAnimationFrameRef = useRef<number | null>(null);
 
   // Sticky notes state
   const isStickyActive = useStickyNotesStore((state) => state.isActive);
 
-  // Use individual selectors to avoid infinite loops
-  const workflow = useWorkflowStore((state) => state.workflow);
-  const workflowNodes = useWorkflowStore(
-    (state) => state.workflow?.nodes ?? EMPTY_NODES
+  const {
+    workflow,
+    workflowNodes,
+    workflowEdges,
+    workflowViewport,
+    snapToGrid,
+    isCanvasPinchDisabled,
+    selectedNodes,
+    clipboard,
+    isConnecting,
+    connectHoveredTargetId,
+    connectPreviewTargetId,
+  } = useWorkflowStore(
+    useShallow((state) => ({
+      workflow: state.workflow,
+      workflowNodes: state.workflow?.nodes ?? EMPTY_NODES,
+      workflowEdges: state.workflow?.edges ?? EMPTY_EDGES,
+      workflowViewport: state.workflow?.viewport,
+      snapToGrid: state.snapToGrid,
+      isCanvasPinchDisabled: state.isCanvasPinchDisabled,
+      selectedNodes: state.selectedNodes,
+      clipboard: state.clipboard,
+      isConnecting: state.isConnecting,
+      connectHoveredTargetId: state.connectHoveredTargetId,
+      connectPreviewTargetId: state.connectPreviewTargetId,
+    }))
   );
-  const workflowEdges = useWorkflowStore(
-    (state) => state.workflow?.edges ?? EMPTY_EDGES
-  );
-  const workflowViewport = useWorkflowStore(
-    (state) => state.workflow?.viewport
-  );
-  const controlMode = useWorkflowStore((state) => state.controlMode);
-  const snapToGrid = useWorkflowStore((state) => state.snapToGrid);
-  const isCanvasPinchDisabled = useWorkflowStore(
-    (state) => state.isCanvasPinchDisabled
-  );
-  const selectedNodes = useWorkflowStore((state) => state.selectedNodes);
-  const clipboard = useWorkflowStore((state) => state.clipboard);
 
-  const addNode = useWorkflowStore((state) => state.addNode);
-  const updateNode = useWorkflowStore((state) => state.updateNode);
-  const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const updateNodePosition = useWorkflowStore(
-    (state) => state.updateNodePosition
+  const {
+    addNode,
+    updateNode,
+    updateNodeData,
+    updateNodePosition,
+    deleteNode,
+    deleteNodes,
+    addEdgeToStore,
+    deleteEdge,
+    deleteEdges,
+    updateViewport,
+    selectNode,
+    clearSelection,
+    pasteNodes,
+    copyNodes,
+    duplicateNode,
+    alignNodes,
+    distributeNodes,
+    setConnecting,
+    setConnectHoveredTarget,
+    setConnectPreviewTarget,
+    setCursorPosition,
+  } = useWorkflowStore(
+    useShallow((state) => ({
+      addNode: state.addNode,
+      updateNode: state.updateNode,
+      updateNodeData: state.updateNodeData,
+      updateNodePosition: state.updateNodePosition,
+      deleteNode: state.deleteNode,
+      deleteNodes: state.deleteNodes,
+      addEdgeToStore: state.addEdge,
+      deleteEdge: state.deleteEdge,
+      deleteEdges: state.deleteEdges,
+      updateViewport: state.updateViewport,
+      selectNode: state.selectNode,
+      clearSelection: state.clearSelection,
+      pasteNodes: state.pasteNodes,
+      copyNodes: state.copyNodes,
+      duplicateNode: state.duplicateNode,
+      alignNodes: state.alignNodes,
+      distributeNodes: state.distributeNodes,
+      setConnecting: state.setConnecting,
+      setConnectHoveredTarget: state.setConnectHoveredTarget,
+      setConnectPreviewTarget: state.setConnectPreviewTarget,
+      setCursorPosition: state.setCursorPosition,
+    }))
   );
-  const deleteNode = useWorkflowStore((state) => state.deleteNode);
-  const deleteNodes = useWorkflowStore((state) => state.deleteNodes);
-  const addEdgeToStore = useWorkflowStore((state) => state.addEdge);
-  const deleteEdge = useWorkflowStore((state) => state.deleteEdge);
-  const deleteEdges = useWorkflowStore((state) => state.deleteEdges);
-  const updateViewport = useWorkflowStore((state) => state.updateViewport);
-  const selectNode = useWorkflowStore((state) => state.selectNode);
-  const clearSelection = useWorkflowStore((state) => state.clearSelection);
-  const pasteNodes = useWorkflowStore((state) => state.pasteNodes);
-  const copyNodes = useWorkflowStore((state) => state.copyNodes);
-  const duplicateNode = useWorkflowStore((state) => state.duplicateNode);
-  const alignNodes = useWorkflowStore((state) => state.alignNodes);
-  const distributeNodes = useWorkflowStore((state) => state.distributeNodes);
-  const setActiveNode = useWorkflowStore((state) => state.setActiveNode);
-  const setConnecting = useWorkflowStore((state) => state.setConnecting);
-  const setConnectHoveredTarget = useWorkflowStore((state) => state.setConnectHoveredTarget);
-  const setConnectPreviewTarget = useWorkflowStore((state) => state.setConnectPreviewTarget);
 
   // Convert workflow nodes/edges to React Flow format
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -580,6 +605,18 @@ function WorkflowCanvasInner() {
       zoom: workflowViewport.zoom,
     };
   }, [workflowViewport]);
+
+  const fitViewOptions = useMemo(() => ({ padding: 0.2 }), []);
+  const proOptions = useMemo(() => ({ hideAttribution: true }), []);
+  const defaultEdgeOptions = useMemo(
+    () => ({
+      type: "smoothstep",
+      animated: false,
+    }),
+    []
+  );
+  const deleteKeyCode = useMemo(() => ["Backspace", "Delete"], []);
+  const snapGridConfig = useMemo(() => [15, 15] as [number, number], []);
 
   // FIXED: Optimize mapped nodes calculation
   // Only recalculate when workflowNodes array reference changes
@@ -602,7 +639,12 @@ function WorkflowCanvasInner() {
       position: node.parentId
         ? { x: node.position.x, y: node.position.y }
         : node.position,
-      data: node.data as Record<string, unknown>,
+      data: {
+        ...(node.data as Record<string, unknown>),
+        // Performance optimization: only pass connection state to the specific targeted nodes
+        isConnectTarget: isConnecting && connectHoveredTargetId === node.id,
+        isPreviewTarget: isConnecting && connectPreviewTargetId === node.id && connectHoveredTargetId !== node.id,
+      },
       // Inline style overrides for group nodes to ensure no outer border/box-shadow from React Flow
       style:
         node.type === "group"
@@ -633,7 +675,7 @@ function WorkflowCanvasInner() {
       connectable: true,
       selectable: true,
     }));
-  }, [workflowNodes]);
+  }, [workflowNodes, isConnecting, connectHoveredTargetId, connectPreviewTargetId]);
 
   // Sync workflow edges to React Flow (memoized for immediate rendering)
   const mappedEdges = useMemo(() => {
@@ -663,20 +705,47 @@ function WorkflowCanvasInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mappedEdges]);
 
+  // Performance optimization: Only rebuild spatial indexes when node count changes
+  // This avoids expensive rebuilds on every position update
   useEffect(() => {
-    const rfNodes = reactFlowInstance.getNodes();
-    connectableIndexRef.current = buildConnectableIndex(rfNodes);
-    groupIndexRef.current = buildGroupIndex(rfNodes);
-  }, [nodes, reactFlowInstance]);
+    // Debounce index building to avoid excessive rebuilds during rapid changes
+    const timeoutId = setTimeout(() => {
+      const rfNodes = reactFlowInstance.getNodes();
+      connectableIndexRef.current = buildConnectableIndex(rfNodes);
+      groupIndexRef.current = buildGroupIndex(rfNodes);
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [nodes.length, reactFlowInstance]); // Only rebuild when node count changes
+
+  // Performance optimization: throttle pointer move handling
+  const pointerMoveThrottleRef = useRef<number>(0);
+  const connectionUpdateRafRef = useRef<number | null>(null);
+  const boundsCache = useRef<DOMRect | null>(null);
+  const boundsTimestamp = useRef<number>(0);
 
   useEffect(() => {
+    const cancelCursorAnimation = () => {
+      if (cursorAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(cursorAnimationFrameRef.current);
+        cursorAnimationFrameRef.current = null;
+      }
+    };
+
     const handlePointerMove = (event: PointerEvent) => {
       const wrapper = reactFlowWrapper.current;
       if (!wrapper) {
         return;
       }
 
-      const bounds = wrapper.getBoundingClientRect();
+      // Cache bounds for 500ms to avoid repeated getBoundingClientRect calls
+      const now = performance.now();
+      if (!boundsCache.current || now - boundsTimestamp.current > 500) {
+        boundsCache.current = wrapper.getBoundingClientRect();
+        boundsTimestamp.current = now;
+      }
+
+      const bounds = boundsCache.current;
       const withinBounds =
         event.clientX >= bounds.left &&
         event.clientX <= bounds.right &&
@@ -684,6 +753,8 @@ function WorkflowCanvasInner() {
         event.clientY <= bounds.bottom;
 
       if (!withinBounds) {
+        pendingCursorPositionRef.current = null;
+        cancelCursorAnimation();
         setCursorPosition(null);
         return;
       }
@@ -693,48 +764,79 @@ function WorkflowCanvasInner() {
         y: event.clientY,
       });
 
-      setCursorPosition(flowPosition);
-
-      // Magnetic targeting while connecting - two-zone detection
-      const store = useWorkflowStore.getState();
-      if (store.isConnecting) {
-        const candidates = queryConnectableIndex(
-          connectableIndexRef.current,
-          flowPosition.x,
-          flowPosition.y,
-          CONNECT_PREVIEW_RADIUS
-        );
-
-        let bestEntry: ConnectableEntry | null = null;
-        let bestDist = Infinity;
-
-        for (const entry of candidates) {
-          if (entry.id === connectSourceRef.current) continue;
-          const dx = flowPosition.x - entry.handleX;
-          const dy = flowPosition.y - entry.handleY;
-          const dist = Math.hypot(dx, dy);
-          if (dist < bestDist) {
-            bestDist = dist;
-            bestEntry = entry;
+      pendingCursorPositionRef.current = flowPosition;
+      if (cursorAnimationFrameRef.current === null) {
+        cursorAnimationFrameRef.current = requestAnimationFrame(() => {
+          cursorAnimationFrameRef.current = null;
+          if (pendingCursorPositionRef.current) {
+            setCursorPosition(pendingCursorPositionRef.current);
           }
+        });
+      }
+
+      // Throttle connection detection to 16ms (60fps)
+      const store = useWorkflowStore.getState();
+      if (store.isConnecting && now - pointerMoveThrottleRef.current > 16) {
+        pointerMoveThrottleRef.current = now;
+
+        // Cancel any pending connection update
+        if (connectionUpdateRafRef.current) {
+          cancelAnimationFrame(connectionUpdateRafRef.current);
         }
 
-        const hoveredId =
-          bestEntry && bestDist <= CONNECT_MAGNET_RADIUS ? bestEntry.id : null;
-        const previewId =
-          bestEntry && bestDist <= CONNECT_PREVIEW_RADIUS ? bestEntry.id : null;
+        // Schedule connection update in next frame
+        connectionUpdateRafRef.current = requestAnimationFrame(() => {
+          const candidates = queryConnectableIndex(
+            connectableIndexRef.current,
+            flowPosition.x,
+            flowPosition.y,
+            CONNECT_PREVIEW_RADIUS
+          );
 
-        if (hoveredId !== store.connectHoveredTargetId) {
-          setConnectHoveredTarget(hoveredId);
-        }
+          let bestEntry: ConnectableEntry | null = null;
+          let bestDist = Infinity;
 
-        if (previewId !== store.connectPreviewTargetId) {
-          setConnectPreviewTarget(previewId);
-        }
+          for (const entry of candidates) {
+            if (entry.id === connectSourceRef.current) continue;
+            const dx = flowPosition.x - entry.handleX;
+            const dy = flowPosition.y - entry.handleY;
+            const dist = Math.hypot(dx, dy);
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestEntry = entry;
+            }
+          }
+
+          const hoveredId =
+            bestEntry && bestDist <= CONNECT_MAGNET_RADIUS ? bestEntry.id : null;
+          const previewId =
+            bestEntry && bestDist <= CONNECT_PREVIEW_RADIUS ? bestEntry.id : null;
+
+          const currentStore = useWorkflowStore.getState();
+          if (hoveredId !== currentStore.connectHoveredTargetId) {
+            setConnectHoveredTarget(hoveredId);
+          }
+
+          if (previewId !== currentStore.connectPreviewTargetId) {
+            setConnectPreviewTarget(previewId);
+          }
+
+          connectionUpdateRafRef.current = null;
+        });
       }
     };
 
-    const resetCursor = () => setCursorPosition(null);
+    const resetCursor = () => {
+      pendingCursorPositionRef.current = null;
+      cancelCursorAnimation();
+      setCursorPosition(null);
+      boundsCache.current = null; // Clear cache on reset
+
+      if (connectionUpdateRafRef.current) {
+        cancelAnimationFrame(connectionUpdateRafRef.current);
+        connectionUpdateRafRef.current = null;
+      }
+    };
 
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerleave", resetCursor);
@@ -744,6 +846,11 @@ function WorkflowCanvasInner() {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerleave", resetCursor);
       window.removeEventListener("blur", resetCursor);
+      cancelCursorAnimation();
+
+      if (connectionUpdateRafRef.current) {
+        cancelAnimationFrame(connectionUpdateRafRef.current);
+      }
     };
   }, [screenToFlowPosition, setCursorPosition, setConnectHoveredTarget, setConnectPreviewTarget]);
 
@@ -984,11 +1091,10 @@ function WorkflowCanvasInner() {
 
     // Otherwise, handle normal click behavior
     clearSelection();
-    setActiveNode(null);
     setContextMenuPosition(null);
     setNodeContextMenu(null);
     setSelectionContextMenu(null);
-  }, [clearSelection, setActiveNode, isStickyActive, workflow?.id, addNode, reactFlowInstance]);
+  }, [clearSelection, isStickyActive, workflow?.id, addNode, reactFlowInstance]);
 
   // FIXED: Access selectedNodes from store instead of using as dependency
   // This prevents callback recreation on every selection change
@@ -1371,7 +1477,7 @@ function WorkflowCanvasInner() {
       const target = event.target;
       const activeElement = document.activeElement;
 
-      if (isEditableElement(target) || isEditableElement(activeElement)) {
+      if (isInteractiveElement(target) || isInteractiveElement(activeElement)) {
         return;
       }
 
@@ -1444,23 +1550,9 @@ function WorkflowCanvasInner() {
     };
   }, [spacePressed]);
 
-  // ESC key to deactivate all nodes
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setActiveNode(null);
-      }
-    };
-
-    window.addEventListener("keydown", handleEsc);
-    return () => {
-      window.removeEventListener("keydown", handleEsc);
-    };
-  }, [setActiveNode]);
-
   if (!workflow) {
     return (
-      <div className="flex items-center justify-center h-full bg-[#F5F5F5]">
+      <div className="flex items-center justify-center h-full bg-[#efefef]">
         <div className="text-center max-w-md">
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center shadow-sm">
             <svg
@@ -1606,7 +1698,7 @@ function WorkflowCanvasInner() {
 
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
-      if (isEditableElement(e.target)) return;
+      if (isInteractiveElement(e.target)) return;
 
       const items = Array.from(e.clipboardData?.items || []);
       const imageItem = items.find(item => item.type.startsWith('image/'));
@@ -1804,33 +1896,30 @@ function WorkflowCanvasInner() {
         onDragOver={onDragOver}
         onDrop={onDrop}
         onSelectionChange={onSelectionChange}
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={fitViewOptions}
         minZoom={0.1}
         maxZoom={4}
         panOnScroll={true}
         panOnScrollSpeed={1.2}
-        panOnDrag={controlMode === "hand" || spacePressed}
+        panOnDrag={spacePressed}
         zoomOnScroll={!isCanvasPinchDisabled}
         zoomOnPinch={!isCanvasPinchDisabled}
         zoomOnDoubleClick={false}
-        selectionOnDrag={controlMode === "pointer" && !spacePressed}
+        selectionOnDrag={!spacePressed}
         panActivationKeyCode={null}
-        proOptions={{ hideAttribution: true }}
+        proOptions={proOptions}
         connectionLineType={ConnectionLineType.SmoothStep}
-        defaultEdgeOptions={{
-          type: "smoothstep",
-          animated: false,
-        }}
-        deleteKeyCode={["Backspace", "Delete"]}
+        defaultEdgeOptions={defaultEdgeOptions}
+        deleteKeyCode={deleteKeyCode}
         multiSelectionKeyCode="Shift"
         snapToGrid={snapToGrid}
-        snapGrid={[15, 15]}
+        snapGrid={snapGridConfig}
       >
         <Background
           gap={16}
           size={2}
-          color="#E0E0E0"
-          style={{ backgroundColor: "#F5F5F5" }}
+          color="#c8c8c8"
+          style={{ backgroundColor: "#efefef" }}
         />
       </ReactFlow>
 

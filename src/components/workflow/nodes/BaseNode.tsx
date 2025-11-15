@@ -1,7 +1,6 @@
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { useCallback } from 'react';
 import type { ReactNode, CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
-import { useWorkflowStore } from '@/lib/stores/workflow-store';
 
 interface HandleConfig {
   id: string;
@@ -15,6 +14,7 @@ interface BaseNodeProps {
   icon?: ReactNode;
   iconBg?: string;
   children: ReactNode;
+  selected?: boolean; // React Flow native selection state
   showSourceHandle?: boolean;
   showTargetHandle?: boolean;
   // NEW: Control overflow behavior for scrollable content
@@ -35,6 +35,9 @@ interface BaseNodeProps {
   headerClassName?: string;
   contentClassName?: string;
   contentStyle?: CSSProperties;
+  // Performance optimization: pass connection state as props instead of subscribing
+  isConnectTarget?: boolean;
+  isPreviewTarget?: boolean;
 }
 
 export function BaseNode({
@@ -43,6 +46,7 @@ export function BaseNode({
   icon: _icon,
   iconBg: _iconBg = 'bg-gray-100',
   children,
+  selected,
   showSourceHandle = true,
   showTargetHandle = false, // Changed default to false - most nodes only need source handle
   allowOverflow = true, // Changed to true to allow handles to extend outside node boundary
@@ -58,14 +62,12 @@ export function BaseNode({
   headerClassName,
   contentClassName,
   contentStyle,
+  isConnectTarget = false,
+  isPreviewTarget = false,
 }: BaseNodeProps) {
   void _type;
   void _icon;
   void _iconBg;
-  // Node activation system
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const setActiveNode = useWorkflowStore((state) => state.setActiveNode);
-  const isActive = activeNodeId === id;
 
   // Get the actual parentId from React Flow's internal state
   // This is more reliable than relying on props which may not be passed correctly
@@ -73,42 +75,25 @@ export function BaseNode({
   const node = getNode(id);
   const actualParentId = node?.parentId || parentId || parentNode;
 
-  const handlePointerDownActivate = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    const isPrimaryPointer = event.pointerType === 'touch' || event.button === 0;
-    if (!isPrimaryPointer) {
-      return;
-    }
-
-    if (!isActive) {
-      setActiveNode(id);
-    }
-  }, [id, isActive, setActiveNode]);
-
   // Hide handles when node is inside a group
   // Use actualParentId from React Flow's getNode() for reliable parent detection
   const isChildOfGroup = !!actualParentId;
   const shouldShowSourceHandle = showSourceHandle && !isChildOfGroup;
   const shouldShowTargetHandle = showTargetHandle && !isChildOfGroup;
-  // Connection targeting highlight state
-  const isConnecting = useWorkflowStore((state) => state.isConnecting);
-  const connectHoveredTargetId = useWorkflowStore((state) => state.connectHoveredTargetId);
-  const connectPreviewTargetId = useWorkflowStore((state) => state.connectPreviewTargetId);
-  const isConnectTarget = isConnecting && connectHoveredTargetId === id;
-  const isPreviewTarget = isConnecting && connectPreviewTargetId === id && !isConnectTarget;
   const hasHeader = Boolean(header);
   return (
     <div
+      data-flowy-selected={selected ? 'true' : 'false'}
       className={`flowy-node min-w-[280px] min-h-[200px] flex flex-col rounded-2xl bg-white transition-all duration-200 ${
         allowOverflow ? 'relative' : 'overflow-hidden relative'
       } ${
         className
           ? className
           : `border border-[#E6E8EC] shadow-sm hover:shadow-md ${
-              isActive ? '!border-[#0F766E]' : 'hover:border-[#CBD5F0]'
+              selected ? '!border-[#0F766E]' : 'hover:border-[#CBD5F0]'
             }`
       } ${isConnectTarget ? 'flowy-magnetic-node' : ''} ${isPreviewTarget ? 'flowy-preview-node' : ''}`}
       style={style}
-      onPointerDownCapture={handlePointerDownActivate}
     >
       {header && (
         <div className={`flex-shrink-0 ${headerClassName}`}>{header}</div>

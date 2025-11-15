@@ -140,12 +140,12 @@ export function DifyWorkflowHeader() {
   };
 
   return (
-    <header className="h-14 border-b border-gray-200 bg-white flex items-center justify-between px-4 flex-shrink-0">
+    <header className="h-14 border-b border-[#074830] bg-[#095D40] flex items-center justify-between px-4 flex-shrink-0">
       {/* Left section - Back button and title */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.push("/flows")}
-          className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
+          className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/10 transition-colors text-white/90 hover:text-white"
           title="Back to canvas"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -161,17 +161,17 @@ export function DifyWorkflowHeader() {
                 onChange={(e) => setEditedName(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onBlur={handleSaveName}
-                className="text-[15px] font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
+                className="text-[15px] font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white/50 min-w-[200px]"
               />
             </div>
           ) : (
             <>
-              <h1 className="text-[15px] font-semibold text-gray-900">
+              <h1 className="text-[15px] font-semibold text-white">
                 {workflowName}
               </h1>
               <button
                 onClick={handleStartEdit}
-                className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
+                className="flex items-center justify-center w-6 h-6 rounded hover:bg-white/10 transition-colors text-white/80 hover:text-white"
                 title="Edit workflow name"
               >
                 <Pencil className="h-3.5 w-3.5" />
@@ -185,7 +185,7 @@ export function DifyWorkflowHeader() {
       <div className="flex items-center gap-3">
         {/* Published Badge */}
         {isPublished && (
-          <Badge className="bg-[#095D40] text-white hover:bg-[#074830] text-[11px] font-medium flex items-center gap-1">
+          <Badge className="bg-white/20 text-white hover:bg-white/30 text-[11px] font-medium flex items-center gap-1 border border-white/20">
             <Globe className="h-3 w-3" />
             Public Template
           </Badge>
@@ -198,15 +198,15 @@ export function DifyWorkflowHeader() {
         {isTemplateAdmin && (
           <button
             onClick={() => setPublishDialogOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 text-[13px] font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/90 hover:text-white text-[13px] font-medium"
             title={isPublished ? "Manage template" : "Publish as template"}
           >
-            <Globe className={`h-4 w-4 ${isPublished ? 'text-[#095D40]' : ''}`} />
+            <Globe className="h-4 w-4" />
             {isPublished ? "Manage" : "Publish"}
           </button>
         )}
 
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 text-[13px] font-medium">
+        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/90 hover:text-white text-[13px] font-medium">
           <MoreHorizontal className="h-4 w-4" />
         </button>
       </div>

@@ -86,8 +86,6 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
   }>({ url: null, status: 'idle', data: null });
   const inputRef = useRef<HTMLInputElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const isActive = activeNodeId === id;
   const scrapeControllerRef = useRef<AbortController | null>(null);
 
   const canPreview = useMemo(() => !!data.url, [data.url]);
@@ -262,14 +260,11 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
   };
 
   useEffect(() => () => {
-    if (scrapeControllerRef.current) {
-      try {
-        scrapeControllerRef.current.abort();
-      } catch {
-        // Ignore errors from aborting - this is cleanup
-      }
-      scrapeControllerRef.current = null;
+    const controller = scrapeControllerRef.current;
+    if (controller && !controller.signal.aborted) {
+      controller.abort();
     }
+    scrapeControllerRef.current = null;
   }, []);
 
   const fetchPreview = useCallback(async (targetUrl: string) => {
@@ -624,7 +619,7 @@ export const WebpageNode = memo(({ id, data, parentId, selected }: NodeProps<Web
       </BaseNode>
 
       {/* Floating AI Instructions - visible once the node is active/selected */}
-      {(isActive || selected) && (
+      {selected && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<WebpageNodeData>)}

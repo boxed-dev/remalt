@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Popover,
   PopoverContent,
@@ -17,6 +17,7 @@ import {
 } from '@/lib/models/model-registry';
 
 import { OpenAI, Gemini, Anthropic, DeepSeek, XAI } from '@lobehub/icons';
+import { stopCanvasPointerEvent, stopCanvasWheelEvent } from '@/lib/workflow/interaction-guards';
 
 const PROVIDER_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   OpenAI: OpenAI,
@@ -49,7 +50,7 @@ const ModelItem: React.FC<ModelItemProps> = ({ model, isSelected, onSelect }) =>
     <button
       onClick={onSelect}
       className={cn(
-        'w-full flex items-center gap-2 px-2 py-1 text-left transition-colors hover:bg-gray-50 rounded group',
+        'w-full flex items-center gap-2 px-2 py-1 text-left transition-colors hover:bg-gray-50 rounded-md group',
         isSelected && 'bg-blue-50/50 hover:bg-blue-50/50'
       )}
     >
@@ -71,7 +72,7 @@ const ModelItem: React.FC<ModelItemProps> = ({ model, isSelected, onSelect }) =>
 
       {/* Badge */}
       {model.badge && (
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 font-medium">
+        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-green-50 text-green-700 font-medium">
           {model.badge}
         </span>
       )}
@@ -121,6 +122,18 @@ export const ModelSelectionDialog: React.FC<ModelSelectionDialogProps> = ({
   trigger,
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
+  const handleWheelCapture = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      stopCanvasWheelEvent(event);
+    },
+    []
+  );
+  const handleTriggerPointerDown = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    stopCanvasPointerEvent(event);
+  }, []);
+  const handleTriggerClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    stopCanvasPointerEvent(event);
+  }, []);
 
   // Use controlled state if provided, otherwise use internal state
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
@@ -141,6 +154,9 @@ export const ModelSelectionDialog: React.FC<ModelSelectionDialogProps> = ({
   // Default trigger button if no custom trigger provided
   const defaultTrigger = (
     <button
+      data-flowy-interactive="true"
+      onPointerDown={handleTriggerPointerDown}
+      onClick={handleTriggerClick}
       className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
     >
       {ProviderIcon && (
@@ -166,6 +182,9 @@ export const ModelSelectionDialog: React.FC<ModelSelectionDialogProps> = ({
         align="start"
         side="top"
         sideOffset={4}
+        data-flowy-interactive="true"
+        onWheel={handleWheelCapture}
+        onWheelCapture={handleWheelCapture}
       >
         <div className="max-h-[280px] overflow-y-auto">
           <TierSection

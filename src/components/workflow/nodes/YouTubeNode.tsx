@@ -22,6 +22,7 @@ import type { NodeProps } from "@xyflow/react";
 import type { YouTubeNodeData } from "@/types/workflow";
 import { FloatingAIInstructions } from "./FloatingAIInstructions";
 import { extractChannelId } from "@/lib/api/youtube";
+import { getTextInputProps } from "@/lib/workflow/text-input-helpers";
 
 function extractYouTubeId(url: string): string | null {
   const patterns = [
@@ -74,8 +75,6 @@ export const YouTubeNode = memo(
     const [copiedTranscript, setCopiedTranscript] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const isActive = activeNodeId === id;
     const processedUrlRef = useRef<string | null>(null);
 
     const isChannel = data.mode === "channel";
@@ -776,6 +775,8 @@ export const YouTubeNode = memo(
       </div>
     );
 
+    const inputProps = getTextInputProps();
+
     // Render single video view
     const renderVideoView = () => (
       <div className="w-[320px] space-y-2">
@@ -787,11 +788,11 @@ export const YouTubeNode = memo(
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleSave}
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
             placeholder="Paste YouTube URL or channel..."
-            className="w-full px-4 py-2.5 text-[12px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] transition-all"
+            className="w-full px-4 py-2.5 text-[12px] border border-[#E8ECEF] rounded-lg focus:outline-none focus:ring-[1.5px] focus:ring-[#007AFF] transition-all select-text"
+            {...inputProps}
             style={{
+              ...inputProps.style,
               fontFamily:
                 '-apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif',
             }}
@@ -972,7 +973,7 @@ export const YouTubeNode = memo(
         </BaseNode>
 
         {/* Floating AI Instructions - visible once the node is active/selected */}
-        {(isActive || selected) && (
+        {selected && (
           <FloatingAIInstructions
             value={data.aiInstructions}
             onChange={(value) =>

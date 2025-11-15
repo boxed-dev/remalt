@@ -11,7 +11,7 @@ import {
   TextT,
   Globe,
   ChatCircle,
-  Monitor,
+  Folder,
   Sparkle,
   MagicWand,
   Play as PlayIcon,
@@ -26,6 +26,9 @@ import type { NodeType } from '@/types/workflow';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import { SocialMediaDialog } from './SocialMediaDialog';
 import { UploadMediaDialog } from './UploadMediaDialog';
+
+const SIDEBAR_TOOLTIP_CLASS =
+  'bg-gray-900/95 text-white border border-white/10 shadow-sm text-[10px] leading-tight px-2 py-1 rounded-md tracking-tight';
 
 export function DifyWorkflowSidebar() {
   const addNode = useWorkflowStore((state) => state.addNode);
@@ -83,64 +86,64 @@ export function DifyWorkflowSidebar() {
   return (
     <>
       <TooltipProvider delayDuration={300}>
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none overflow-visible flex flex-col gap-3">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none overflow-visible flex flex-col gap-2">
 
           {/* SECTION 1: AI TOOLS */}
-          <aside className="bg-white rounded-xl shadow-lg border border-gray-200/80 py-2 px-1 pointer-events-auto w-12 flex flex-col items-center gap-1 overflow-visible">
+          <aside className="bg-[#095D40] rounded-xl shadow-lg border border-[#074830] py-2 px-1 pointer-events-auto w-12 flex flex-col items-center gap-px overflow-visible">
             {/* Prompt */}
-            <Tooltip side="right" sideOffset={8}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   draggable
                   onDragStart={(e) => handleDragStart(e, 'prompt')}
                   onDragEnd={handleDragEnd}
                   onClick={() => handleNodeClick('prompt')}
-                  className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-[#D4E5DF] transition-colors cursor-grab active:cursor-grabbing"
+                  className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-white/10 transition-colors cursor-grab active:cursor-grabbing"
                 >
-                  <MagicWand size={24} weight="duotone" className="text-gray-600 hover:text-[#095D40]" />
+                  <MagicWand size={21} weight="duotone" className="text-white/90 hover:text-white" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-gray-900 text-white border-0 shadow-lg text-[12px] px-3 py-1.5"><p>AI Prompt</p></TooltipContent>
+              <TooltipContent side="right" sideOffset={8} className={SIDEBAR_TOOLTIP_CLASS}><p>AI Prompt</p></TooltipContent>
             </Tooltip>
 
             {/* Image Gen */}
-            <Tooltip side="right" sideOffset={8}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   draggable
                   onDragStart={(e) => handleDragStart(e, 'image-generation')}
                   onDragEnd={handleDragEnd}
                   onClick={() => handleNodeClick('image-generation')}
-                  className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-[#D4E5DF] transition-colors cursor-grab active:cursor-grabbing"
+                  className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-white/10 transition-colors cursor-grab active:cursor-grabbing"
                 >
-                  <Sparkle size={24} weight="duotone" className="text-gray-600 hover:text-[#095D40]" />
+                  <Sparkle size={21} weight="duotone" className="text-white/90 hover:text-white" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-gray-900 text-white border-0 shadow-lg text-[12px] px-3 py-1.5"><p>AI Image</p></TooltipContent>
+              <TooltipContent side="right" sideOffset={8} className={SIDEBAR_TOOLTIP_CLASS}><p>AI Image</p></TooltipContent>
             </Tooltip>
 
             {/* Chat */}
-            <Tooltip side="right" sideOffset={8}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   draggable
                   onDragStart={(e) => handleDragStart(e, 'chat')}
                   onDragEnd={handleDragEnd}
                   onClick={() => handleNodeClick('chat')}
-                  className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-[#D4E5DF] transition-colors cursor-grab active:cursor-grabbing"
+                  className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-white/10 transition-colors cursor-grab active:cursor-grabbing"
                 >
-                  <ChatCircle size={24} weight="duotone" className="text-gray-600 hover:text-[#095D40]" />
+                  <ChatCircle size={21} weight="duotone" className="text-white/90 hover:text-white" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-gray-900 text-white border-0 shadow-lg text-[12px] px-3 py-1.5"><p>Chat</p></TooltipContent>
+              <TooltipContent side="right" sideOffset={8} className={SIDEBAR_TOOLTIP_CLASS}><p>Chat</p></TooltipContent>
             </Tooltip>
 
           </aside>
 
           {/* SECTION 2: MEDIA/INPUT */}
-          <aside className="bg-white rounded-xl shadow-lg border border-gray-200/80 py-2 px-1 pointer-events-auto w-12 flex flex-col items-center gap-1 overflow-visible">
+          <aside className="bg-white rounded-xl shadow-lg border border-gray-200/80 py-2 px-1 pointer-events-auto w-12 flex flex-col items-center gap-px overflow-visible">
             {/* Social Media 2x2 Grid */}
-            <Tooltip side="right" sideOffset={8}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={(e) => {
@@ -148,35 +151,35 @@ export function DifyWorkflowSidebar() {
                     e.stopPropagation();
                     setSocialMediaDialogOpen(true);
                   }}
-                  className="flex items-center justify-center w-12 h-12 group"
+                  className="flex items-center justify-center w-12 h-12 rounded-lg group"
                 >
                   <div className="flex flex-col gap-0.5 group-hover:scale-105 transition-transform">
                     <div className="flex gap-0.5">
-                      <div className="p-0.5 bg-gray-100 rounded group-hover:bg-[#B8D5C9] transition-colors">
-                        <Globe size={13} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                      <div className="p-0.5 bg-gray-100 rounded-sm group-hover:bg-[#B8D5C9] transition-colors">
+                        <Globe size={11} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
                       </div>
-                      <div className="p-0.5 bg-gray-100 rounded group-hover:bg-[#B8D5C9] transition-colors">
-                        <YoutubeLogo size={13} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                      <div className="p-0.5 bg-gray-100 rounded-sm group-hover:bg-[#B8D5C9] transition-colors">
+                        <YoutubeLogo size={11} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
                       </div>
                     </div>
                     <div className="flex gap-0.5">
-                      <div className="p-0.5 bg-gray-100 rounded group-hover:bg-[#B8D5C9] transition-colors">
-                        <InstagramLogo size={13} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                      <div className="p-0.5 bg-gray-100 rounded-sm group-hover:bg-[#B8D5C9] transition-colors">
+                        <InstagramLogo size={11} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
                       </div>
-                      <div className="p-0.5 bg-gray-100 rounded group-hover:bg-[#B8D5C9] transition-colors">
-                        <LinkedinLogo size={13} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
+                      <div className="p-0.5 bg-gray-100 rounded-sm group-hover:bg-[#B8D5C9] transition-colors">
+                        <LinkedinLogo size={11} weight="fill" className="text-gray-600 group-hover:text-[#095D40]" />
                       </div>
                     </div>
                   </div>
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-gray-900 text-white border-0 shadow-lg text-[12px] px-3 py-1.5">
+              <TooltipContent side="right" sideOffset={8} className={SIDEBAR_TOOLTIP_CLASS}>
                 <p>Social media sources</p>
               </TooltipContent>
             </Tooltip>
 
             {/* Text */}
-            <Tooltip side="right" sideOffset={8}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   draggable
@@ -185,14 +188,14 @@ export function DifyWorkflowSidebar() {
                   onClick={() => handleNodeClick('text')}
                   className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-[#D4E5DF] transition-colors cursor-grab active:cursor-grabbing"
                 >
-                  <TextT size={24} weight="regular" className="text-gray-600 hover:text-[#095D40]" />
+                  <TextT size={21} weight="regular" className="text-gray-600 hover:text-[#095D40]" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-gray-900 text-white border-0 shadow-lg text-[12px] px-3 py-1.5"><p>Text</p></TooltipContent>
+              <TooltipContent side="right" sideOffset={8} className={SIDEBAR_TOOLTIP_CLASS}><p>Text</p></TooltipContent>
             </Tooltip>
 
             {/* Image */}
-            <Tooltip side="right" sideOffset={8}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   draggable
@@ -201,14 +204,14 @@ export function DifyWorkflowSidebar() {
                   onClick={() => handleNodeClick('image', 'upload')}
                   className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-[#D4E5DF] transition-colors cursor-grab active:cursor-grabbing"
                 >
-                  <ImageIcon size={24} weight="duotone" className="text-gray-600 hover:text-[#095D40]" />
+                  <ImageIcon size={21} weight="duotone" className="text-gray-600 hover:text-[#095D40]" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-gray-900 text-white border-0 shadow-lg text-[12px] px-3 py-1.5"><p>Image</p></TooltipContent>
+              <TooltipContent side="right" sideOffset={8} className={SIDEBAR_TOOLTIP_CLASS}><p>Image</p></TooltipContent>
             </Tooltip>
 
             {/* PDF */}
-            <Tooltip side="right" sideOffset={8}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   draggable
@@ -217,14 +220,14 @@ export function DifyWorkflowSidebar() {
                   onClick={() => handleNodeClick('pdf', 'upload')}
                   className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-[#D4E5DF] transition-colors cursor-grab active:cursor-grabbing"
                 >
-                  <FileText size={24} weight="duotone" className="text-gray-600 hover:text-[#095D40]" />
+                  <FileText size={21} weight="duotone" className="text-gray-600 hover:text-[#095D40]" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-gray-900 text-white border-0 shadow-lg text-[12px] px-3 py-1.5"><p>PDF</p></TooltipContent>
+              <TooltipContent side="right" sideOffset={8} className={SIDEBAR_TOOLTIP_CLASS}><p>PDF</p></TooltipContent>
             </Tooltip>
 
             {/* Voice */}
-            <Tooltip side="right" sideOffset={8}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   draggable
@@ -233,17 +236,17 @@ export function DifyWorkflowSidebar() {
                   onClick={() => handleNodeClick('voice')}
                   className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-[#D4E5DF] transition-colors cursor-grab active:cursor-grabbing"
                 >
-                  <Microphone size={24} weight="duotone" className="text-gray-600 hover:text-[#095D40]" />
+                  <Microphone size={21} weight="duotone" className="text-gray-600 hover:text-[#095D40]" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-gray-900 text-white border-0 shadow-lg text-[12px] px-3 py-1.5"><p>Voice</p></TooltipContent>
+              <TooltipContent side="right" sideOffset={8} className={SIDEBAR_TOOLTIP_CLASS}><p>Voice</p></TooltipContent>
             </Tooltip>
           </aside>
 
           {/* SECTION 3: STRUCTURE/UTILITIES */}
-          <aside className="bg-white rounded-xl shadow-lg border border-gray-200/80 py-2 px-1 pointer-events-auto w-12 flex flex-col items-center gap-1 overflow-visible">
+          <aside className="bg-white rounded-xl shadow-lg border border-gray-200/80 py-2 px-1 pointer-events-auto w-12 flex flex-col items-center gap-px overflow-visible">
             {/* Start */}
-            <Tooltip side="right" sideOffset={8}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   draggable
@@ -252,14 +255,14 @@ export function DifyWorkflowSidebar() {
                   onClick={() => handleNodeClick('start')}
                   className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-[#D4E5DF] transition-colors cursor-grab active:cursor-grabbing"
                 >
-                  <PlayIcon size={24} weight="fill" className="text-gray-600 hover:text-[#095D40]" />
+                  <PlayIcon size={21} weight="fill" className="text-gray-600 hover:text-[#095D40]" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-gray-900 text-white border-0 shadow-lg text-[12px] px-3 py-1.5"><p>Start</p></TooltipContent>
+              <TooltipContent side="right" sideOffset={8} className={SIDEBAR_TOOLTIP_CLASS}><p>Start</p></TooltipContent>
             </Tooltip>
 
             {/* Group */}
-            <Tooltip side="right" sideOffset={8}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   draggable
@@ -268,10 +271,10 @@ export function DifyWorkflowSidebar() {
                   onClick={() => handleNodeClick('group')}
                   className="flex items-center justify-center w-12 h-12 rounded-lg hover:bg-[#D4E5DF] transition-colors cursor-grab active:cursor-grabbing"
                 >
-                  <Monitor size={24} weight="duotone" className="text-gray-600 hover:text-[#095D40]" />
+                  <Folder size={21} weight="duotone" className="text-gray-600 hover:text-[#095D40]" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-gray-900 text-white border-0 shadow-lg text-[12px] px-3 py-1.5"><p>Group</p></TooltipContent>
+              <TooltipContent side="right" sideOffset={8} className={SIDEBAR_TOOLTIP_CLASS}><p>Group</p></TooltipContent>
             </Tooltip>
 
           </aside>

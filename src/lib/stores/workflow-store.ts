@@ -1,6 +1,7 @@
-import { create } from "zustand";
+import { createWithEqualityFn } from "zustand/traditional";
 import { immer } from "zustand/middleware/immer";
 import { enableMapSet } from "immer";
+import { shallow } from "zustand/shallow";
 import type {
   Workflow,
   WorkflowNode,
@@ -35,7 +36,6 @@ interface WorkflowStore {
   selectedNodes: string[];
   selectedEdges: string[];
   clipboard: WorkflowNode[];
-  activeNodeId: string | null;
   cursorPosition: Position | null;
   isCanvasPinchDisabled: boolean;
   // Connection UI State
@@ -53,7 +53,6 @@ interface WorkflowStore {
   lastSaved: string | null;
 
   // Canvas Control State
-  controlMode: "pointer" | "hand";
   snapToGrid: boolean;
 
   // Workflow Actions
@@ -127,7 +126,6 @@ interface WorkflowStore {
   pushHistory: (options?: { replaceLast?: boolean }) => void;
 
   // Canvas Control Actions
-  setControlMode: (mode: "pointer" | "hand") => void;
   toggleSnapToGrid: () => void;
   setCanvasPinchDisabled: (disabled: boolean) => void;
 
@@ -144,8 +142,6 @@ interface WorkflowStore {
     direction: "horizontal" | "vertical"
   ) => void;
 
-  // Activation Actions
-  setActiveNode: (id: string | null) => void;
   // Connection UI Actions
   setConnecting: (is: boolean) => void;
   setConnectHoveredTarget: (id: string | null) => void;
@@ -157,7 +153,10 @@ interface WorkflowStore {
   executionError: string | null;
 
   // Execution Actions
-  executeNode: (nodeId: string, options?: { forceExecution?: boolean }) => Promise<void>;
+  executeNode: (
+    nodeId: string,
+    options?: { forceExecution?: boolean; context?: 'node' | 'workflow' }
+  ) => Promise<void>;
   executeWorkflow: (options?: { fromNodeId?: string }) => Promise<void>;
   cancelExecution: () => void;
   clearExecutionState: () => void;
@@ -333,20 +332,18 @@ const createDefaultNodeData = (type: NodeType): NodeData => {
   }
 };
 
-export const useWorkflowStore = create<WorkflowStore>()(
+export const useWorkflowStore = createWithEqualityFn<WorkflowStore>()(
   immer((set, get) => ({
     // Initial State
     workflow: null,
     selectedNodes: [],
     selectedEdges: [],
     clipboard: [],
-    activeNodeId: null,
     history: [],
     historyIndex: -1,
     isSaving: false,
     saveError: null,
     lastSaved: null,
-    controlMode: "hand",
     snapToGrid: false,
     cursorPosition: null,
     isCanvasPinchDisabled: false,
@@ -375,7 +372,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
         state.workflow = workflow;
         state.selectedNodes = [];
         state.selectedEdges = [];
-        state.activeNodeId = null;
         state.cursorPosition = null;
         state.history = [];
         state.historyIndex = -1;
@@ -408,7 +404,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
         state.selectedNodes = [];
         state.selectedEdges = [];
         state.clipboard = [];
-        state.activeNodeId = null;
         state.isSaving = false;
         state.saveError = null;
         state.lastSaved = null;
@@ -552,10 +547,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
             (e) => e.source !== id && e.target !== id
           );
           state.selectedNodes = state.selectedNodes.filter((nId) => nId !== id);
-          // Deactivate if deleting the active node
-          if (state.activeNodeId === id) {
-            state.activeNodeId = null;
-          }
           removeNodeIdsFromGroups(state.workflow.nodes, [id]);
           state.workflow.updatedAt = new Date().toISOString();
           didDelete = true;
@@ -603,10 +594,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
           state.selectedNodes = state.selectedNodes.filter(
             (nId) => !ids.includes(nId)
           );
-          // Deactivate if deleting the active node
-          if (state.activeNodeId && ids.includes(state.activeNodeId)) {
-            state.activeNodeId = null;
-          }
           removeNodeIdsFromGroups(state.workflow.nodes, ids);
           state.workflow.updatedAt = new Date().toISOString();
           didDelete = true;
@@ -977,12 +964,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
     },
 
     // Canvas Control Actions
-    setControlMode: (mode) => {
-      set((state) => {
-        state.controlMode = mode;
-      });
-    },
-
     toggleSnapToGrid: () => {
       set((state) => {
         state.snapToGrid = !state.snapToGrid;
@@ -1082,12 +1063,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
       });
     },
 
-    // Activation Actions
-    setActiveNode: (id) => {
-      set((state) => {
-        state.activeNodeId = id;
-      });
-    },
     // Connection UI Actions
     setConnecting: (is) => {
       set((state) => {
@@ -1107,6 +1082,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
 
     // Execution Actions
     executeNode: async (nodeId, options = {}) => {
+      const context = options.context ?? 'node';
+      const manageGlobalState = context === 'node';
       const { workflow } = get();
       if (!workflow) {
         console.error('No workflow loaded');
@@ -1128,7 +1105,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
           node.data.executionStatus = 'running';
           node.data.executionError = undefined;
           state.executingNodes.add(nodeId);
-          state.isExecuting = true;
+          if (manageGlobalState) {
+            state.isExecuting = true;
+          }
           state.executionError = null;
         }
       });
@@ -1168,7 +1147,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
             }
 
             state.executingNodes.delete(nodeId);
-            if (state.executingNodes.size === 0) {
+            if (manageGlobalState && state.executingNodes.size === 0) {
               state.isExecuting = false;
             }
 
@@ -1192,7 +1171,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
             };
 
             state.executingNodes.delete(nodeId);
-            if (state.executingNodes.size === 0) {
+            if (manageGlobalState && state.executingNodes.size === 0) {
               state.isExecuting = false;
             }
 
@@ -1271,7 +1250,10 @@ export const useWorkflowStore = create<WorkflowStore>()(
           }
 
           // Execute node
-          await get().executeNode(nodeId, { forceExecution: true });
+          await get().executeNode(nodeId, {
+            forceExecution: true,
+            context: 'workflow',
+          });
 
           // Check if execution was cancelled or errored
           const { isExecuting, executionError } = get();
@@ -1338,7 +1320,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
         }
       });
     },
-  }))
+  })),
+  shallow
 );
 
 // Helper - currently a no-op since grouping handled via parentId; kept for compatibility

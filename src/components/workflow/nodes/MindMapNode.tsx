@@ -14,8 +14,6 @@ export const MindMapNode = memo(({ id, data, parentId, selected }: NodeProps<Min
   const [notes, setNotes] = useState(data.notes || '');
   const inputRef = useRef<HTMLInputElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const isActive = activeNodeId === id;
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -96,7 +94,7 @@ export const MindMapNode = memo(({ id, data, parentId, selected }: NodeProps<Min
       </BaseNode>
 
       {/* Floating AI Instructions - visible once the node is active/selected */}
-      {(isActive || selected) && (
+      {selected && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<MindMapNodeData>)}

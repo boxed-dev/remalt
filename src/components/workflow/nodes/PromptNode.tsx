@@ -1,11 +1,12 @@
 "use client";
 
 import { memo, useState, useMemo, useCallback } from 'react';
-import { Wand2, Loader2, ChevronDown, Play, FastForward } from 'lucide-react';
+import { Wand2, Loader2, Play, FastForward } from 'lucide-react';
 import { BaseNode } from './BaseNode';
 import { NodeHeader } from './NodeHeader';
 import { ExecutionStatusBadge } from './ExecutionStatusBadge';
 import { NodeExecutionOutput } from './NodeExecutionOutput';
+import { ModelSelectionDialog } from '../ModelSelectionDialog';
 import { useWorkflowStore } from '@/lib/stores/workflow-store';
 import type { NodeProps } from '@xyflow/react';
 import type { NodeData } from '@/types/workflow';
@@ -25,12 +26,9 @@ export interface PromptNodeData extends NodeData {
 
 export const PromptNode = memo(({ id, data, parentId, selected }: NodeProps<PromptNodeData>) => {
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
   const executeNode = useWorkflowStore((state) => state.executeNode);
   const executeWorkflow = useWorkflowStore((state) => state.executeWorkflow);
-  const isActive = activeNodeId === id;
 
-  const [showModelPicker, setShowModelPicker] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
 
   // Get current model info
@@ -53,7 +51,6 @@ export const PromptNode = memo(({ id, data, parentId, selected }: NodeProps<Prom
         provider: model.provider,
       });
     }
-    setShowModelPicker(false);
   };
 
   const stopPropagation = (e: React.MouseEvent) => {
@@ -80,19 +77,6 @@ export const PromptNode = memo(({ id, data, parentId, selected }: NodeProps<Prom
     setIsExecuting(false);
   }, [id, isExecuting, executeWorkflow]);
 
-  // Group models by provider
-  const modelsByProvider = useMemo(() => {
-    const groups: Record<string, typeof MODELS> = {};
-    MODELS.forEach((model) => {
-      const providerName = model.provider === 'gemini' ? 'Google' : 'OpenRouter';
-      if (!groups[providerName]) {
-        groups[providerName] = [];
-      }
-      groups[providerName].push(model);
-    });
-    return groups;
-  }, []);
-
   return (
     <div className="relative">
       <BaseNode
@@ -107,79 +91,33 @@ export const PromptNode = memo(({ id, data, parentId, selected }: NodeProps<Prom
             subtitle={currentModel.name}
             icon={<Wand2 />}
             themeKey="prompt"
-            trailing={
-              <ExecutionStatusBadge
-                status={data.executionStatus}
-                executionTime={data.executionTime}
-                showTime={true}
-              />
-            }
             actions={
               <div className="flex items-center gap-1">
-                {/* Model Selector */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      stopPropagation(e);
-                      setShowModelPicker(!showModelPicker);
-                    }}
-                    className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-white/80 hover:bg-white border border-gray-200 hover:border-gray-300 transition-all"
-                    title="Select AI model"
-                  >
-                    <span className="max-w-[80px] truncate">{currentModel.name}</span>
-                    <ChevronDown className="h-3 w-3 text-gray-500" />
-                  </button>
+                {/* Model Selector - Branded with provider icons */}
+                <ModelSelectionDialog
+                  currentModel={data.model || 'google/gemini-2.5-flash'}
+                  onSelectModel={handleModelSelect}
+                />
 
-                  {/* Model Picker Dropdown */}
-                  {showModelPicker && (
-                    <div
-                      className="absolute top-full mt-1 right-0 w-[280px] max-h-[400px] overflow-y-auto bg-white rounded-lg shadow-lg border border-gray-200 z-50"
-                      onClick={stopPropagation}
-                    >
-                      {Object.entries(modelsByProvider).map(([provider, models]) => (
-                        <div key={provider} className="p-2">
-                          <div className="text-[9px] font-semibold text-gray-500 uppercase px-2 py-1">
-                            {provider}
-                          </div>
-                          {models.map((model) => (
-                            <button
-                              key={model.id}
-                              onClick={() => handleModelSelect(model.id)}
-                              className={`w-full text-left px-3 py-2 rounded-md text-[11px] hover:bg-gray-50 transition-colors ${
-                                model.id === data.model ? 'bg-[#D4E5DF] text-[#095D40] font-medium' : 'text-gray-700'
-                              }`}
-                            >
-                              <div className="font-medium">{model.name}</div>
-                              <div className="text-[9px] text-gray-500 mt-0.5">
-                                {model.contextWindow.toLocaleString()} tokens • {model.category}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Execution Buttons - Two buttons like in the image */}
+                {/* Execution Buttons */}
                 <button
                   onClick={handleExecuteFromHere}
                   disabled={isExecuting || data.executionStatus === 'running'}
-                  className="flex items-center justify-center h-6 w-6 rounded-md hover:bg-white/80 transition-all disabled:opacity-50"
+                  className="flex items-center justify-center h-6 w-6 rounded-md hover:bg-white/20 transition-all disabled:opacity-50"
                   title="Run from here (this node + downstream)"
                 >
-                  <FastForward className="h-3.5 w-3.5 text-gray-700 hover:text-[#095D40]" />
+                  <FastForward className="h-3.5 w-3.5 text-white" />
                 </button>
                 <button
                   onClick={handleExecuteNode}
                   disabled={isExecuting || data.executionStatus === 'running'}
-                  className="flex items-center justify-center h-6 w-6 rounded-md hover:bg-white/80 transition-all disabled:opacity-50"
+                  className="flex items-center justify-center h-6 w-6 rounded-md hover:bg-white/20 transition-all disabled:opacity-50"
                   title="Run this node only"
                 >
                   {data.executionStatus === 'running' || isExecuting ? (
-                    <Loader2 className="h-3.5 w-3.5 text-blue-600 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
                   ) : (
-                    <Play className="h-3.5 w-3.5 text-gray-700 hover:text-[#095D40]" />
+                    <Play className="h-3.5 w-3.5 text-white" />
                   )}
                 </button>
               </div>
@@ -237,7 +175,7 @@ Example: Summarize the content above in 3 bullet points"
       </BaseNode>
 
       {/* Floating AI Instructions */}
-      {(isActive || selected) && (
+      {selected && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value })}

@@ -43,6 +43,11 @@ export function VoiceInputButton({
     const unsubscribeState = recordingManager.on('state-changed', (newState) => {
       if (isActiveRecorder) {
         setRecordingState(newState);
+
+        if (newState === 'processing') {
+          setIsRecording(false);
+        }
+
         if (newState === 'idle') {
           setIsRecording(false);
           setIsActiveRecorder(false);
@@ -190,12 +195,21 @@ export function VoiceInputButton({
 
   const iconSize = size === 'sm' ? 'h-4 w-4' : 'h-5 w-5';
 
+  if (recordingState === 'processing' && isActiveRecorder) {
+    return (
+      <div className={`${sizeClasses} relative flex items-center justify-center rounded-full bg-[#4338CA] shadow-lg`} title="Finishing recording...">
+        <span className="absolute inline-flex h-full w-full rounded-full border-2 border-t-transparent border-[#818CF8] animate-spin" />
+        <Mic className={`${iconSize} text-white relative z-10`} />
+      </div>
+    );
+  }
+
   if (!isRecording) {
     return (
       <button
         type="button"
         onClick={handleStartRecording}
-        disabled={disabled}
+        disabled={disabled || recordingState === 'processing'}
         className={`${sizeClasses} flex items-center justify-center rounded-full border border-[#095D40]/20 bg-[#095D40]/5 hover:bg-[#095D40]/10 hover:border-[#095D40] transition-all disabled:opacity-40 disabled:cursor-not-allowed group shadow-sm`}
         title={error ? error : 'Voice input (click to record)'}
         onMouseDown={(e) => e.stopPropagation()}
@@ -233,15 +247,6 @@ export function VoiceInputButton({
             Cancel
           </button>
         </>
-      )}
-      {recordingState === 'processing' && (
-        <div className={`${sizeClasses} relative flex items-center justify-center rounded-full bg-[#4338CA] shadow-lg`}>
-          {/* Spinner rings */}
-          <span className="absolute inline-flex h-full w-full rounded-full border-2 border-t-transparent border-[#818CF8] animate-spin" />
-
-          {/* Mic icon */}
-          <Mic className={`${iconSize} text-white relative z-10`} />
-        </div>
       )}
       {error && (
         <div className="text-[10px] text-[#EF4444] max-w-[120px]">

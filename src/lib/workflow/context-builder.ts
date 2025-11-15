@@ -13,7 +13,8 @@ import type {
   WebpageNodeData,
   MindMapNodeData,
   TemplateNodeData,
-  ChatNodeData
+  ChatNodeData,
+  PromptNodeData
 } from '@/types/workflow';
 
 // Metadata shared across all context items
@@ -515,6 +516,27 @@ export function buildChatContext(
         break;
       }
 
+      case 'prompt': {
+        const promptData = node.data as PromptNodeData;
+        // Include processed output from prompt node as text context
+        if (promptData.processedOutput && promptData.processedOutput.trim()) {
+          context.textContext.push({
+            content: promptData.processedOutput,
+            aiInstructions: safeGetInstructions(promptData),
+            metadata: buildNodeMetadata(node, workflow),
+          });
+        }
+        // If there's a prompt but no output yet, include the prompt as context
+        else if (promptData.prompt && promptData.prompt.trim()) {
+          context.textContext.push({
+            content: `Prompt: ${promptData.prompt}`,
+            aiInstructions: safeGetInstructions(promptData),
+            metadata: buildNodeMetadata(node, workflow),
+          });
+        }
+        break;
+      }
+
       case 'chat': {
         const chatData = node.data as ChatNodeData;
         // Include other chat conversations as context
@@ -522,7 +544,10 @@ export function buildChatContext(
           const chatHistory = chatData.messages
             .map(msg => `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.content}`)
             .join('\n');
-          context.textContext.push(`Previous conversation:\n${chatHistory}`);
+          context.textContext.push({
+            content: `Previous conversation:\n${chatHistory}`,
+            metadata: buildNodeMetadata(node, workflow),
+          });
         }
         break;
       }
@@ -704,6 +729,18 @@ function extractNodeContext(node: WorkflowNode): string | null {
     case 'template': {
       const data = node.data as TemplateNodeData;
       return data.generatedContent || null;
+    }
+    case 'prompt': {
+      const data = node.data as PromptNodeData;
+      // Return processed output if available
+      if (data.processedOutput && data.processedOutput.trim()) {
+        return data.processedOutput;
+      }
+      // Otherwise return the prompt itself
+      if (data.prompt && data.prompt.trim()) {
+        return `Prompt: ${data.prompt}`;
+      }
+      return null;
     }
     default:
       return null;

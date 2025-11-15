@@ -27,8 +27,6 @@ export const VoiceNode = memo(({ id, data, parentId, selected }: NodeProps<Voice
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const isActive = activeNodeId === id;
 
   const hasTranscript = useMemo(() => data.transcriptStatus === 'success' && !!data.transcript, [data.transcriptStatus, data.transcript]);
   const hasAudio = useMemo(() => !!data.audioUrl || !!data.storageUrl, [data.audioUrl, data.storageUrl]);
@@ -680,7 +678,7 @@ export const VoiceNode = memo(({ id, data, parentId, selected }: NodeProps<Voice
     </BaseNode>
 
     {/* Floating AI Instructions - visible once the node is active/selected */}
-    {(isActive || selected) && (
+    {selected && (
       <FloatingAIInstructions
         value={data.aiInstructions}
         onChange={(value) =>

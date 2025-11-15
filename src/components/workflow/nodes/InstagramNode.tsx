@@ -44,8 +44,6 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
   const [url, setUrl] = useState(data.url || '');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const isActive = activeNodeId === id;
 
   function formatDateShort(iso?: string): string | undefined {
     if (!iso) return undefined;
@@ -117,8 +115,8 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
     if (data.fetchStatus === 'loading') {
       return (
         <NodeHeaderBadge tone="accent">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Fetching</span>
+          <Loader2 className="h-3 w-3 animate-spin text-white" />
+          <span className="text-white">Fetching</span>
         </NodeHeaderBadge>
       );
     }
@@ -126,8 +124,8 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
     if (data.fetchStatus === 'error') {
       return (
         <NodeHeaderBadge tone="danger">
-          <AlertCircle className="h-3 w-3" />
-          <span>Failed</span>
+          <AlertCircle className="h-3 w-3 text-white" />
+          <span className="text-white">Failed</span>
         </NodeHeaderBadge>
       );
     }
@@ -135,8 +133,8 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
     if (hasReelData) {
       return (
         <NodeHeaderBadge tone="success">
-          <CheckCircle2 className="h-3 w-3" />
-          <span>Loaded</span>
+          <CheckCircle2 className="h-3 w-3 text-white" />
+          <span className="text-white">Loaded</span>
         </NodeHeaderBadge>
       );
     }
@@ -366,7 +364,6 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
         header={
           <NodeHeader
             title={data.isStory ? 'Instagram Story' : 'Instagram Post'}
-            subtitle={data.author?.username ? `@${data.author.username}` : data.url || 'Add Instagram URL'}
             icon={<Instagram />}
             themeKey="instagram"
             trailing={fetchStatusBadge}
@@ -628,7 +625,7 @@ export const InstagramNode = memo(({ id, data, parentId, selected }: NodeProps<I
     </BaseNode>
 
     {/* Floating AI Instructions - Only show when node is active */}
-    {isActive && (
+    {selected && (
       <FloatingAIInstructions
         value={data.aiInstructions}
         onChange={(value) =>

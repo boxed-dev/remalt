@@ -8,6 +8,7 @@ import {
   HelpCircle,
   FolderPlus,
 } from 'lucide-react';
+import { stopCanvasPointerEvent, stopCanvasWheelEvent } from '@/lib/workflow/interaction-guards';
 
 interface NodeContextMenuProps {
   position: { x: number; y: number } | null;
@@ -108,7 +109,11 @@ export function NodeContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-[100] w-52 rounded-lg border border-[#D4AF7F]/30 bg-white shadow-xl"
+      data-flowy-interactive="true"
+      onMouseDownCapture={stopCanvasPointerEvent}
+      onPointerDownCapture={stopCanvasPointerEvent}
+      onWheelCapture={stopCanvasWheelEvent}
+      className="fixed z-[100] w-52 rounded-xl border border-[#D4AF7F]/30 bg-white shadow-xl"
       style={{
         left: position.x,
         top: position.y,
@@ -130,7 +135,7 @@ export function NodeContextMenu({
               key={item.label}
               onClick={item.onClick}
               className={`
-                w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors
+                w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors
                 ${
                   item.danger
                     ? 'hover:bg-red-50 text-red-600 hover:text-red-700'

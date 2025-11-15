@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus, Mic, Check, Loader2, Send } from 'lucide-react';
-import { useState, useEffect, useRef, forwardRef } from 'react';
+import { useState, useEffect, useRef, forwardRef, useCallback } from 'react';
 import { recordingManager, type RecordingState } from '@/lib/recording-manager';
 import { cn } from '@/lib/utils';
 
@@ -38,23 +38,107 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
     const [isActiveRecorder, setIsActiveRecorder] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
+    const isProcessing = isActiveRecorder && recordingState === 'processing';
+
     // Audio visualization - store real frequency data for each bar (reduced to 16 for performance)
     const [frequencyData, setFrequencyData] = useState<Uint8Array>(new Uint8Array(16));
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyzerRef = useRef<AnalyserNode | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const mediaStreamRef = useRef<MediaStream | null>(null);
+    const audioSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
     const lastUpdateTimeRef = useRef<number>(0);
 
     // Track accumulated transcripts (don't show until confirmed)
     const accumulatedTranscriptRef = useRef<string[]>([]);
     const currentInterimRef = useRef<string>('');
 
+    // Audio visualization setup - optimized with throttling and reduced bars
+    const startAudioVisualization = useCallback(async (stream: MediaStream) => {
+      try {
+        mediaStreamRef.current = stream;
+        audioContextRef.current = new AudioContext();
+        const source = audioContextRef.current.createMediaStreamSource(stream);
+        analyzerRef.current = audioContextRef.current.createAnalyser();
+        analyzerRef.current.fftSize = 64; // Reduced from 128 for better performance
+        analyzerRef.current.smoothingTimeConstant = 0.7;
+        source.connect(analyzerRef.current);
+
+        // Store source reference for proper cleanup
+        audioSourceRef.current = source;
+
+        const updateFrequencyData = (timestamp: number) => {
+          if (!analyzerRef.current) return;
+
+          // Throttle to ~30fps (33ms between updates) for better performance
+          const elapsed = timestamp - lastUpdateTimeRef.current;
+          if (elapsed < 33) {
+            animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
+            return;
+          }
+          lastUpdateTimeRef.current = timestamp;
+
+          // Get 32 frequency bins from the analyzer
+          const dataArray = new Uint8Array(analyzerRef.current.frequencyBinCount);
+          analyzerRef.current.getByteFrequencyData(dataArray);
+
+          // Take first 16 bins for visualization (covers most voice frequencies)
+          const displayData = new Uint8Array(16);
+          for (let i = 0; i < 16; i++) {
+            displayData[i] = dataArray[i];
+          }
+
+          setFrequencyData(displayData);
+          animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
+        };
+
+        animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
+      } catch (error) {
+        console.error('Failed to setup audio visualization:', error);
+      }
+    }, []);
+
+    const stopAudioVisualization = useCallback(() => {
+      // Disconnect source node FIRST to release MediaStream reference
+      if (audioSourceRef.current) {
+        audioSourceRef.current.disconnect();
+        audioSourceRef.current = null;
+      }
+
+      // Cancel animation frame
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+
+      // Close AudioContext
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+
+      // Stop MediaStream tracks (they may already be stopped by RecordingManager)
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+      }
+
+      analyzerRef.current = null;
+      setFrequencyData(new Uint8Array(16)); // Reset to zeros (16 bars)
+      lastUpdateTimeRef.current = 0;
+    }, []);
+
     // Subscribe to recording events
     useEffect(() => {
       const unsubscribeState = recordingManager.on('state-changed', (newState) => {
         if (isActiveRecorder) {
           setRecordingState(newState);
+
+          if (newState === 'processing') {
+            setIsRecording(false);
+            stopAudioVisualization();
+          }
+
           if (newState === 'idle') {
             setIsRecording(false);
             setIsActiveRecorder(false);
@@ -116,67 +200,17 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
         unsubscribeComplete();
         unsubscribeError();
       };
-    }, [isActiveRecorder, onChange]);
+    }, [isActiveRecorder, onChange, stopAudioVisualization]);
 
-    // Audio visualization setup - optimized with throttling and reduced bars
-    const startAudioVisualization = async (stream: MediaStream) => {
-      try {
-        mediaStreamRef.current = stream;
-        audioContextRef.current = new AudioContext();
-        const source = audioContextRef.current.createMediaStreamSource(stream);
-        analyzerRef.current = audioContextRef.current.createAnalyser();
-        analyzerRef.current.fftSize = 64; // Reduced from 128 for better performance
-        analyzerRef.current.smoothingTimeConstant = 0.7;
-        source.connect(analyzerRef.current);
-
-        const updateFrequencyData = (timestamp: number) => {
-          if (!analyzerRef.current) return;
-
-          // Throttle to ~30fps (33ms between updates) for better performance
-          const elapsed = timestamp - lastUpdateTimeRef.current;
-          if (elapsed < 33) {
-            animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
-            return;
-          }
-          lastUpdateTimeRef.current = timestamp;
-
-          // Get 32 frequency bins from the analyzer
-          const dataArray = new Uint8Array(analyzerRef.current.frequencyBinCount);
-          analyzerRef.current.getByteFrequencyData(dataArray);
-
-          // Take first 16 bins for visualization (covers most voice frequencies)
-          const displayData = new Uint8Array(16);
-          for (let i = 0; i < 16; i++) {
-            displayData[i] = dataArray[i];
-          }
-
-          setFrequencyData(displayData);
-          animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
-        };
-
-        animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
-      } catch (error) {
-        console.error('Failed to setup audio visualization:', error);
-      }
-    };
-
-    const stopAudioVisualization = () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
-        mediaStreamRef.current = null;
-      }
-      analyzerRef.current = null;
-      setFrequencyData(new Uint8Array(16)); // Reset to zeros (16 bars)
-      lastUpdateTimeRef.current = 0;
-    };
+    // Cleanup on unmount to ensure MediaStream is released
+    useEffect(() => {
+      return () => {
+        // If component unmounts during active recording, cleanup audio visualization
+        if (isActiveRecorder && isRecording) {
+          stopAudioVisualization();
+        }
+      };
+    }, [isActiveRecorder, isRecording, stopAudioVisualization]);
 
     // Start recording
     const handleStartRecording = async (e: React.MouseEvent) => {
@@ -297,7 +331,7 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
                   value={value}
                   onChange={(e) => onChange(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  disabled={disabled || isRecording}
+                  disabled={disabled || isRecording || isProcessing}
                   placeholder={placeholder}
                   rows={1}
                   className={cn(
@@ -322,7 +356,7 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
             </div>
           </div>
 
-          {/* Recording controls - show tick and cross when recording */}
+          {/* Recording controls - show tick/cross when recording, spinner when finalizing */}
           {isRecording ? (
             <>
               {/* Cancel button - X */}
@@ -373,6 +407,15 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
                 )}
               </button>
             </>
+          ) : isProcessing ? (
+            <button
+              type="button"
+              disabled
+              className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-[#E5E7EB] text-gray-500 cursor-wait"
+              title="Finishing recording..."
+            >
+              <Loader2 className="w-4 h-4 animate-spin" />
+            </button>
           ) : (
             /* Microphone or Send button */
             <button
@@ -382,7 +425,7 @@ export const VoiceInputBar = forwardRef<HTMLTextAreaElement, VoiceInputBarProps>
                   ? onSend
                   : handleStartRecording
               }
-              disabled={disabled}
+              disabled={disabled || isProcessing}
               className={cn(
                 'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full',
                 'transition-all duration-200 shadow-sm',

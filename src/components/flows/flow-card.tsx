@@ -1,7 +1,9 @@
+'use client';
+
 import { Badge } from "@/components/ui/badge";
 import { Flow } from "@/lib/mock-data/flows";
 import { Trash2, Globe } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // Extended Flow type to support both mock and real data
 interface ExtendedFlow extends Omit<Flow, 'created' | 'updated' | 'recentlyOpened'> {
@@ -22,6 +24,12 @@ interface FlowCardProps {
 
 export function FlowCard({ flow, onClick, onDelete, onPublish, isTemplateAdmin }: FlowCardProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Only show relative time after client hydration
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // Format relative time
   const formatRelativeTime = (date: Date) => {
@@ -172,14 +180,15 @@ export function FlowCard({ flow, onClick, onDelete, onPublish, isTemplateAdmin }
             </div>
           )}
 
-          {/* Timestamps */}
+          {/* Timestamps - client-side only to avoid hydration mismatch */}
           <div className="flex items-center gap-3 text-[11px] text-[#9CA3AF]">
-            {flow.createdAt && (
+            {isHydrated && flow.createdAt && (
               <span>Created {formatRelativeTime(flow.createdAt)}</span>
             )}
-            {flow.lastEdited && (
+            {isHydrated && flow.lastEdited && (
               <span>Edited {formatRelativeTime(flow.lastEdited)}</span>
             )}
+            {!isHydrated && <span>&nbsp;</span>}
           </div>
         </div>
       </div>

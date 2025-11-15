@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { stopCanvasPointerEvent, stopCanvasWheelEvent } from '@/lib/workflow/interaction-guards';
 
 interface SelectionFloatingToolbarProps {
   selectedNodeIds: string[];
@@ -121,6 +122,10 @@ export function SelectionFloatingToolbar({
     <TooltipProvider delayDuration={300}>
       <div
         ref={toolbarRef}
+        data-flowy-interactive="true"
+        onPointerDownCapture={stopCanvasPointerEvent}
+        onMouseDownCapture={stopCanvasPointerEvent}
+        onWheelCapture={stopCanvasWheelEvent}
         className="fixed z-[90] flex items-center gap-1 px-2 py-1.5 bg-white rounded-lg border border-[#D4AF7F]/30 shadow-lg"
         style={{
           left: position.x,

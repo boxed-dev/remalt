@@ -1,6 +1,5 @@
 import type { NodeType } from '@/types/workflow';
-import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Lightbulb, FileCode, Globe, MessageSquare, Link, Type, StickyNote, PenSquare, Sparkles, Wand2, Play } from 'lucide-react';
-import { Folder } from 'lucide-react';
+import { FileText, Mic, Youtube, Instagram, Linkedin, Image as ImageIcon, Lightbulb, FileCode, Globe, MessageSquare, Link, Type, StickyNote, PenSquare, Play, Users, WandSparkles, BrainCircuit } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // Node type metadata
@@ -102,7 +101,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Generate images from text using Nano Banana (Gemini 2.5 Flash Image)',
     category: 'ai',
     color: '#8B5CF6',
-    icon: Sparkles,
+    icon: WandSparkles,
     defaultWidth: 480,
     defaultHeight: 520,
   },
@@ -162,7 +161,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Container to organize nodes on the canvas',
     category: 'structure',
     color: '#D4AF7F',
-    icon: Folder,
+    icon: Users,
     defaultWidth: 640,
     defaultHeight: 420,
   },
@@ -182,7 +181,7 @@ export const NODE_METADATA: Record<NodeType, NodeTypeMetadata> = {
     description: 'Transform and process data with custom AI prompts',
     category: 'ai',
     color: '#3B82F6',
-    icon: Wand2,
+    icon: BrainCircuit,
     defaultWidth: 380,
     defaultHeight: 400,
   },

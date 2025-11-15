@@ -11,8 +11,6 @@ import { FloatingAIInstructions } from './FloatingAIInstructions';
 
 export const ImageGenerationNode = memo(({ id, data, parentId, selected }: NodeProps<ImageGenerationNodeData>) => {
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const isActive = activeNodeId === id;
   const [localPrompt, setLocalPrompt] = useState(data.prompt || '');
   const [isDownloadHovered, setIsDownloadHovered] = useState(false);
 
@@ -281,7 +279,7 @@ export const ImageGenerationNode = memo(({ id, data, parentId, selected }: NodeP
       </BaseNode>
 
       {/* Floating AI Instructions - visible once the node is active/selected */}
-      {(isActive || selected) && (
+      {selected && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<ImageGenerationNodeData>)}

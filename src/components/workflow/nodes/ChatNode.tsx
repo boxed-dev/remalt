@@ -101,7 +101,7 @@ const CodeBlock = memo(({ inline, className, children }: { inline?: boolean; cla
 
   if (inline) {
     return (
-      <code className="bg-gray-100 px-2 py-1 rounded text-[12px] font-mono select-text" style={{ userSelect: 'text' }}>
+      <code className="bg-gray-100 px-2 py-1 rounded-md text-[12px] font-mono select-text" style={{ userSelect: 'text' }}>
         {children}
       </code>
     );
@@ -120,7 +120,7 @@ const CodeBlock = memo(({ inline, className, children }: { inline?: boolean; cla
           </button>
         </span>
         {language ? (
-          <span className="block rounded-xl overflow-hidden border border-gray-700 shadow-sm">
+          <span className="block rounded-lg overflow-hidden border border-gray-700 shadow-sm">
             <span className="flex items-center justify-between px-4 py-2 bg-[#1e1e1e] text-gray-400 text-[11px] font-mono border-b border-gray-700">
               <span className="uppercase tracking-wider">{language}</span>
             </span>
@@ -141,7 +141,7 @@ const CodeBlock = memo(({ inline, className, children }: { inline?: boolean; cla
             </SyntaxHighlighter>
           </span>
         ) : (
-          <code className="block bg-[#1e1e1e] text-gray-300 p-4 rounded-xl text-[12px] font-mono overflow-x-auto border border-gray-700 select-text" style={{ userSelect: 'text' }}>
+          <code className="block bg-[#1e1e1e] text-gray-300 p-4 rounded-lg text-[12px] font-mono overflow-x-auto border border-gray-700 select-text" style={{ userSelect: 'text' }}>
             {children}
           </code>
         )}
@@ -171,9 +171,9 @@ const MessageBubble = memo(({
     if (message.content === '' && isLoading) {
       return (
         <div className="flex items-center gap-2 py-2">
-          <div className="w-2 h-2 bg-[#095D40] rounded-full animate-pulse"></div>
-          <div className="w-2 h-2 bg-[#095D40] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-          <div className="w-2 h-2 bg-[#095D40] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+          <div className="w-2 h-2 bg-gray-800 rounded-full animate-pulse"></div>
+          <div className="w-2 h-2 bg-gray-800 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+          <div className="w-2 h-2 bg-gray-800 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
         </div>
       );
     }
@@ -234,7 +234,7 @@ const MessageBubble = memo(({
         <div className={`flex items-center gap-1.5 mb-1 ${message.role === 'user' ? 'justify-end ml-auto' : 'justify-start'}`}>
           {message.role === 'assistant' ? (
             <>
-              <div className="w-1 h-1 bg-[#095D40] rounded-full"></div>
+              <div className="w-1 h-1 bg-gray-800 rounded-full"></div>
               <span className="text-[10px] font-medium text-gray-600">Remic AI</span>
             </>
           ) : (
@@ -250,8 +250,8 @@ const MessageBubble = memo(({
           <div
             className={`px-3 py-1.5 text-[13px] leading-[1.6] select-text cursor-text transition-colors break-words ${
               message.role === 'user'
-                ? 'bg-[#095D40]/6 text-gray-900 rounded-tl-xl rounded-tr-xl rounded-bl-xl'
-                : 'bg-white text-gray-900 rounded-tl-xl rounded-tr-xl rounded-br-xl'
+                ? 'bg-gray-100 text-gray-900 rounded-tl-lg rounded-tr-lg rounded-bl-lg'
+                : 'bg-white text-gray-900 rounded-tl-lg rounded-tr-lg rounded-br-lg'
             }`}
             style={{ userSelect: 'text', wordBreak: 'break-word', overflowWrap: 'break-word' }}
           >
@@ -267,8 +267,8 @@ const MessageBubble = memo(({
                 e.stopPropagation();
                 handleCopyMessage(message.id, message.content);
               }}
-              className={`flex items-center gap-1 mt-1 text-[10px] text-gray-400 hover:text-[#095D40] transition-colors cursor-pointer ${
-                copiedMessageId === message.id ? 'text-[#095D40]' : ''
+              className={`flex items-center gap-1 mt-1 text-[10px] text-gray-400 hover:text-gray-900 transition-colors cursor-pointer ${
+                copiedMessageId === message.id ? 'text-gray-900' : ''
               }`}
             >
               {copiedMessageId === message.id ? (
@@ -1123,7 +1123,7 @@ export const ChatNode = memo(({
             setIsMaximized(true);
           }
         }}
-        className="inline-flex size-8 items-center justify-center rounded-full bg-white/40 text-[#0A6C4A] transition hover:bg-white/55"
+        className="inline-flex size-8 items-center justify-center rounded-lg bg-white/40 text-white transition hover:bg-white/55"
         aria-label={isModal ? 'Close chat' : 'Maximize chat'}
         title={isModal ? 'Close chat' : 'Maximize chat'}
       >
@@ -1154,9 +1154,9 @@ export const ChatNode = memo(({
         ref={containerRef}
         className={`flex h-full w-full flex-col overflow-hidden rounded-2xl bg-white ${
           isModal
-            ? 'border border-[#0A6C4A] shadow-2xl'
+            ? 'border border-black shadow-2xl'
             : `border ${
-                isActive ? 'border-[#0A6C4A]/70 shadow-lg' : 'border-[#D1E8E0] shadow-md'
+                isActive ? 'border-gray-800 shadow-lg' : 'border-gray-200 shadow-md'
               } transition-all`
         }`}
         onWheel={handleWheelEvent}
@@ -1175,11 +1175,11 @@ export const ChatNode = memo(({
         <div className="flex flex-1 overflow-hidden">
           {/* Left Sidebar */}
           <div className="flex h-full w-[260px] min-w-[260px] flex-col gap-4 border-r border-[#D7E8E1] bg-[#F2F7F5] px-4 py-4">
-            <div className="rounded-2xl border border-white/60 bg-white px-3 py-3 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0A6C4A]">
+            <div className="rounded-xl border border-white/60 bg-white px-3 py-3 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-900">
                 Connected ({data.linkedNodes?.length || 0})
               </p>
-              <p className="mt-1 text-[11px] text-[#527565]">
+              <p className="mt-1 text-[11px] text-gray-600">
                 {data.linkedNodes && data.linkedNodes.length > 0
                   ? `${data.linkedNodes.length} linked ${data.linkedNodes.length === 1 ? 'node' : 'nodes'}`
                   : 'No linked nodes yet'}
@@ -1188,7 +1188,7 @@ export const ChatNode = memo(({
 
             <Button
               size="sm"
-              className="nodrag nowheel w-full justify-center gap-2 rounded-full border border-transparent bg-gradient-to-r from-[#0C7A53] to-[#19B17A] px-4 py-2 text-[12px] font-semibold text-white shadow-sm transition-all duration-200 hover:from-[#0C7A53]/90 hover:to-[#19B17A]/90"
+              className="nodrag nowheel w-full justify-center gap-2 rounded-lg border border-transparent bg-black px-4 py-2 text-[12px] font-semibold text-white shadow-sm transition-all duration-200 hover:bg-gray-800"
               onClick={(e) => {
                 stopReactFlowPropagation(e);
                 createNewChat();
@@ -1199,7 +1199,7 @@ export const ChatNode = memo(({
             </Button>
 
             <div className="min-h-0 flex-1">
-              <h4 className="px-1 text-[11px] font-semibold uppercase tracking-wide text-[#0A6C4A]/70">
+              <h4 className="px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-700">
                 Previous Conversations
               </h4>
               <ScrollArea
@@ -1215,10 +1215,10 @@ export const ChatNode = memo(({
                       return (
                         <div
                           key={session.id}
-                          className={`group relative flex w-full min-w-0 cursor-pointer items-center gap-x-2.5 overflow-hidden rounded-full px-4 py-1 text-[12px] font-semibold transition-all ${
+                          className={`group relative flex w-full min-w-0 cursor-pointer items-center gap-x-2.5 overflow-hidden rounded-lg px-4 py-1 text-[12px] font-semibold transition-all ${
                             isActiveSession
-                              ? 'bg-transparent text-[#0A6C4A] border border-[#0A6C4A]/30'
-                              : 'bg-transparent text-[#0A6C4A]/75 border border-transparent hover:bg-[#0A6C4A]/8 hover:text-[#0A6C4A]'
+                              ? 'bg-transparent text-gray-900 border border-gray-900/30'
+                              : 'bg-transparent text-gray-700 border border-transparent hover:bg-gray-900/8 hover:text-gray-900'
                           }`}
                         >
                           <Button
@@ -1239,7 +1239,7 @@ export const ChatNode = memo(({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 flex-shrink-0 text-[#0A6C4A]/60 opacity-0 transition-opacity hover:bg-transparent hover:text-destructive group-hover:opacity-100"
+                            className="h-6 w-6 flex-shrink-0 text-gray-600 opacity-0 transition-opacity hover:bg-transparent hover:text-destructive group-hover:opacity-100"
                             onClick={(e) => deleteSession(session.id, e)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1249,7 +1249,7 @@ export const ChatNode = memo(({
                       );
                     })
                   ) : (
-                    <p className="px-2 py-6 text-center text-[11px] text-[#527565]">
+                    <p className="px-2 py-6 text-center text-[11px] text-gray-600">
                       No conversations yet
                     </p>
                   )}
@@ -1267,7 +1267,8 @@ export const ChatNode = memo(({
               onWheel={handleWheelEvent}
               onWheelCapture={handleWheelEvent}
               data-lenis-prevent
-              className="flowy-scrollable flex-1 overflow-y-auto overflow-x-hidden bg-[#F7FBF9] px-6 py-6"
+              data-flowy-selectable="true"
+              className="flowy-scrollable nodrag nowheel flex-1 overflow-y-auto overflow-x-hidden bg-[#F7FBF9] px-6 py-6"
               style={{ overscrollBehavior: 'contain', userSelect: 'text', touchAction: 'pan-y' }}
             >
               <div className="mx-auto w-full max-w-[720px]">

@@ -12,8 +12,6 @@ import type { PDFNodeData } from '@/types/workflow';
 export const PDFNode = memo(({ id, data, parentId, selected }: NodeProps<PDFNodeData>) => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
-  const activeNodeId = useWorkflowStore((state) => state.activeNodeId);
-  const isActive = activeNodeId === id;
 
   const hasParsedContent = useMemo(() => data.parseStatus === 'success' && (data.parsedText || (data.segments?.length ?? 0) > 0), [data.parseStatus, data.parsedText, data.segments]);
 
@@ -375,7 +373,7 @@ export const PDFNode = memo(({ id, data, parentId, selected }: NodeProps<PDFNode
       </BaseNode>
 
       {/* Floating AI Instructions - visible once the node is active/selected */}
-      {(isActive || selected) && (
+      {selected && (
         <FloatingAIInstructions
           value={data.aiInstructions}
           onChange={(value) => updateNodeData(id, { aiInstructions: value } as Partial<PDFNodeData>)}

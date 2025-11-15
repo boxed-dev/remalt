@@ -105,12 +105,32 @@ export const NODE_HEADER_THEMES: Record<NodeThemeKey | 'default', NodeHeaderThem
   voice: createTheme('#00aba9'),          // Metro Teal - bright, saturated
   image: createTheme('#e3a21a'),          // Metro Orange/Amber - warm, golden
   youtube: createTheme('#FF0000', { iconColor: '#FF0000' }),  // YouTube Red - official brand color
-  instagram: createTheme('#E4405F'),      // Instagram Brand Color - official pink/magenta
+  instagram: createTheme('#C13584', {     // Instagram Dark - solid dark gradient color
+    textColor: '#FFFFFF',
+    mutedText: '#FECDD3',
+    iconColor: '#FFFFFF',
+    iconBackground: transparentize('#8B1F61', 0.4),
+    surface: '#C13584',
+    surfaceHover: '#8B1F61',
+    surfaceActive: '#6B1548',
+    border: '#8B1F61',
+    shadow: transparentize('#000000', 0.3),
+  }),
   linkedin: createTheme('#2b5797'),       // Dark Blue - professional LinkedIn tone
   mindmap: createTheme('#603cba'),        // Dark Purple - creative, deep
   template: createTheme('#ff0097'),       // Metro Magenta - bold, eye-catching
   webpage: createTheme('#603cba'),        // Dark Purple - rich indigo alternative
-  chat: createTheme('#16a085'),           // Mountain Meadow - professional emerald
+  chat: createTheme('#000000', {          // Black - solid header
+    textColor: '#FFFFFF',
+    mutedText: '#D1D5DB',
+    iconColor: '#FFFFFF',
+    iconBackground: transparentize('#1F2937', 0.4),
+    surface: '#000000',
+    surfaceHover: '#1F2937',
+    surfaceActive: '#374151',
+    border: '#1F2937',
+    shadow: transparentize('#000000', 0.3),
+  }),
   connector: createTheme('#4B5563', {
     textColor: '#111827',
     iconColor: '#111827',
@@ -131,9 +151,16 @@ export const NODE_HEADER_THEMES: Record<NodeThemeKey | 'default', NodeHeaderThem
     textColor: '#111827',
     iconColor: '#92400E',
   }),
-  prompt: createTheme('#3B82F6', {          // Blue - AI transformation
-    textColor: '#1E293B',
-    iconColor: '#1D4ED8',
+  prompt: createTheme('#1E40AF', {          // Dark Blue - solid AI transformation
+    textColor: '#FFFFFF',
+    mutedText: '#BFDBFE',
+    iconColor: '#FFFFFF',
+    iconBackground: transparentize('#1E3A8A', 0.4),
+    surface: '#1E40AF',
+    surfaceHover: '#1E3A8A',
+    surfaceActive: '#1E3A8A',
+    border: '#1E3A8A',
+    shadow: transparentize('#000000', 0.3),
   }),
   trigger: createTheme('#603cba'),          // Dark Purple - distinctive trigger
   action: createTheme('#da532c'),           // Dark Orange - active, energetic

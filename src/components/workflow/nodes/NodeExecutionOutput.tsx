@@ -1,8 +1,16 @@
 "use client";
 
 import { memo, useState, useMemo } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ChevronDown, ChevronUp, Copy, Check, FileJson, Table2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import 'katex/dist/katex.min.css';
 
 interface NodeExecutionOutputProps {
   output?: unknown;
@@ -20,44 +28,12 @@ interface NodeExecutionOutputProps {
 export const NodeExecutionOutput = memo(({
   output,
   error,
-  lastExecutedAt,
-  executionTime,
   defaultExpanded = false,
   compact = false,
 }: NodeExecutionOutputProps) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [viewMode, setViewMode] = useState<'json' | 'table'>('json');
   const [copied, setCopied] = useState(false);
-
-  // Compute formatted timestamp before any early returns (React Hooks rules)
-  const formattedTimestamp = useMemo(() => {
-    if (!lastExecutedAt) return null;
-    const date = new Date(lastExecutedAt);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-
-    // Less than 1 minute ago
-    if (diffMs < 60000) {
-      return 'just now';
-    }
-    // Less than 1 hour ago
-    if (diffMs < 3600000) {
-      const minutes = Math.floor(diffMs / 60000);
-      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    }
-    // Less than 24 hours ago
-    if (diffMs < 86400000) {
-      const hours = Math.floor(diffMs / 3600000);
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    }
-    // More than 24 hours ago - show date
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  }, [lastExecutedAt]);
 
   // Try to detect if output is array (for table view)
   const isArrayOutput = Array.isArray(output);
@@ -109,14 +85,6 @@ export const NodeExecutionOutput = memo(({
         </button>
 
         <div className="flex items-center gap-2">
-          {/* Timestamp and execution time */}
-          {!error && (formattedTimestamp || executionTime !== undefined) && (
-            <span className="text-[10px] text-gray-500">
-              {formattedTimestamp}
-              {executionTime !== undefined && ` • ${formatTime(executionTime)}`}
-            </span>
-          )}
-
           {/* View mode toggle */}
           {!error && isExpanded && canShowTable && (
             <div className="flex items-center rounded border border-gray-200 bg-white">
@@ -177,17 +145,27 @@ export const NodeExecutionOutput = memo(({
       {/* Content */}
       {isExpanded && (
         <div
-          className="rounded-lg border border-gray-200 bg-white w-full"
+          className="nodrag nowheel rounded-lg border border-gray-200 bg-white w-full select-text"
           style={{
             maxHeight: '200px',
             overflowY: 'scroll',
             overflowX: 'hidden',
             WebkitOverflowScrolling: 'touch',
+            userSelect: 'text',
+            WebkitUserSelect: 'text',
+            cursor: 'text',
           }}
           onWheelCapture={(event) => {
             event.stopPropagation();
           }}
+          data-flowy-selectable="true"
           onTouchMoveCapture={(event) => {
+            event.stopPropagation();
+          }}
+          onMouseDown={(event) => {
+            event.stopPropagation();
+          }}
+          onPointerDown={(event) => {
             event.stopPropagation();
           }}
         >
@@ -213,11 +191,11 @@ function ErrorView({ error, compact }: { error: { message: string; details?: unk
   const [showStack, setShowStack] = useState(false);
 
   return (
-    <div className={cn('space-y-2', compact ? 'p-3' : 'p-4')}>
+    <div className={cn('space-y-2 select-text', compact ? 'p-3' : 'p-4')} style={{ userSelect: 'text', WebkitUserSelect: 'text' }}>
       <div className="flex items-start gap-2">
         <XCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
         <div className="flex-1 space-y-1">
-          <p className="text-[11px] font-medium text-red-700">{error.message}</p>
+          <p className="text-[11px] font-medium text-red-700 select-text">{error.message}</p>
           {error.stack && (
             <button
               onClick={() => setShowStack(!showStack)}
@@ -229,7 +207,7 @@ function ErrorView({ error, compact }: { error: { message: string; details?: unk
         </div>
       </div>
       {showStack && error.stack && (
-        <pre className="text-[9px] text-gray-600 bg-gray-50 rounded p-2 overflow-x-auto font-mono">
+        <pre className="text-[9px] text-gray-600 bg-gray-50 rounded p-2 overflow-x-auto font-mono select-text">
           {error.stack}
         </pre>
       )}
@@ -249,59 +227,147 @@ function JSONView({ data, compact }: { data: unknown; compact?: boolean }) {
 
   return (
     <pre className={cn(
-      'text-[10px] font-mono text-gray-700 whitespace-pre-wrap break-words',
+      'text-[10px] font-mono text-gray-700 whitespace-pre-wrap break-words select-text',
       compact ? 'p-3' : 'p-4'
-    )}>
+    )} style={{ userSelect: 'text', WebkitUserSelect: 'text' }}>
       {formatted}
     </pre>
   );
 }
 
 // Text view component - for AI-generated text output
-function TextView({ data, compact }: { data: string; compact?: boolean }) {
-  // Simple markdown-like formatting
-  const formatText = (text: string) => {
-    return text
-      .split('\n')
-      .map((line, idx) => {
-        // Headers
-        if (line.startsWith('### ')) {
-          return <h3 key={idx} className="font-bold text-[12px] mt-2 mb-1">{line.substring(4)}</h3>;
-        }
-        if (line.startsWith('## ')) {
-          return <h2 key={idx} className="font-bold text-[13px] mt-3 mb-1">{line.substring(3)}</h2>;
-        }
-        if (line.startsWith('# ')) {
-          return <h1 key={idx} className="font-bold text-[14px] mt-3 mb-2">{line.substring(2)}</h1>;
-        }
-        // Bullet points
-        if (line.startsWith('* ') || line.startsWith('- ')) {
-          return <li key={idx} className="ml-4">{line.substring(2)}</li>;
-        }
-        // Bold
-        if (line.includes('**')) {
-          const parts = line.split('**');
-          return (
-            <p key={idx} className="mb-1">
-              {parts.map((part, i) => i % 2 === 1 ? <strong key={i}>{part}</strong> : part)}
-            </p>
-          );
-        }
-        // Regular line
-        if (line.trim()) {
-          return <p key={idx} className="mb-1">{line}</p>;
-        }
-        // Empty line
-        return <br key={idx} />;
-      });
-  };
+const CODE_BLOCK_STYLES = {
+  background: '#111827',
+  borderRadius: '12px',
+  fontSize: '12px',
+  padding: '14px',
+  border: '1px solid rgba(255,255,255,0.08)',
+} satisfies CSSProperties;
+
+const InlineCode = ({ children }: { children: ReactNode }) => (
+  <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-900">
+    {children}
+  </code>
+);
+
+const MarkdownCodeBlock = ({ inline, className, children }: { inline?: boolean; className?: string; children?: ReactNode }) => {
+  const language = /language-(\w+)/.exec(className || '')?.[1] ?? 'text';
+  const content = String(children ?? '').replace(/\n$/, '');
+
+  if (inline) {
+    return <InlineCode>{children}</InlineCode>;
+  }
 
   return (
-    <div className={cn(
-      'text-[11px] text-gray-800 leading-relaxed break-words max-w-full',
-      compact ? 'p-3' : 'p-4'
-    )}>
-      {formatText(data)}
+    <div className="my-4 overflow-hidden rounded-xl border border-gray-800/60 bg-[#0b1220]">
+      <SyntaxHighlighter
+        language={language}
+        style={vscDarkPlus}
+        PreTag="div"
+        customStyle={CODE_BLOCK_STYLES}
+        showLineNumbers={false}
+        wrapLines
+      >
+        {content}
+      </SyntaxHighlighter>
+    </div>
+  );
+};
+
+function TextView({ data, compact }: { data: string; compact?: boolean }) {
+  return (
+    <div
+      className={cn(
+        'max-w-full break-words space-y-3 text-[12px] leading-relaxed text-gray-900 select-text',
+        compact ? 'p-3' : 'p-4'
+      )}
+      style={{ userSelect: 'text', WebkitUserSelect: 'text' }}
+    >
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={{
+          code: ({ inline, className, children }) => (
+            <MarkdownCodeBlock inline={inline} className={className}>
+              {children}
+            </MarkdownCodeBlock>
+          ),
+          pre: ({ children }) => <>{children}</>,
+          p: ({ children }) => (
+            <p className="text-[12px] text-gray-900 leading-relaxed select-text break-words">{children}</p>
+          ),
+          h1: ({ children }) => (
+            <h1 className="text-[16px] font-semibold text-gray-900 leading-snug mt-4 mb-2 first:mt-0 select-text">
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-[15px] font-semibold text-gray-900 leading-snug mt-4 mb-2 first:mt-0 select-text">
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-[14px] font-semibold text-gray-900 leading-snug mt-3 mb-1 first:mt-0 select-text">
+              {children}
+            </h3>
+          ),
+          h4: ({ children }) => (
+            <h4 className="text-[13px] font-semibold text-gray-900 leading-snug mt-3 mb-1 first:mt-0 select-text">
+              {children}
+            </h4>
+          ),
+          ul: ({ children }) => (
+            <ul className="list-disc space-y-1 pl-5 text-[12px] text-gray-900 select-text">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal space-y-1 pl-5 text-[12px] text-gray-900 select-text">{children}</ol>
+          ),
+          li: ({ children }) => (
+            <li className="leading-relaxed text-gray-900 select-text">{children}</li>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-semibold text-gray-900 select-text">{children}</strong>
+          ),
+          em: ({ children }) => <em className="italic text-gray-900 select-text">{children}</em>,
+          a: ({ href, children }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#095D40] underline-offset-2 hover:underline select-text"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {children}
+            </a>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-gray-200 bg-gray-50 px-4 py-2 text-[12px] text-gray-800 italic rounded-r select-text">
+              {children}
+            </blockquote>
+          ),
+          table: ({ children }) => (
+            <div className="overflow-x-auto rounded-lg border border-gray-200 select-text">
+              <table className="w-full text-left text-[12px] text-gray-900">{children}</table>
+            </div>
+          ),
+          thead: ({ children }) => (
+            <thead className="bg-gray-100 text-gray-900 select-text">{children}</thead>
+          ),
+          th: ({ children }) => (
+            <th className="px-3 py-2 text-[11px] font-semibold text-gray-900 border-b border-gray-200 select-text">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="px-3 py-2 text-[11px] text-gray-900 border-b border-gray-100 select-text">
+              {children}
+            </td>
+          ),
+          hr: () => <hr className="border-gray-200" />,
+        }}
+      >
+        {data}
+      </ReactMarkdown>
     </div>
   );
 }
@@ -318,11 +384,11 @@ function TableView({ data, compact }: { data: Record<string, unknown>[]; compact
   }, [data]);
 
   if (columns.length === 0 || data.length === 0) {
-    return <div className={cn('text-center text-gray-500', compact ? 'p-3 text-[10px]' : 'p-4 text-[11px]')}>No data to display</div>;
+    return <div className={cn('text-center text-gray-500 select-text', compact ? 'p-3 text-[10px]' : 'p-4 text-[11px]')}>No data to display</div>;
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto select-text" style={{ userSelect: 'text', WebkitUserSelect: 'text' }}>
       <table className="w-full text-[10px] border-collapse">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200">
@@ -330,7 +396,7 @@ function TableView({ data, compact }: { data: Record<string, unknown>[]; compact
               <th
                 key={col}
                 className={cn(
-                  'text-left font-medium text-gray-700',
+                  'text-left font-medium text-gray-700 select-text',
                   compact ? 'px-2 py-1.5' : 'px-3 py-2'
                 )}
               >
@@ -346,7 +412,7 @@ function TableView({ data, compact }: { data: Record<string, unknown>[]; compact
                 <td
                   key={col}
                   className={cn(
-                    'text-gray-600',
+                    'text-gray-600 select-text',
                     compact ? 'px-2 py-1.5' : 'px-3 py-2'
                   )}
                 >
@@ -370,12 +436,4 @@ function formatCellValue(value: unknown): string {
     return JSON.stringify(value);
   }
   return String(value);
-}
-
-// Helper: Format time
-function formatTime(ms: number): string {
-  if (ms < 1000) {
-    return `${ms}ms`;
-  }
-  return `${(ms / 1000).toFixed(2)}s`;
 }

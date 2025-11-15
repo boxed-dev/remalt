@@ -12,6 +12,7 @@ import {
   MoveHorizontal,
   MoveVertical,
 } from 'lucide-react';
+import { stopCanvasPointerEvent, stopCanvasWheelEvent } from '@/lib/workflow/interaction-guards';
 
 interface SelectionContextMenuProps {
   position: { x: number; y: number } | null;
@@ -171,6 +172,10 @@ export function SelectionContextMenu({
   return (
     <div
       ref={menuRef}
+      data-flowy-interactive="true"
+      onMouseDownCapture={stopCanvasPointerEvent}
+      onPointerDownCapture={stopCanvasPointerEvent}
+      onWheelCapture={stopCanvasWheelEvent}
       className="fixed z-[100] w-56 rounded-lg border border-[#D4AF7F]/30 bg-white shadow-xl"
       style={{
         left: position.x,
